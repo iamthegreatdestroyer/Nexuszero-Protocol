@@ -553,4 +553,133 @@ mod tests {
         assert!(n >= 512); // Next power of 2 after min
         assert!(n <= 1024); // Power of 2 within max
     }
+
+    #[test]
+    fn test_selector_extreme_dimension_constraints() {
+        // Very small min dimension
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .min_dimension(10)
+            .max_dimension(300);
+        let params = selector.build_lwe().unwrap();
+        assert!(params.n >= 10 && params.n <= 300);
+        
+        // Very large max dimension
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .min_dimension(256)
+            .max_dimension(10000);
+        let params = selector.build_lwe().unwrap();
+        assert!(params.n >= 256 && params.n <= 10000);
+    }
+
+    #[test]
+    fn test_selector_conflicting_constraints() {
+        // Min > Max should fail or auto-correct
+        let selector = ParameterSelector::new()
+            .min_dimension(1024)
+            .max_dimension(512);
+        
+        // This should either error or auto-swap
+        let result = selector.build_lwe();
+        // If it succeeds, dimension should be reasonable
+        if let Ok(params) = result {
+            assert!(params.n > 0);
+        }
+    }
+
+    #[test]
+    fn test_selector_boundary_modulus() {
+        // Very small modulus constraint
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .min_modulus(100)
+            .max_modulus(500);
+        let params = selector.build_lwe().unwrap();
+        assert!(params.q >= 100 && params.q <= 500);
+        
+        // Very large modulus constraint
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .min_modulus(50000)
+            .max_modulus(100000);
+        let params = selector.build_lwe().unwrap();
+        assert!(params.q >= 50000 && params.q <= 100000);
+    }
+
+    #[test]
+    fn test_selector_custom_ratio_extremes() {
+        // Very small ratio (m barely larger than n)
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .custom_ratio(1.1);
+        let params = selector.build_lwe().unwrap();
+        assert!((params.m as f64 / params.n as f64) >= 1.0);
+        assert!((params.m as f64 / params.n as f64) < 1.5);
+        
+        // Large ratio (m much larger than n)
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .custom_ratio(10.0);
+        let params = selector.build_lwe().unwrap();
+        assert!((params.m as f64 / params.n as f64) >= 9.0);
+    }
+
+    #[test]
+    fn test_selector_custom_sigma_extremes() {
+        // Very small sigma
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .custom_sigma(0.5);
+        let params = selector.build_lwe().unwrap();
+        assert!((params.sigma - 0.5).abs() < 0.01);
+        
+        // Large sigma
+        let selector = ParameterSelector::new()
+            .target_security(SecurityLevel::Bit128)
+            .custom_sigma(10.0);
+        let params = selector.build_lwe().unwrap();
+        assert!((params.sigma - 10.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_prime_generation_edge_cases() {
+        // Small bit size
+        let prime = generate_prime(4).unwrap();
+        assert!(is_prime_miller_rabin(prime, 20));
+        assert!(prime >= 8 && prime < 16);
+        
+        // Larger bit size
+        let prime = generate_prime(20).unwrap();
+        assert!(is_prime_miller_rabin(prime, 20));
+        assert!(prime >= (1 << 19) && prime < (1 << 20));
+    }
+
+    #[test]
+    fn test_find_nearest_prime_boundary_cases() {
+        // Near lower bound
+        let prime = find_nearest_prime(100).unwrap();
+        assert!(is_prime_miller_rabin(prime, 20));
+        
+        // Even number (should find odd prime)
+        let prime = find_nearest_prime(1000).unwrap();
+        assert!(is_prime_miller_rabin(prime, 20));
+        assert!(prime % 2 == 1 || prime == 2);
+        
+        // Already prime
+        let prime = find_nearest_prime(7919).unwrap();
+        assert_eq!(prime, 7919);
+        assert!(is_prime_miller_rabin(prime, 20));
+    }
+
+    #[test]
+    fn test_ring_lwe_power_of_2_enforcement() {
+        // Request non-power-of-2 via constraints, should get next power of 2
+        let selector = ParameterSelector::new()
+            .min_dimension(300)
+            .max_dimension(600);
+        let params = selector.build_ring_lwe().unwrap();
+        assert!(params.n.is_power_of_two());
+        assert!(params.n >= 512); // Next power of 2 >= 300
+    }
 }

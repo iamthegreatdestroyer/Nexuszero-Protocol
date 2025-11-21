@@ -146,6 +146,7 @@ impl CryptoParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::LatticeParameters;
 
     #[test]
     fn test_parameter_sets() {
@@ -167,5 +168,101 @@ mod tests {
         let params = CryptoParameters::new_128bit_security();
         assert_eq!(params.security_level, SecurityLevel::Bit128);
         assert_eq!(params.ring_params.n, 512);
+    }
+
+    #[test]
+    fn test_security_level_progression() {
+        // Verify increasing security levels have larger parameters
+        let params_128 = ParameterSet::from_security_level(SecurityLevel::Bit128);
+        let params_192 = ParameterSet::from_security_level(SecurityLevel::Bit192);
+        let params_256 = ParameterSet::from_security_level(SecurityLevel::Bit256);
+        
+        // Dimension increases
+        assert!(params_128.n < params_192.n);
+        assert!(params_192.n < params_256.n);
+        
+        // Modulus increases
+        assert!(params_128.q < params_192.q);
+        assert!(params_192.q < params_256.q);
+        
+        // Performance estimates increase
+        assert!(params_128.prove_time_ms < params_192.prove_time_ms);
+        assert!(params_192.prove_time_ms < params_256.prove_time_ms);
+    }
+
+    #[test]
+    fn test_parameter_set_validation_edge_cases() {
+        // Invalid: dimension not power of 2
+        let mut params = ParameterSet::from_security_level(SecurityLevel::Bit128);
+        params.n = 511;
+        assert!(params.validate().is_err());
+        
+        // Invalid: modulus too small
+        let mut params = ParameterSet::from_security_level(SecurityLevel::Bit128);
+        params.q = 1;
+        assert!(params.validate().is_err());
+        
+        // Invalid: negative sigma
+        let mut params = ParameterSet::from_security_level(SecurityLevel::Bit128);
+        params.sigma = -1.0;
+        assert!(params.validate().is_err());
+        
+        // Invalid: zero sigma
+        let mut params = ParameterSet::from_security_level(SecurityLevel::Bit128);
+        params.sigma = 0.0;
+        assert!(params.validate().is_err());
+    }
+
+    #[test]
+    fn test_all_security_levels_valid() {
+        for level in [SecurityLevel::Bit128, SecurityLevel::Bit192, SecurityLevel::Bit256] {
+            let params = ParameterSet::from_security_level(level);
+            assert!(params.validate().is_ok());
+            assert!(params.n.is_power_of_two());
+            assert!(params.q >= 2);
+            assert!(params.sigma > 0.0);
+        }
+    }
+
+    #[test]
+    fn test_crypto_parameters_all_levels() {
+        let p128 = CryptoParameters::new_128bit_security();
+        assert_eq!(p128.security_level, SecurityLevel::Bit128);
+        assert!(p128.ring_params.validate().is_ok());
+        
+        let p192 = CryptoParameters::new_192bit_security();
+        assert_eq!(p192.security_level, SecurityLevel::Bit192);
+        assert!(p192.ring_params.validate().is_ok());
+        
+        let p256 = CryptoParameters::new_256bit_security();
+        assert_eq!(p256.security_level, SecurityLevel::Bit256);
+        assert!(p256.ring_params.validate().is_ok());
+    }
+
+    #[test]
+    fn test_parameter_set_proof_size_estimates() {
+        let params_128 = ParameterSet::from_security_level(SecurityLevel::Bit128);
+        let params_192 = ParameterSet::from_security_level(SecurityLevel::Bit192);
+        let params_256 = ParameterSet::from_security_level(SecurityLevel::Bit256);
+        
+        // Proof size should scale with security level
+        assert!(params_128.proof_size < params_192.proof_size);
+        assert!(params_192.proof_size < params_256.proof_size);
+        
+        // Proof sizes should be reasonable (not zero, not huge)
+        assert!(params_128.proof_size > 1000);
+        assert!(params_256.proof_size < 100_000);
+    }
+
+    #[test]
+    fn test_parameter_set_timing_estimates() {
+        let params = ParameterSet::from_security_level(SecurityLevel::Bit128);
+        
+        // Verify time is positive
+        assert!(params.prove_time_ms > 0);
+        assert!(params.verify_time_ms > 0);
+        
+        // Verify should be faster than prove
+        assert!(params.verify_time_ms <= params.prove_time_ms);
     }
 }

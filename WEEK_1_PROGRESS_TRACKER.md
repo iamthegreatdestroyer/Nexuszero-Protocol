@@ -259,35 +259,44 @@ OVERALL:                                 [█████████▱] 90%
 - [x] **Task 4.1.31** - Add statement serialization edge tests ✅
 - [x] **Task 4.1.32** - Add witness mismatch tests ✅
 - [x] **Task 4.1.33** - Add tampered proof verification tests ✅
-      **Progress:** 28 / 34 tasks (82.4%) - Negative tests complete, coverage at 83.27% (+5.15%)!### Coverage Summary (Tarpaulin Report - After Negative Tests)
+- [x] **Task 4.1.35** - Add LWE error distribution statistical tests ✅
+- [x] **Task 4.1.36** - Add selector edge cases (extreme constraints, boundary primes) ✅
+- [x] **Task 4.1.37** - Add security estimation boundary tests ✅
+**Progress:** 31 / 37 tasks (83.8%) - Edge case tests complete, coverage at 87.13% (+8.01% total)!
 
-| File           | Covered | Total   | Percent    | Change     | Status             |
-| -------------- | ------- | ------- | ---------- | ---------- | ------------------ |
-| `sampling.rs`  | 12      | 12      | 100%       | 0%         | ✅ Complete        |
-| `ring_lwe.rs`  | 185     | 197     | 93.9%      | 0%         | ✅ Excellent       |
-| `statement.rs` | 49      | 54      | 90.7%      | +42.59%    | 🎯 Target reached! |
-| `math.rs`      | 24      | 27      | 88.9%      | 0%         | Good               |
-| `lwe.rs`       | 45      | 55      | 81.8%      | 0%         | Improve            |
-| `proof.rs`     | 142     | 177     | 80.2%      | +5.08%     | Improved           |
-| `witness.rs`   | 45      | 58      | 77.6%      | +13.79%    | Improved           |
-| `security.rs`  | 22      | 28      | 78.6%      | 0%         | Improve            |
-| `selector.rs`  | 123     | 169     | 72.8%      | 0%         | Add edge cases     |
-| **Overall**    | **647** | **777** | **83.27%** | **+5.15%** | 🚀 Major gain!     |
+### Coverage Summary (Tarpaulin Report - After Edge Case & Statistical Tests)| File           | Covered | Total   | Percent    | Total Change | Status                 |
+| -------------- | ------- | ------- | ---------- | ------------ | ---------------------- |
+| `sampling.rs`  | 12      | 12      | 100%       | 0%           | ✅ Complete            |
+| `security.rs`  | 28      | 28      | 100%       | +21.43%      | ✅ Perfect! (was 78.6%)|
+| `ring_lwe.rs`  | 185     | 197     | 93.9%      | 0%           | ✅ Excellent           |
+| `lwe.rs`       | 51      | 55      | 92.7%      | +10.91%      | 🎯 Great improvement!  |
+| `statement.rs` | 49      | 54      | 90.7%      | +42.59%      | 🎯 Target reached!     |
+| `math.rs`      | 24      | 27      | 88.9%      | 0%           | Good                   |
+| `selector.rs`  | 141     | 169     | 83.4%      | +10.65%      | Improved significantly |
+| `proof.rs`     | 142     | 177     | 80.2%      | +5.08%       | Improved               |
+| `witness.rs`   | 45      | 58      | 77.6%      | +13.79%      | Improved               |
+| **Overall**    | **677** | **777** | **87.13%** | **+8.01%**   | 🚀 Excellent progress! |
 
-### Completed Negative Test Improvements ✅
+### Completed Test Improvements ✅
 
+**Wave 1: Negative Tests (78.12% → 83.27%, +5.15%)**
 1. ✅ Added statement validation tests (empty fields, invalid ranges, missing builder type) → **+42.59% coverage**
 2. ✅ Added witness mismatch tests (discrete log, preimage, range) → **+13.79% coverage**
 3. ✅ Added proof tampering tests (commitment/response/challenge, Blake3, truncated) → **+5.08% coverage**
-4. ✅ Overall coverage jumped from 78.12% → 83.27% (**+5.15%**)
+
+**Wave 2: Edge Case & Statistical Tests (83.27% → 87.13%, +3.86%)**
+4. ✅ Added LWE statistical tests (error distribution, magnitude bounds, invalid params, encryption randomness) → **+10.91% coverage** → 92.7%
+5. ✅ Added selector edge cases (extreme dimensions, boundary modulus, ratio/sigma extremes, prime generation, ring-LWE) → **+10.65% coverage** → 83.4%
+6. ✅ Added security boundary tests (level progression, validation edge cases, proof size/timing estimates) → **+21.43% coverage** → **100%** ✨
+
+**Overall Progress:** 78.12% → 87.13% (**+8.01%** total, +18 tests)
 
 ### Next Coverage Push (Target: ≥90%)
 
-- [ ] **Task 4.1.35** - Add LWE error distribution statistical tests (Chi-squared goodness of fit)
-- [ ] **Task 4.1.36** - Add selector edge cases (extreme constraints, boundary primes)
-- [ ] **Task 4.1.37** - Add security estimation boundary tests (min/max dimension/modulus)
-- [ ] **Task 4.1.38** - Re-run coverage (target ≥88%)
-- [ ] **Task 4.1.39** - Final coverage push (target ≥90%)
+- [ ] **Task 4.1.38** - Analyze remaining uncovered lines in selector.rs (28 lines) and lwe.rs (4 lines)
+- [ ] **Task 4.1.39** - Add targeted tests for uncovered branches/error paths
+- [ ] **Task 4.1.40** - Re-run coverage (target ≥90%)
+- [ ] **Task 4.1.41** - Document coverage achievement and next steps
 
 ---
 

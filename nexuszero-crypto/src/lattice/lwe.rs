@@ -212,4 +212,89 @@ mod tests {
         let decrypted_true = decrypt(&sk, &ct_true, &params).unwrap();
         assert_eq!(decrypted_true, true);
     }
+
+    #[test]
+    fn test_error_distribution_statistical_properties() {
+        use crate::lattice::sampling::sample_error;
+        let sigma = 3.2;
+        let n = 1000;
+        
+        // Sample error vector
+        let samples = sample_error(sigma, n);
+        
+        // Check mean is close to 0
+        let mean: f64 = samples.iter().map(|&x| x as f64).sum::<f64>() / n as f64;
+        assert!(mean.abs() < 1.0, "Mean should be close to 0: {}", mean);
+        
+        // Check standard deviation is close to sigma
+        let variance: f64 = samples.iter().map(|&x| {
+            let x_f = x as f64;
+            (x_f - mean).powi(2)
+        }).sum::<f64>() / n as f64;
+        let std_dev = variance.sqrt();
+        assert!((std_dev - sigma).abs() < 1.0, "Std dev should be close to {}: {}", sigma, std_dev);
+        
+        // Check distribution is roughly bell-shaped (most values within 3 sigma)
+        let within_3sigma = samples.iter().filter(|&&x| (x as f64).abs() <= 3.0 * sigma).count();
+        let ratio = within_3sigma as f64 / n as f64;
+        assert!(ratio > 0.95, "At least 95% of samples should be within 3 sigma: {}", ratio);
+    }
+
+    #[test]
+    fn test_error_magnitude_bounds() {
+        use crate::lattice::sampling::sample_error;
+        let sigma = 2.0;
+        
+        // Sample error vector and check all values are bounded
+        for _ in 0..10 {
+            let errors = sample_error(sigma, 100);
+            for &error in errors.iter() {
+                // In practice, errors beyond 6*sigma are extremely rare
+                let error_f = (error as f64).abs();
+                assert!(error_f < 6.0 * sigma, "Error magnitude too large: {}", error_f);
+            }
+        }
+    }
+
+    #[test]
+    fn test_lwe_invalid_parameters() {
+        // Zero dimension
+        let params = LWEParameters::new(0, 64, 97, 2.0);
+        assert!(params.validate().is_err());
+        
+        // Zero samples
+        let params = LWEParameters::new(32, 0, 97, 2.0);
+        assert!(params.validate().is_err());
+        
+        // Invalid modulus
+        let params = LWEParameters::new(32, 64, 1, 2.0);
+        assert!(params.validate().is_err());
+        
+        // Negative/zero sigma
+        let params = LWEParameters::new(32, 64, 97, 0.0);
+        assert!(params.validate().is_err());
+        
+        let params = LWEParameters::new(32, 64, 97, -1.0);
+        assert!(params.validate().is_err());
+    }
+
+    #[test]
+    fn test_encryption_produces_different_ciphertexts() {
+        let params = LWEParameters::new(32, 64, 97, 2.0);
+        let mut rng = rand::thread_rng();
+        let (sk, pk) = keygen(&params, &mut rng).unwrap();
+        
+        // Encrypt same message multiple times
+        let ct1 = encrypt(&pk, true, &params, &mut rng).unwrap();
+        let ct2 = encrypt(&pk, true, &params, &mut rng).unwrap();
+        
+        // Ciphertexts should be different (probabilistic encryption)
+        let same_u = ct1.u.iter().zip(ct2.u.iter()).all(|(a, b)| a == b);
+        let same_v = ct1.v == ct2.v;
+        assert!(!(same_u && same_v), "Ciphertexts should differ due to randomness");
+        
+        // But both decrypt to the same plaintext
+        assert_eq!(decrypt(&sk, &ct1, &params).unwrap(), true);
+        assert_eq!(decrypt(&sk, &ct2, &params).unwrap(), true);
+    }
 }
