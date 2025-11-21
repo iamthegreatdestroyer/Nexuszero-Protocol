@@ -36,12 +36,17 @@ jobs:
         run: |
           .\scripts\update-coverage.ps1 -WorkspacePath . -FailUnder 90
 
+      - name: Generate coverage badge
+        shell: pwsh
+        run: |
+          .\scripts\update-badge.ps1
+
       - name: Commit and push if changed
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/coverage/HISTORY.md
+          git add docs/coverage/HISTORY.md docs/coverage/badge.svg README.md
           $changed = git diff --staged --quiet; $LASTEXITCODE -ne 0
           if ($changed) {
             $date = Get-Date -Format "yyyy-MM-dd"

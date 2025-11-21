@@ -98,6 +98,45 @@ Nexuszero-Protocol/
 
 ## 🎯 Key Features
 
+### 0. Bulletproofs Zero-Knowledge Range Proofs 🔒
+
+**Full Implementation:**
+
+- ✅ Logarithmic-size proofs (O(log n) vs O(n) naive approach)
+- ✅ Pedersen commitments with cryptographic binding and hiding
+- ✅ Inner product argument with recursive halving
+- ✅ Fiat-Shamir transform for non-interactive proofs
+- ✅ No trusted setup required
+
+**Security Properties:**
+
+- **Completeness:** Honest prover can always convince verifier
+- **Soundness:** Prover cannot convince verifier of false statements
+- **Zero-Knowledge:** Proofs reveal nothing beyond range validity
+
+**Performance:**
+
+- Proof size: ~6 rounds for 64-bit values (vs 64 commitments naive)
+- Verification: Sub-linear in range size
+- Range [min, max] automatically normalized to [0, 2^n)
+
+**Example Usage:**
+
+```rust
+use nexuszero_crypto::proof::{prove_range, verify_range, pedersen_commit};
+
+// Create commitment
+let value = 42u64;
+let blinding = vec![0xAA; 32];
+let commitment = pedersen_commit(value, &blinding)?;
+
+// Generate range proof for [0, 100)
+let proof = prove_range(value, &blinding, 7)?; // 2^7 = 128 > 100
+
+// Verify proof
+verify_range(&proof, &commitment, 7)?; // ✓ Passes
+```
+
 ### 1. VS Code Workspace Configuration [REF:VSCODE-001]
 
 **Automatic Setup:**
@@ -319,6 +358,12 @@ Session 4 checkpoint with:
 
 **Current Coverage:** 90.48% (Tarpaulin, +1.03% from 89.45%) – target ≥90% achieved.
 
+**📊 Coverage Reports:** [View Live Coverage Dashboard](https://iamthegreatdestroyer.github.io/Nexuszero-Protocol/)
+
+- Interactive HTML reports updated nightly
+- Historical trend tracking in [HISTORY.md](docs/coverage/HISTORY.md)
+- Automated badge generation via GitHub Actions
+
 **Test Assets:** Structured JSON test vectors (LWE, Ring-LWE, Proof) using unified schema documented in `docs/TEST_VECTORS_SCHEMA.md`.
 
 **Implemented Suites:**
@@ -326,6 +371,7 @@ Session 4 checkpoint with:
 - Unit tests (encryption, polynomial ops, NTT, proofs)
 - Property-based tests (LWE, proofs)
 - Negative tests (validation, tampering, mismatches) – **60 tests passing**
+- Bulletproofs tests (commitment, inner product, range proofs) – **10 tests**
 - Benchmarks (LWE encrypt, proof gen/verify)
 - Test vector ingestion + execution (`tests/test_vector_runner.rs`)
 
@@ -334,8 +380,9 @@ Session 4 checkpoint with:
 - Statement module: 48.1% → 90.7% (+42.6%) via validation tests
 - Witness module: 63.8% → 81.0% (+17.2%) via boundary & mismatch tests
 - Proof module: 75.1% → 83.6% (+8.5%) via tampering & edge-case verification tests
+- **NEW:** Full Bulletproofs protocol with logarithmic-size range proofs
 
-**Next Target:** Strengthen statistical distribution tests, advanced range proof implementation, and performance regression tracking.
+**Next Target:** Statistical distribution tests, performance regression tracking, and extended Bulletproofs optimizations.
 
 ---
 
