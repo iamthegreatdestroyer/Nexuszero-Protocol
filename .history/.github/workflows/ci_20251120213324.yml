@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  node-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies (node example)
+        working-directory: examples/node-app
+        run: |
+          npm ci
+      - name: Start node server
+        working-directory: examples/node-app
+        run: |
+          npm start &
+          sleep 2
+      - name: Smoke test node server
+        run: |
+          curl --retry 3 --retry-connrefused --max-time 10 http://localhost:3000 | grep -q "NexusZero Protocol - Node Example"
+
+  python-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install dependencies (python example)
+        working-directory: examples/python-app
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+      - name: Start python server
+        working-directory: examples/python-app
+        run: |
+          python app.py &
+          sleep 2
+      - name: Smoke test python server
+        run: |
+          curl --retry 3 --retry-connrefused --max-time 10 http://localhost:5000 | grep -q "NexusZero Protocol - Python Example"

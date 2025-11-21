@@ -1,0 +1,21 @@
+name: Init Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate-init:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+      - name: Run init script (dry-run)
+        run: |
+          pwsh -NoProfile -NonInteractive -File ./scripts/init-project.ps1 -DryRun -ProjectType both
+      - name: Check env file created (dry-run should not create files)
+        run: |
+          if [ -f .env.local ]; then echo "ENV local exists" && exit 1; else echo "ENV local not present (expected)"; fi

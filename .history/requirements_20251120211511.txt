@@ -1,0 +1,2 @@
+# Minimal requirements for example Python app
+flask>=2.0
