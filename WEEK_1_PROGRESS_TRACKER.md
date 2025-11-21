@@ -262,10 +262,10 @@ OVERALL:                                 [█████████▱] 90%
 - [x] **Task 4.1.35** - Add LWE error distribution statistical tests ✅
 - [x] **Task 4.1.36** - Add selector edge cases (extreme constraints, boundary primes) ✅
 - [x] **Task 4.1.37** - Add security estimation boundary tests ✅
-   - [x] **Task 4.1.38** - Analyze remaining uncovered lines in selector.rs and lwe.rs ✅
-   - [x] **Task 4.1.39** - Add targeted tests for uncovered branches/error paths (LWE: 3 tests, selector: 10 tests) ✅
-   - [x] **Task 4.1.40** - Re-run coverage achieving 89.45% ✅
-      **Progress:** 34 / 40 tasks (85%) - Coverage pushed to 89.45% (+10.33% total from baseline)!
+  - [x] **Task 4.1.38** - Analyze remaining uncovered lines in selector.rs and lwe.rs ✅
+  - [x] **Task 4.1.39** - Add targeted tests for uncovered branches/error paths (LWE: 3 tests, selector: 10 tests) ✅
+  - [x] **Task 4.1.40** - Re-run coverage achieving 89.45% ✅
+        **Progress:** 34 / 40 tasks (85%) - Coverage pushed to 89.45% (+10.33% total from baseline)!
 
 ### Coverage Summary (Tarpaulin Report - Final Push to ≥90%)
 
@@ -291,15 +291,9 @@ OVERALL:                                 [█████████▱] 90%
 2. ✅ Added witness mismatch tests (discrete log, preimage, range) → **+13.79% coverage**
 3. ✅ Added proof tampering tests (commitment/response/challenge, Blake3, truncated) → **+5.08% coverage**
 
-**Wave 2: Edge Case & Statistical Tests (83.27% → 87.13%, +3.86%)**
-4. ✅ Added LWE statistical tests (error distribution, magnitude bounds, invalid params, encryption randomness) → **+10.91% coverage** → 92.7%
-5. ✅ Added selector edge cases (extreme dimensions, boundary modulus, ratio/sigma extremes, prime generation, ring-LWE) → **+10.65% coverage** → 83.4%
-6. ✅ Added security boundary tests (level progression, validation edge cases, proof size/timing estimates) → **+21.43% coverage** → **100%** ✨
+**Wave 2: Edge Case & Statistical Tests (83.27% → 87.13%, +3.86%)** 4. ✅ Added LWE statistical tests (error distribution, magnitude bounds, invalid params, encryption randomness) → **+10.91% coverage** → 92.7% 5. ✅ Added selector edge cases (extreme dimensions, boundary modulus, ratio/sigma extremes, prime generation, ring-LWE) → **+10.65% coverage** → 83.4% 6. ✅ Added security boundary tests (level progression, validation edge cases, proof size/timing estimates) → **+21.43% coverage** → **100%** ✨
 
-**Wave 3: Error Path & Validation Tests (87.13% → 89.45%, +2.32%)**
-7. ✅ Added LWE edge case tests (keygen with various params, decrypt edge values, small modulus) → kept at 92.7%
-8. ✅ Added selector error path tests (dimension too small, ring-LWE min, modulus < dimension, prime bit length errors, security estimation edge cases, all constraints) → **+10.7% coverage** → 94.1%
-9. ✅ Added selector power-of-2 rounding tests (rounding up/down for Ring-LWE dimensions)
+**Wave 3: Error Path & Validation Tests (87.13% → 89.45%, +2.32%)** 7. ✅ Added LWE edge case tests (keygen with various params, decrypt edge values, small modulus) → kept at 92.7% 8. ✅ Added selector error path tests (dimension too small, ring-LWE min, modulus < dimension, prime bit length errors, security estimation edge cases, all constraints) → **+10.7% coverage** → 94.1% 9. ✅ Added selector power-of-2 rounding tests (rounding up/down for Ring-LWE dimensions)
 
 **Overall Progress:** 78.12% → 89.45% (**+10.33%** total, +31 tests added across 3 waves)
 **Test Count:** 60 → 91 unit tests (+31 new tests, 100% passing)
@@ -311,6 +305,7 @@ OVERALL:                                 [█████████▱] 90%
 **Gap: 0.55%** (only 4-5 more lines needed!)
 
 **Key Improvements:**
+
 - security.rs: **100%** ✨ (perfect coverage)
 - selector.rs: **94.1%** (+21.3% total)
 - lwe.rs: **92.7%** (+10.91%)

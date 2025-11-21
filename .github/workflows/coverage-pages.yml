@@ -1,0 +1,183 @@
+name: Deploy Coverage to GitHub Pages
+
+on:
+  # Run after nightly coverage workflow completes
+  workflow_run:
+    workflows: ["Nightly Coverage"]
+    types:
+      - completed
+  # Allow manual trigger
+  workflow_dispatch:
+  # Run on push to main with coverage changes
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/coverage/**'
+      - '.github/workflows/coverage-pages.yml'
+
+# Sets permissions for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Generate coverage HTML reports
+  generate-coverage:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Generate HTML coverage report
+        shell: pwsh
+        run: |
+          Set-Location nexuszero-crypto
+          cargo tarpaulin --out Html --output-dir ../docs/coverage/html --ignore-tests
+
+      - name: Create index page
+        shell: pwsh
+        run: |
+          $indexContent = @"
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Nexuszero-Protocol Coverage Reports</title>
+              <style>
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                      max-width: 1200px;
+                      margin: 0 auto;
+                      padding: 2rem;
+                      background: #f5f5f5;
+                  }
+                  .header {
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                      padding: 2rem;
+                      border-radius: 10px;
+                      margin-bottom: 2rem;
+                  }
+                  h1 { margin: 0 0 0.5rem 0; }
+                  .subtitle { opacity: 0.9; margin: 0; }
+                  .card {
+                      background: white;
+                      padding: 1.5rem;
+                      border-radius: 8px;
+                      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                      margin-bottom: 1rem;
+                  }
+                  .card h2 { margin-top: 0; color: #333; }
+                  a {
+                      color: #667eea;
+                      text-decoration: none;
+                      font-weight: 500;
+                  }
+                  a:hover { text-decoration: underline; }
+                  .coverage-badge {
+                      display: inline-block;
+                      margin: 1rem 0;
+                  }
+                  .footer {
+                      text-align: center;
+                      color: #666;
+                      margin-top: 2rem;
+                      font-size: 0.9rem;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>🔒 Nexuszero-Protocol</h1>
+                  <p class="subtitle">Post-Quantum Zero-Knowledge Proof System - Coverage Reports</p>
+              </div>
+              
+              <div class="card">
+                  <h2>📊 Latest Coverage Report</h2>
+                  <div class="coverage-badge">
+                      <img src="badge.svg" alt="Coverage Badge">
+                  </div>
+                  <p><a href="html/index.html">View Detailed HTML Coverage Report →</a></p>
+              </div>
+              
+              <div class="card">
+                  <h2>📈 Coverage History</h2>
+                  <p><a href="HISTORY.md">View Coverage Trend History →</a></p>
+              </div>
+              
+              <div class="card">
+                  <h2>🔗 Quick Links</h2>
+                  <ul>
+                      <li><a href="https://github.com/iamthegreatdestroyer/Nexuszero-Protocol">GitHub Repository</a></li>
+                      <li><a href="https://github.com/iamthegreatdestroyer/Nexuszero-Protocol/actions">CI/CD Actions</a></li>
+                      <li><a href="https://github.com/iamthegreatdestroyer/Nexuszero-Protocol/blob/main/README.md">Project README</a></li>
+                  </ul>
+              </div>
+              
+              <div class="footer">
+                  <p>Generated automatically by GitHub Actions • Updated nightly at 2 AM UTC</p>
+                  <p>© 2025 Nexuszero-Protocol • Post-Quantum Cryptography</p>
+              </div>
+          </body>
+          </html>
+          "@
+          
+          New-Item -ItemType Directory -Force -Path docs/coverage
+          Set-Content -Path docs/coverage/index.html -Value $indexContent
+          Write-Host "Created index page"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: docs/coverage/
+          retention-days: 90
+
+  # Deploy to GitHub Pages
+  deploy:
+    needs: generate-coverage
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload to Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./coverage
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -197,7 +197,8 @@ mod tests {
 
     #[test]
     fn test_lwe_encrypt_decrypt() {
-        let params = LWEParameters::new(32, 64, 97, 2.0);
+        // Use a slightly larger prime-ish modulus to reduce boundary decryption errors
+        let params = LWEParameters::new(32, 64, 257, 2.0);
         let mut rng = rand::thread_rng();
 
         let (sk, pk) = keygen(&params, &mut rng).unwrap();
@@ -329,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_encryption_produces_different_ciphertexts() {
-        let params = LWEParameters::new(32, 64, 97, 2.0);
+        let params = LWEParameters::new(32, 64, 257, 2.0);
         let mut rng = rand::thread_rng();
         let (sk, pk) = keygen(&params, &mut rng).unwrap();
         
