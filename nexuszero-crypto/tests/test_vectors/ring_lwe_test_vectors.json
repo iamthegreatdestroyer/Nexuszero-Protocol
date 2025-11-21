@@ -1,0 +1,72 @@
+{
+  "test_suite": "Ring-LWE Test Vectors",
+  "version": "1.0",
+  "description": "Test vectors for Ring-LWE with polynomial multiplication",
+  "vectors": [
+    {
+      "name": "Ring-LWE-128-Polynomial-Operations",
+      "security_level": 128,
+      "parameters": {
+        "degree": 256,
+        "modulus": 7681,
+        "sigma": 3.2
+      },
+      "polynomial_tests": [
+        {
+          "operation": "addition",
+          "poly_a": [1, 2, 3, 0, 0],
+          "poly_b": [4, 5, 6, 0, 0],
+          "expected": [5, 7, 9, 0, 0],
+          "description": "Simple polynomial addition"
+        },
+        {
+          "operation": "multiplication",
+          "poly_a": [1, 1, 0, 0],
+          "poly_b": [1, 1, 0, 0],
+          "expected_schoolbook": [1, 2, 1, 0],
+          "description": "Schoolbook multiplication (x+1)^2"
+        },
+        {
+          "operation": "ntt_forward",
+          "input": [1, 0, 0, 0],
+          "primitive_root": 3,
+          "expected_ntt": "deterministic_ntt_output",
+          "description": "NTT of constant polynomial"
+        }
+      ],
+      "encryption_tests": [
+        {
+          "message": [1, 0, 0, 0],
+          "encryption_seed": "test_seed_128",
+          "expected_properties": {
+            "c1_degree": 255,
+            "c2_degree": 255,
+            "decryption_success": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ring-LWE-256-NTT-Multiplication",
+      "security_level": 256,
+      "parameters": {
+        "degree": 512,
+        "modulus": 12289,
+        "sigma": 4.2
+      },
+      "ntt_tests": [
+        {
+          "test": "ntt_invertibility",
+          "input_polynomial": [1, 2, 3, 4, 5],
+          "description": "Verify NTT(INTT(x)) = x"
+        },
+        {
+          "test": "ntt_multiplication_correctness",
+          "poly_a": [1, 1],
+          "poly_b": [1, 0, 1],
+          "description": "Verify NTT mult equals schoolbook"
+        }
+      ]
+    }
+  ]
+}

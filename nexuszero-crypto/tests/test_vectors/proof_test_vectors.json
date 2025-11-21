@@ -1,0 +1,103 @@
+{
+  "test_suite": "Zero-Knowledge Proof Test Vectors",
+  "version": "1.0",
+  "description": "Test vectors for Schnorr-style zero-knowledge proofs",
+  "vectors": [
+    {
+      "name": "Discrete-Log-Proof-Basic",
+      "proof_type": "discrete_log",
+      "parameters": {
+        "generator": "0202020202020202020202020202020202020202020202020202020202020202",
+        "modulus": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "secret": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+        "public_value": "computed_from_g^secret_mod_p"
+      },
+      "proof_components": {
+        "commitment_seed": "random_blinding_seed",
+        "challenge": "fiat_shamir_hash_output",
+        "response": "r_plus_c_times_secret"
+      },
+      "verification": {
+        "expected_result": "valid",
+        "equation": "g^s == t * h^c (mod p)"
+      }
+    },
+    {
+      "name": "Preimage-Proof-SHA3",
+      "proof_type": "preimage",
+      "hash_function": "SHA3-256",
+      "parameters": {
+        "preimage": "secret_message_bytes",
+        "hash_output": "sha3_256_of_preimage"
+      },
+      "proof_components": {
+        "commitment": "hash_of_random_blinding",
+        "challenge": "fiat_shamir_challenge",
+        "response": "blinding_xor_challenge"
+      },
+      "verification": {
+        "expected_result": "valid",
+        "check": "recompute_commitment_matches"
+      }
+    },
+    {
+      "name": "Proof-Soundness-Test",
+      "description": "Invalid proofs should be rejected",
+      "test_cases": [
+        {
+          "name": "tampered_commitment",
+          "modification": "change_commitment_value",
+          "expected_result": "invalid"
+        },
+        {
+          "name": "tampered_response",
+          "modification": "change_response_value",
+          "expected_result": "invalid"
+        },
+        {
+          "name": "wrong_secret",
+          "modification": "use_different_secret",
+          "expected_result": "proof_generation_fails"
+        },
+        {
+          "name": "replay_attack",
+          "modification": "reuse_same_proof",
+          "expected_result": "detectable_via_challenge"
+        }
+      ]
+    },
+    {
+      "name": "Proof-Serialization",
+      "description": "Proofs must serialize and deserialize correctly",
+      "test_cases": [
+        {
+          "proof_type": "discrete_log",
+          "serialization_format": "bincode",
+          "expected_behavior": "roundtrip_preserves_validity"
+        },
+        {
+          "proof_type": "preimage",
+          "serialization_format": "bincode",
+          "expected_behavior": "roundtrip_preserves_validity"
+        }
+      ]
+    }
+  ],
+  "security_properties": [
+    {
+      "property": "completeness",
+      "description": "Valid proofs always verify",
+      "test": "generate_1000_valid_proofs_all_verify"
+    },
+    {
+      "property": "soundness",
+      "description": "Invalid proofs always reject",
+      "test": "tamper_with_100_proofs_all_reject"
+    },
+    {
+      "property": "zero_knowledge",
+      "description": "Proof reveals no information about witness",
+      "test": "statistical_analysis_shows_uniformity"
+    }
+  ]
+}
