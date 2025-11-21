@@ -212,6 +212,55 @@ mod tests {
         let decrypted_true = decrypt(&sk, &ct_true, &params).unwrap();
         assert_eq!(decrypted_true, true);
     }
+    
+    #[test]
+    fn test_keygen_with_various_parameters() {
+        let mut rng = rand::thread_rng();
+        
+        // Test with minimal parameters
+        let params = LWEParameters::new(8, 16, 11, 1.0);
+        let result = keygen(&params, &mut rng);
+        assert!(result.is_ok());
+        
+        // Test with large parameters
+        let params = LWEParameters::new(512, 1024, 40961, 5.0);
+        let result = keygen(&params, &mut rng);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_decrypt_edge_values() {
+        // Test decryption with reliable parameters
+        let params = LWEParameters::new(64, 128, 257, 2.0);
+        let mut rng = rand::thread_rng();
+        let (sk, pk) = keygen(&params, &mut rng).unwrap();
+        
+        // Test multiple encryptions and decryptions
+        for _ in 0..10 {
+            let ct_false = encrypt(&pk, false, &params, &mut rng).unwrap();
+            let ct_true = encrypt(&pk, true, &params, &mut rng).unwrap();
+            
+            assert_eq!(decrypt(&sk, &ct_false, &params).unwrap(), false);
+            assert_eq!(decrypt(&sk, &ct_true, &params).unwrap(), true);
+        }
+    }
+
+    #[test]
+    fn test_lwe_with_small_modulus() {
+        // Test with small but secure modulus
+        let params = LWEParameters::new(32, 64, 127, 1.5);
+        let mut rng = rand::thread_rng();
+        
+        let (sk, pk) = keygen(&params, &mut rng).unwrap();
+        let ct = encrypt(&pk, true, &params, &mut rng).unwrap();
+        let decrypted = decrypt(&sk, &ct, &params).unwrap();
+        assert_eq!(decrypted, true);
+        
+        // Test false as well
+        let ct_false = encrypt(&pk, false, &params, &mut rng).unwrap();
+        let decrypted_false = decrypt(&sk, &ct_false, &params).unwrap();
+        assert_eq!(decrypted_false, false);
+    }
 
     #[test]
     fn test_error_distribution_statistical_properties() {

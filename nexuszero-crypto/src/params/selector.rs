@@ -682,4 +682,132 @@ mod tests {
         assert!(params.n.is_power_of_two());
         assert!(params.n >= 512); // Next power of 2 >= 300
     }
+
+        #[test]
+        fn test_dimension_too_small_error() {
+            // Test that dimensions below security threshold fail
+            let selector = ParameterSelector::new()
+                .max_dimension(32); // Below minimum 64
+        
+            let result = selector.build_lwe();
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_ring_lwe_dimension_too_small_error() {
+            // Ring-LWE requires min 128
+            let selector = ParameterSelector::new()
+                .max_dimension(64); // Below Ring-LWE minimum
+        
+            let result = selector.build_ring_lwe();
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_modulus_smaller_than_dimension_error() {
+            // Modulus must be at least as large as dimension
+            let selector = ParameterSelector::new()
+                .min_dimension(1000)
+                .max_modulus(500); // q < n
+        
+            let result = selector.build_lwe();
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_generate_prime_bit_length_too_large() {
+            // Test that requesting 64+ bit primes fails
+            let result = generate_prime(64);
+            assert!(result.is_err());
+        
+            let result = generate_prime(100);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_find_prime_extreme_range() {
+            // Test finding prime in challenging ranges
+            let prime = find_nearest_prime(2).unwrap();
+            assert_eq!(prime, 2);
+        
+            let prime = find_nearest_prime(3).unwrap();
+            assert_eq!(prime, 3);
+        
+            // Large number
+            let prime = find_nearest_prime(65000).unwrap();
+            assert!(is_prime_miller_rabin(prime, 20));
+            assert!((prime as i64 - 65000).abs() < 1000);
+        }
+
+        #[test]
+        fn test_security_estimation_edge_cases() {
+            // Very small parameters
+            let security = ParameterSelector::estimate_security(64, 100, 1.0);
+            assert!(security >= 64); // Should clamp to minimum
+        
+            // Very large parameters
+            let security = ParameterSelector::estimate_security(8192, 100000, 2.0);
+            assert!(security <= 512); // Should clamp to maximum
+        
+            // Large sigma impact
+            let security = ParameterSelector::estimate_security(256, 12289, 10.0);
+            assert!(security > 0);
+        }
+
+        #[test]
+        fn test_selector_all_security_levels() {
+            // Test each security level produces valid parameters
+            for level in [SecurityLevel::Bit128, SecurityLevel::Bit192, SecurityLevel::Bit256] {
+                let selector = ParameterSelector::new().target_security(level);
+            
+                let lwe_params = selector.clone().build_lwe().unwrap();
+                assert!(lwe_params.validate().is_ok());
+            
+                let ring_params = selector.build_ring_lwe().unwrap();
+                assert!(ring_params.validate().is_ok());
+            }
+        }
+
+        #[test]
+        fn test_selector_with_all_constraints() {
+            // Test with maximum constraints specified
+            let selector = ParameterSelector::new()
+                .target_security(SecurityLevel::Bit192)
+                .min_dimension(256)
+                .max_dimension(512)
+                .min_modulus(10000)
+                .max_modulus(20000)
+                .prefer_prime_modulus(true)
+                .custom_sigma(3.5)
+                .custom_ratio(1.5);
+        
+            let params = selector.build_lwe().unwrap();
+            assert!(params.n >= 256 && params.n <= 512);
+            assert!(params.q >= 10000 && params.q <= 20000);
+            assert!(is_prime_miller_rabin(params.q, 20));
+            assert!((params.sigma - 3.5).abs() < 0.01);
+        }
+
+        #[test]
+        fn test_power_of_2_rounding_down() {
+            // Test that max_dimension rounds down to power of 2
+            let selector = ParameterSelector::new()
+                .max_dimension(1500); // Should round down to 1024
+        
+            let n = selector.select_power_of_2_dimension(SecurityLevel::Bit192).unwrap();
+            assert_eq!(n, 1024);
+            assert!(n.is_power_of_two());
+        }
+
+        #[test]
+        fn test_power_of_2_rounding_up() {
+            // Test that min_dimension rounds up to power of 2
+            let selector = ParameterSelector::new()
+                .min_dimension(700) // Should round up to 1024
+                .max_dimension(2000);
+        
+            let n = selector.select_power_of_2_dimension(SecurityLevel::Bit192).unwrap();
+            assert_eq!(n, 1024);
+            assert!(n.is_power_of_two());
+        }
 }
