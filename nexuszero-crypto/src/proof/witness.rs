@@ -227,4 +227,47 @@ mod tests {
         let witness = Witness::preimage(vec![4, 5, 6]);
         assert!(matches!(witness.witness_type(), &WitnessType::Preimage));
     }
+
+    #[test]
+    fn test_discrete_log_witness_mismatch() {
+        use num_bigint::BigUint;
+        let generator = vec![2u8;32];
+        let secret = vec![5u8;32];
+        // public_value computed with different secret to force mismatch
+        let wrong_secret = vec![7u8;32];
+        let modulus_bytes = vec![0xFF;32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let wrong_big = BigUint::from_bytes_be(&wrong_secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&wrong_big, &mod_big).to_bytes_be();
+        let statement = StatementBuilder::new()
+            .discrete_log(generator.clone(), public_value)
+            .build()
+            .unwrap();
+        let witness = Witness::discrete_log(secret);
+        assert!(!witness.satisfies_statement(&statement));
+    }
+
+    #[test]
+    fn test_preimage_witness_mismatch() {
+        use sha3::{Digest, Sha3_256};
+        let preimage = b"correct".to_vec();
+        let mut hasher = Sha3_256::new(); hasher.update(&preimage); let hash = hasher.finalize().to_vec();
+        let statement = StatementBuilder::new()
+            .preimage(HashFunction::SHA3_256, hash)
+            .build()
+            .unwrap();
+        let wrong_witness = Witness::preimage(b"wrong".to_vec());
+        assert!(!wrong_witness.satisfies_statement(&statement));
+    }
+
+    #[test]
+    fn test_range_witness_out_of_range() {
+        let statement = StatementBuilder::new()
+            .range(10, 20, vec![0u8;32])
+            .build()
+            .unwrap();
+        let witness = Witness::range(25, vec![1,2,3]);
+        assert!(!witness.satisfies_statement(&statement));
+    }
 }

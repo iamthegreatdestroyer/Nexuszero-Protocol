@@ -837,4 +837,105 @@ mod tests {
         assert!(proof.metadata.size > 0);
         assert_eq!(proof.size(), proof.metadata.size);
     }
+
+    #[test]
+    fn test_proof_validation_errors() {
+        let bad_proof_empty = Proof { commitments: vec![], challenge: Challenge { value: [0u8;32] }, responses: vec![Response{ value: vec![1]}], metadata: ProofMetadata{version:1,timestamp:0,size:0} };        
+        assert!(bad_proof_empty.validate().is_err());
+        let bad_proof_no_responses = Proof { commitments: vec![Commitment{ value: vec![1]}], challenge: Challenge { value: [0u8;32] }, responses: vec![], metadata: ProofMetadata{version:1,timestamp:0,size:0} };        
+        assert!(bad_proof_no_responses.validate().is_err());
+    }
+
+    #[test]
+    fn test_discrete_log_commitment_tamper_failure() {
+        use crate::proof::statement::StatementBuilder; use num_bigint::BigUint;
+        let generator = vec![2u8;32]; let secret = vec![42u8;32];
+        let modulus_bytes = vec![0xFF;32];
+        let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
+        let witness = Witness::discrete_log(secret);
+        let mut proof = prove(&statement,&witness).unwrap();
+        // tamper commitment (will cause challenge mismatch rather than equation failure)
+        proof.commitments[0].value[0] ^= 0xAA; // flip byte
+        let result = verify(&statement,&proof);
+        assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Challenge")));
+    }
+
+    #[test]
+    fn test_discrete_log_response_tamper_failure() {
+        use crate::proof::statement::StatementBuilder; use num_bigint::BigUint;
+        let generator = vec![2u8;32]; let secret = vec![42u8;32];
+        let modulus_bytes = vec![0xFF;32];
+        let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
+        let witness = Witness::discrete_log(secret);
+        let mut proof = prove(&statement,&witness).unwrap();
+        // Tamper response drastically (zero out bytes to force equation failure)
+        let len = proof.responses[0].value.len();
+        proof.responses[0].value = vec![0u8; len];
+        let result = verify(&statement,&proof);
+        assert!(result.is_err());
+        if let Err(CryptoError::VerificationError(msg)) = result { assert!(msg.contains("Discrete log") || msg.contains("verification failed")); } else { panic!("Expected VerificationError"); }
+    }
+
+    #[test]
+    fn test_preimage_response_tamper_commitment_failure() {
+        use crate::proof::statement::{HashFunction, StatementBuilder}; use sha3::{Digest,Sha3_256};
+        let preimage = b"secret msg".to_vec(); let mut hasher = Sha3_256::new(); hasher.update(&preimage); let hash = hasher.finalize().to_vec();
+        let statement = StatementBuilder::new().preimage(HashFunction::SHA3_256, hash).build().unwrap();
+        let witness = Witness::preimage(preimage);
+        let mut proof = prove(&statement,&witness).unwrap();
+        // Tamper response so recomputed blinding mismatches commitment
+        proof.responses[0].value[0] ^= 0xAA;
+        let result = verify(&statement,&proof);
+        assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("commitment")));
+    }
+
+    #[test]
+    fn test_truncated_proof_deserialization_failure() {
+        use crate::proof::statement::StatementBuilder; use num_bigint::BigUint;
+        let generator = vec![2u8;32]; let secret = vec![42u8;32];
+        let modulus_bytes = vec![0xFF;32]; let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes); let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
+        let witness = Witness::discrete_log(secret);
+        let proof = prove(&statement,&witness).unwrap();
+        let bytes = proof.to_bytes().unwrap();
+        let truncated = &bytes[..bytes.len()/4];
+        let result = Proof::from_bytes(truncated);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_commitment_reordering_challenge_mismatch() {
+        use crate::proof::statement::StatementBuilder; use num_bigint::BigUint;
+        let generator = vec![2u8;32]; let secret = vec![42u8;32];
+        let modulus_bytes = vec![0xFF;32]; let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes); let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
+        let witness = Witness::discrete_log(secret);
+        let mut proof = prove(&statement,&witness).unwrap();
+        // Duplicate commitment causing challenge mismatch
+        let first = proof.commitments[0].clone();
+        proof.commitments.push(first); // modifies commitment list
+        let result = verify(&statement,&proof);
+        assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Challenge")));
+    }
+
+    #[test]
+    fn test_manual_blake3_preimage_verification_failure() {
+        use crate::proof::statement::{StatementBuilder, HashFunction};
+        // Build statement with Blake3 (unsupported in verify_preimage_proof)
+        let statement = StatementBuilder::new()
+            .preimage(HashFunction::Blake3, vec![1,2,3,4])
+            .build()
+            .unwrap();
+        // Manually fabricate a proof with one commitment/response and matching challenge
+        let commitments = vec![Commitment { value: vec![0xAA; 32] }];
+        let challenge = compute_challenge(&statement,&commitments).unwrap();
+        let responses = vec![Response { value: vec![0xBB; 32] }];
+        let proof = Proof { commitments, challenge, responses, metadata: ProofMetadata { version:1, timestamp:0, size:0 } };
+        let result = verify(&statement,&proof);
+        assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Blake3")));
+    }
 }
