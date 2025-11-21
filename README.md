@@ -3,7 +3,7 @@
 ![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
 ![Sessions](https://img.shields.io/badge/Sessions%20Complete-4%2F6-blue)
 ![Documentation](https://img.shields.io/badge/Documentation-Complete-success)
-![Coverage](https://img.shields.io/badge/Coverage-83.27%25-yellowgreen)
+![Coverage](https://img.shields.io/badge/Coverage-87.13%25-yellowgreen)
 ![License](https://img.shields.io/badge/License-MIT-informational)
 
 > A comprehensive VS Code workspace configuration system with automated terminal environment setup, integrated with Claude AI and GitHub automation for zero-friction developer onboarding.
@@ -330,6 +330,7 @@ Session 4 checkpoint with:
 - Test vector ingestion + execution (`tests/test_vector_runner.rs`)
 
 **Recent Improvements:**
+
 - Statement module: 48.1% → 90.7% (+42.59%) via validation tests
 - Witness module: 63.8% → 77.6% (+13.79%) via mismatch tests
 - Proof module: 75.1% → 80.2% (+5.08%) via tampering tests
