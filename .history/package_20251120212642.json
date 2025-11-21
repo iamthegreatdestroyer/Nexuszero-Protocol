@@ -1,0 +1,11 @@
+{
+  "name": "nexuszero-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node examples/node-app/index.js",
+    "start": "node examples/node-app/index.js",
+    "test": "echo \"No tests configured\" && exit 0"
+  },
+  "license": "MIT"
+}
