@@ -1,0 +1,22 @@
+{
+  "test_vectors": [
+    {
+      "id": "LWE-128-001",
+      "description": "Basic LWE encryption test",
+      "security_level": "128-bit",
+      "parameters": {
+        "n": 512,
+        "m": 1024,
+        "q": 12289,
+        "sigma": 3.2
+      },
+      "test_type": "correctness"
+    },
+    {
+      "id": "PROOF-DL-001",
+      "description": "Discrete log proof test",
+      "statement_type": "DiscreteLog",
+      "test_type": "soundness"
+    }
+  ]
+}

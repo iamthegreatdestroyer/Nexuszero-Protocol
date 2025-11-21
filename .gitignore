@@ -6,3 +6,17 @@
 __pycache__/
 node_modules/
 .DS_Store
+
+# VSCode history
+.history/
+
+# Rust
+target/
+Cargo.lock
+*.pdb
+
+# Python
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
