@@ -1,9 +1,10 @@
 # Nexuszero Protocol
 
-[![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)]()
-[![Sessions](https://img.shields.io/badge/Sessions%20Complete-4%2F6-blue)]()
-[![Documentation](https://img.shields.io/badge/Documentation-Complete-success)]()
-[![License](https://img.shields.io/badge/License-MIT-informational)]()
+![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
+![Sessions](https://img.shields.io/badge/Sessions%20Complete-4%2F6-blue)
+![Documentation](https://img.shields.io/badge/Documentation-Complete-success)
+![Coverage](https://img.shields.io/badge/Coverage-83.27%25-yellowgreen)
+![License](https://img.shields.io/badge/License-MIT-informational)
 
 > A comprehensive VS Code workspace configuration system with automated terminal environment setup, integrated with Claude AI and GitHub automation for zero-friction developer onboarding.
 
@@ -311,6 +312,29 @@ Session 4 checkpoint with:
 - How to continue
 - Implementation status
 - Next steps for Session 5
+
+---
+
+## 🧪 Testing & Quality
+
+**Current Coverage:** 83.27% (Tarpaulin, +5.15% from 78.12%) – target ≥90%.
+
+**Test Assets:** Structured JSON test vectors (LWE, Ring-LWE, Proof) using unified schema documented in `docs/TEST_VECTORS_SCHEMA.md`.
+
+**Implemented Suites:**
+
+- Unit tests (encryption, polynomial ops, NTT, proofs)
+- Property-based tests (LWE, proofs)
+- Negative tests (validation, tampering, mismatches) – **60 tests passing**
+- Benchmarks (LWE encrypt, proof gen/verify)
+- Test vector ingestion + execution (`tests/test_vector_runner.rs`)
+
+**Recent Improvements:**
+- Statement module: 48.1% → 90.7% (+42.59%) via validation tests
+- Witness module: 63.8% → 77.6% (+13.79%) via mismatch tests
+- Proof module: 75.1% → 80.2% (+5.08%) via tampering tests
+
+**Next Target:** Statistical distribution tests, selector edge cases, security boundary tests to reach ≥90%.
 
 ---
 

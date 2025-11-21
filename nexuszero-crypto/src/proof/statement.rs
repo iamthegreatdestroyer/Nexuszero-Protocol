@@ -209,4 +209,53 @@ mod tests {
 
         assert_eq!(stmt.version, recovered.version);
     }
+
+    #[test]
+    fn test_invalid_discrete_log_statement() {
+        let result = StatementBuilder::new()
+            .discrete_log(vec![], vec![1,2,3])
+            .build();
+        assert!(result.is_err());
+        let result2 = StatementBuilder::new()
+            .discrete_log(vec![1,2,3], vec![])
+            .build();
+        assert!(result2.is_err());
+    }
+
+    #[test]
+    fn test_invalid_preimage_statement_empty_hash() {
+        let result = StatementBuilder::new()
+            .preimage(HashFunction::SHA3_256, vec![])
+            .build();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_range_statement_min_greater_equal_max() {
+        let result = StatementBuilder::new()
+            .range(10, 10, vec![0u8;32])
+            .build();
+        assert!(result.is_err());
+        let result2 = StatementBuilder::new()
+            .range(20, 10, vec![0u8;32])
+            .build();
+        assert!(result2.is_err());
+    }
+
+    #[test]
+    fn test_builder_missing_type_rejection() {
+        let builder = StatementBuilder::new();
+        let result = builder.build();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_statement_hash_length() {
+        let stmt = StatementBuilder::new()
+            .discrete_log(vec![1,2,3], vec![4,5,6])
+            .build()
+            .unwrap();
+        let hash = stmt.hash().unwrap();
+        assert_eq!(hash.len(), 32);
+    }
 }
