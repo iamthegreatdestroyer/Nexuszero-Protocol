@@ -104,13 +104,37 @@ impl Witness {
                 computed == public_big
             }
             (
-                SecretData::Range { value, .. },
+                SecretData::Range { value, blinding },
                 StatementType::Range {
                     min,
                     max,
-                    commitment: _,
+                    commitment,
                 },
-            ) => *value >= *min && *value <= *max,
+            ) => {
+                // Check value is in range
+                if *value < *min || *value > *max {
+                    return false;
+                }
+                // Verify commitment matches C = g^v * h^r
+                use num_bigint::BigUint;
+                let modulus_bytes = vec![0xFF; 32];
+                let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+                
+                let gen_g = vec![2u8; 32];
+                let gen_h = vec![3u8; 32];
+                
+                let g_big = BigUint::from_bytes_be(&gen_g);
+                let h_big = BigUint::from_bytes_be(&gen_h);
+                let v_big = BigUint::from(*value);
+                let r_big = BigUint::from_bytes_be(blinding);
+                
+                let g_v = g_big.modpow(&v_big, &mod_big);
+                let h_r = h_big.modpow(&r_big, &mod_big);
+                let computed = (g_v * h_r) % &mod_big;
+                
+                let commitment_big = BigUint::from_bytes_be(commitment);
+                computed == commitment_big
+            }
             _ => false,
         }
     }
@@ -301,12 +325,40 @@ mod tests {
 
     #[test]
     fn test_range_witness_boundary_values() {
-        // Range [10, 20]; test value at min and max boundaries
-        let statement = StatementBuilder::new().range(10, 20, vec![0u8;32]).build().unwrap();
-        let min_witness = Witness::range(10, vec![0xAA;16]);
-        let max_witness = Witness::range(20, vec![0xBB;16]);
-        assert!(min_witness.satisfies_statement(&statement));
-        assert!(max_witness.satisfies_statement(&statement));
+        use num_bigint::BigUint;
+        // Range [10, 20]; test value at min and max boundaries with proper commitments
+        let modulus_bytes = vec![0xFF; 32];
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let gen_g = vec![2u8; 32];
+        let gen_h = vec![3u8; 32];
+        let g_big = BigUint::from_bytes_be(&gen_g);
+        let h_big = BigUint::from_bytes_be(&gen_h);
+        
+        // Test min boundary (10)
+        let min_value = 10u64;
+        let min_blinding = vec![0xAA; 16];
+        let v_big = BigUint::from(min_value);
+        let r_big = BigUint::from_bytes_be(&min_blinding);
+        let g_v = g_big.modpow(&v_big, &mod_big);
+        let h_r = h_big.modpow(&r_big, &mod_big);
+        let min_commitment = ((g_v * h_r) % &mod_big).to_bytes_be();
+        
+        let min_statement = StatementBuilder::new().range(10, 20, min_commitment).build().unwrap();
+        let min_witness = Witness::range(min_value, min_blinding);
+        assert!(min_witness.satisfies_statement(&min_statement));
+        
+        // Test max boundary (20)
+        let max_value = 20u64;
+        let max_blinding = vec![0xBB; 16];
+        let v_big = BigUint::from(max_value);
+        let r_big = BigUint::from_bytes_be(&max_blinding);
+        let g_v = g_big.modpow(&v_big, &mod_big);
+        let h_r = h_big.modpow(&r_big, &mod_big);
+        let max_commitment = ((g_v * h_r) % &mod_big).to_bytes_be();
+        
+        let max_statement = StatementBuilder::new().range(10, 20, max_commitment).build().unwrap();
+        let max_witness = Witness::range(max_value, max_blinding);
+        assert!(max_witness.satisfies_statement(&max_statement));
     }
 
     #[test]
