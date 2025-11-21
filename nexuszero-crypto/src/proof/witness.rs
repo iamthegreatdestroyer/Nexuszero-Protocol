@@ -270,4 +270,49 @@ mod tests {
         let witness = Witness::range(25, vec![1,2,3]);
         assert!(!witness.satisfies_statement(&statement));
     }
+
+    // ===================== Added Witness Corner Case Tests (Wave 4) =====================
+
+    #[test]
+    fn test_cross_type_witness_mismatch() {
+        use num_bigint::BigUint;
+        // Discrete log statement
+        let generator = vec![2u8;32];
+        let secret = vec![3u8;32];
+        let modulus_bytes = vec![0xFF;32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let dl_statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
+        // Preimage witness used against discrete log statement (should fail)
+        let preimage_witness = Witness::preimage(b"not a discrete log".to_vec());
+        assert!(!preimage_witness.satisfies_statement(&dl_statement));
+
+        // Preimage statement
+        use sha3::{Digest, Sha3_256};
+        let preimage = b"secret value".to_vec();
+        let mut hasher = Sha3_256::new(); hasher.update(&preimage); let hash = hasher.finalize().to_vec();
+        let preimage_statement = StatementBuilder::new().preimage(HashFunction::SHA3_256, hash).build().unwrap();
+        // Discrete log witness used against preimage statement (should fail)
+        let dl_witness = Witness::discrete_log(vec![5u8;32]);
+        assert!(!dl_witness.satisfies_statement(&preimage_statement));
+    }
+
+    #[test]
+    fn test_range_witness_boundary_values() {
+        // Range [10, 20]; test value at min and max boundaries
+        let statement = StatementBuilder::new().range(10, 20, vec![0u8;32]).build().unwrap();
+        let min_witness = Witness::range(10, vec![0xAA;16]);
+        let max_witness = Witness::range(20, vec![0xBB;16]);
+        assert!(min_witness.satisfies_statement(&statement));
+        assert!(max_witness.satisfies_statement(&statement));
+    }
+
+    #[test]
+    fn test_constant_time_eq_different_lengths() {
+        let a = vec![1,2,3];
+        let b = vec![1,2,3,4];
+        assert!(!constant_time_eq(&a,&b));
+    }
 }

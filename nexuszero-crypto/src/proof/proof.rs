@@ -938,4 +938,63 @@ mod tests {
         let result = verify(&statement,&proof);
         assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Blake3")));
     }
+
+    // ===================== Added Edge Case Verification Tests (Wave 4) =====================
+
+    #[test]
+    fn test_range_statement_verification_not_implemented() {
+        use crate::proof::statement::StatementBuilder;
+        // Build a range statement (prove value in [10,20])
+        let statement = StatementBuilder::new()
+            .range(10, 20, vec![0u8;32])
+            .build()
+            .unwrap();
+        // Fabricate a minimal proof structure (commitments/responses non-empty)
+        let commitments = vec![Commitment { value: vec![1,2,3] }];
+        let challenge = compute_challenge(&statement, &commitments).unwrap();
+        let responses = vec![Response { value: vec![4,5,6] }];
+        let proof = Proof { commitments, challenge, responses, metadata: ProofMetadata { version:1, timestamp:0, size:0 } };
+        let result = verify(&statement, &proof);
+        assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Range proofs")));
+    }
+
+    #[test]
+    fn test_custom_statement_verification_not_supported() {
+        use crate::proof::statement::{Statement, StatementType};
+        // Manually construct a Custom statement (builder has no helper)
+        let statement = Statement {
+            statement_type: StatementType::Custom { description: "demo".to_string() },
+            version: 1,
+        };
+        // Fabricate a minimal proof
+        let commitments = vec![Commitment { value: vec![9,9,9] }];
+        let challenge = compute_challenge(&statement, &commitments).unwrap();
+        let responses = vec![Response { value: vec![8,8,8] }];
+        let proof = Proof { commitments, challenge, responses, metadata: ProofMetadata { version:1, timestamp:0, size:0 } };
+        let result = verify(&statement, &proof);
+        assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Custom statements")));
+    }
+
+    #[test]
+    fn test_preimage_verification_invalid_empty_hash_output() {
+        use crate::proof::statement::{Statement, StatementType, HashFunction};
+        use sha3::{Digest, Sha3_256};
+        // Manually construct preimage statement with EMPTY hash output to reach error branch
+        let statement = Statement {
+            statement_type: StatementType::Preimage { hash_function: HashFunction::SHA3_256, hash_output: vec![] },
+            version: 1,
+        };
+        // Construct consistent commitment/response so commitment check passes
+        let blinding: Vec<u8> = (0..32).map(|i| (i as u8) ^ 0xA5).collect();
+        let mut hasher = Sha3_256::new(); hasher.update(&blinding); let commitment_bytes = hasher.finalize().to_vec();
+        let commitments = vec![Commitment { value: commitment_bytes }];
+        let challenge = compute_challenge(&statement, &commitments).unwrap();
+        // response = blinding XOR challenge
+        let mut response_bytes = blinding.clone();
+        for (i, b) in response_bytes.iter_mut().enumerate() { if i < challenge.value.len() { *b ^= challenge.value[i]; } }
+        let responses = vec![Response { value: response_bytes }];
+        let proof = Proof { commitments, challenge, responses, metadata: ProofMetadata { version:1, timestamp:0, size:0 } };
+        let result = verify(&statement, &proof);
+        assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Invalid hash output")));
+    }
 }
