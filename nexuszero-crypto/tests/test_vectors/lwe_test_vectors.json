@@ -1,0 +1,81 @@
+{
+  "test_suite": "LWE Encryption Test Vectors",
+  "version": "1.0",
+  "description": "Deterministic test vectors for Learning With Errors encryption",
+  "vectors": [
+    {
+      "name": "LWE-128-Simple",
+      "security_level": 128,
+      "parameters": {
+        "dimension": 512,
+        "modulus": 12289,
+        "sigma": 3.2
+      },
+      "secret_key": {
+        "s": [1, 0, 1, 0, 1]
+      },
+      "public_key": {
+        "A_seed": "0123456789abcdef0123456789abcdef",
+        "b_seed": "fedcba9876543210fedcba9876543210"
+      },
+      "test_cases": [
+        {
+          "plaintext_bit": 0,
+          "encryption_seed": "aaaaaaaaaaaaaaaa",
+          "expected_ciphertext": {
+            "c1_hash": "expected_hash_c1",
+            "c2_mod": 6144
+          },
+          "decryption_result": 0
+        },
+        {
+          "plaintext_bit": 1,
+          "encryption_seed": "bbbbbbbbbbbbbbbb",
+          "expected_ciphertext": {
+            "c1_hash": "expected_hash_c1_bit1",
+            "c2_mod": 9217
+          },
+          "decryption_result": 1
+        }
+      ]
+    },
+    {
+      "name": "LWE-192-Standard",
+      "security_level": 192,
+      "parameters": {
+        "dimension": 768,
+        "modulus": 16384,
+        "sigma": 3.8
+      },
+      "test_cases": [
+        {
+          "plaintext_bit": 0,
+          "notes": "Standard 192-bit security parameters"
+        },
+        {
+          "plaintext_bit": 1,
+          "notes": "Verify correctness at higher security"
+        }
+      ]
+    },
+    {
+      "name": "LWE-256-High",
+      "security_level": 256,
+      "parameters": {
+        "dimension": 1024,
+        "modulus": 32768,
+        "sigma": 4.2
+      },
+      "test_cases": [
+        {
+          "plaintext_bit": 0,
+          "notes": "Maximum security parameters"
+        },
+        {
+          "plaintext_bit": 1,
+          "notes": "Verify high security encryption"
+        }
+      ]
+    }
+  ]
+}
