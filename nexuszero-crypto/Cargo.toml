@@ -41,6 +41,7 @@ thiserror = "1.0"
 
 # Logging
 log = "0.4"
+anyhow = "1.0"
 
 [dev-dependencies]
 # Benchmarking
@@ -74,6 +75,15 @@ harness = false
 name = "comprehensive_benchmarks"
 harness = false
 
+[[bench]]
+name = "proof_benchmarks"
+harness = false
+
+[[bench]]
+name = "bulletproof_benchmarks"
+harness = false
+
 [lib]
 name = "nexuszero_crypto"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]

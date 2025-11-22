@@ -36,6 +36,12 @@ pub mod utils;
 // Re-export commonly used types
 pub use params::{CryptoParameters, SecurityLevel};
 
+/// Return a simple version number for FFI smoke testing.
+#[no_mangle]
+pub extern "C" fn nexuszero_crypto_version() -> u32 {
+    100  // version 1.0.0 encoded as 100
+}
+
 /// Custom error type for cryptographic operations
 #[derive(Debug, thiserror::Error)]
 pub enum CryptoError {
