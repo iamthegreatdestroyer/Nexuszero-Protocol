@@ -62,6 +62,10 @@ pub enum CryptoError {
     /// Mathematical operation error
     #[error("Math error: {0}")]
     MathError(String),
+
+    /// Hardware backend error
+    #[error("Hardware error: {0}")]
+    HardwareError(String),
 }
 
 /// Result type for cryptographic operations

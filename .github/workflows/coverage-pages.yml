@@ -13,8 +13,8 @@ on:
     branches:
       - main
     paths:
-      - 'docs/coverage/**'
-      - '.github/workflows/coverage-pages.yml'
+      - "docs/coverage/**"
+      - ".github/workflows/coverage-pages.yml"
 
 # Sets permissions for GitHub Pages deployment
 permissions:
@@ -144,7 +144,7 @@ jobs:
           </body>
           </html>
           "@
-          
+
           New-Item -ItemType Directory -Force -Path docs/coverage
           Set-Content -Path docs/coverage/index.html -Value $indexContent
           Write-Host "Created index page"

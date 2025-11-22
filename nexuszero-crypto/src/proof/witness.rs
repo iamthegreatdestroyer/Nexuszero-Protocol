@@ -4,6 +4,7 @@
 //! This must NEVER be transmitted or stored insecurely.
 
 use crate::proof::statement::{HashFunction, Statement, StatementType};
+use crate::utils::constant_time::{ct_modpow, ct_bytes_eq, ct_in_range};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Witness type indicator
@@ -92,6 +93,9 @@ impl Witness {
             }
             (SecretData::DiscreteLog(secret), StatementType::DiscreteLog { generator, public_value }) => {
                 // Verify that generator^secret = public_value (mod p)
+                // 
+                // SECURITY: Uses constant-time modular exponentiation (ct_modpow)
+                // to prevent timing attacks that could leak secret exponent bits.
                 use num_bigint::BigUint;
                 
                 let modulus_bytes = vec![0xFF; 32];
@@ -100,8 +104,13 @@ impl Witness {
                 let mod_big = BigUint::from_bytes_be(&modulus_bytes);
                 let public_big = BigUint::from_bytes_be(public_value);
                 
-                let computed = gen_big.modpow(&secret_big, &mod_big);
-                computed == public_big
+                // Use constant-time modular exponentiation (Montgomery ladder)
+                let computed = ct_modpow(&gen_big, &secret_big, &mod_big);
+                
+                // Use constant-time comparison for final equality check
+                let computed_bytes = computed.to_bytes_be();
+                let public_bytes = public_big.to_bytes_be();
+                ct_bytes_eq(&computed_bytes, &public_bytes)
             }
             (
                 SecretData::Range { value, blinding },
@@ -111,29 +120,23 @@ impl Witness {
                     commitment,
                 },
             ) => {
-                // Check value is in range
-                if *value < *min || *value > *max {
-                    return false;
-                }
-                // Verify commitment matches C = g^v * h^r
-                use num_bigint::BigUint;
-                let modulus_bytes = vec![0xFF; 32];
-                let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+                // Check value is in range [min, max] inclusive
+                // SECURITY: Uses constant-time range comparison to prevent timing attacks
+                // that could leak information about whether value is in range.
+                let in_range = ct_in_range(*value, *min, *max);
                 
-                let gen_g = vec![2u8; 32];
-                let gen_h = vec![3u8; 32];
+                // Verify commitment matches C = g^v * h^r using Bulletproofs generators
+                // ALWAYS compute the commitment even if value is out of range (constant-time)
+                let commitment_valid = match crate::proof::bulletproofs::pedersen_commit(*value, blinding) {
+                    Ok(computed_commitment) => {
+                        // Use constant-time comparison for commitment equality
+                        ct_bytes_eq(&computed_commitment, commitment)
+                    }
+                    Err(_) => false, // Commitment computation failed
+                };
                 
-                let g_big = BigUint::from_bytes_be(&gen_g);
-                let h_big = BigUint::from_bytes_be(&gen_h);
-                let v_big = BigUint::from(*value);
-                let r_big = BigUint::from_bytes_be(blinding);
-                
-                let g_v = g_big.modpow(&v_big, &mod_big);
-                let h_r = h_big.modpow(&r_big, &mod_big);
-                let computed = (g_v * h_r) % &mod_big;
-                
-                let commitment_big = BigUint::from_bytes_be(commitment);
-                computed == commitment_big
+                // Combine both checks: in_range AND commitment_valid
+                in_range && commitment_valid
             }
             _ => false,
         }
@@ -195,18 +198,10 @@ impl Witness {
     }
 }
 
-/// Constant-time byte array equality
+// Legacy constant_time_eq function - now using ct_bytes_eq from utils::constant_time
+// Keeping for backward compatibility in tests
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-
-    let mut result = 0u8;
-    for (x, y) in a.iter().zip(b.iter()) {
-        result |= x ^ y;
-    }
-
-    result == 0
+    ct_bytes_eq(a, b)
 }
 
 // Drop is automatically implemented by ZeroizeOnDrop derive
@@ -255,6 +250,7 @@ mod tests {
     #[test]
     fn test_discrete_log_witness_mismatch() {
         use num_bigint::BigUint;
+        use crate::utils::constant_time::ct_modpow;
         let generator = vec![2u8;32];
         let secret = vec![5u8;32];
         // public_value computed with different secret to force mismatch
@@ -263,7 +259,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let wrong_big = BigUint::from_bytes_be(&wrong_secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&wrong_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &wrong_big, &mod_big).to_bytes_be();
         let statement = StatementBuilder::new()
             .discrete_log(generator.clone(), public_value)
             .build()
@@ -300,6 +296,7 @@ mod tests {
     #[test]
     fn test_cross_type_witness_mismatch() {
         use num_bigint::BigUint;
+        use crate::utils::constant_time::ct_modpow;
         // Discrete log statement
         let generator = vec![2u8;32];
         let secret = vec![3u8;32];
@@ -307,7 +304,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         let dl_statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
         // Preimage witness used against discrete log statement (should fail)
         let preimage_witness = Witness::preimage(b"not a discrete log".to_vec());
@@ -325,23 +322,14 @@ mod tests {
 
     #[test]
     fn test_range_witness_boundary_values() {
-        use num_bigint::BigUint;
         // Range [10, 20]; test value at min and max boundaries with proper commitments
-        let modulus_bytes = vec![0xFF; 32];
-        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let gen_g = vec![2u8; 32];
-        let gen_h = vec![3u8; 32];
-        let g_big = BigUint::from_bytes_be(&gen_g);
-        let h_big = BigUint::from_bytes_be(&gen_h);
+        // Use bulletproofs pedersen_commit to ensure compatibility
         
         // Test min boundary (10)
         let min_value = 10u64;
         let min_blinding = vec![0xAA; 16];
-        let v_big = BigUint::from(min_value);
-        let r_big = BigUint::from_bytes_be(&min_blinding);
-        let g_v = g_big.modpow(&v_big, &mod_big);
-        let h_r = h_big.modpow(&r_big, &mod_big);
-        let min_commitment = ((g_v * h_r) % &mod_big).to_bytes_be();
+        let min_commitment = crate::proof::bulletproofs::pedersen_commit(min_value, &min_blinding)
+            .expect("Commitment should succeed");
         
         let min_statement = StatementBuilder::new().range(10, 20, min_commitment).build().unwrap();
         let min_witness = Witness::range(min_value, min_blinding);
@@ -350,11 +338,8 @@ mod tests {
         // Test max boundary (20)
         let max_value = 20u64;
         let max_blinding = vec![0xBB; 16];
-        let v_big = BigUint::from(max_value);
-        let r_big = BigUint::from_bytes_be(&max_blinding);
-        let g_v = g_big.modpow(&v_big, &mod_big);
-        let h_r = h_big.modpow(&r_big, &mod_big);
-        let max_commitment = ((g_v * h_r) % &mod_big).to_bytes_be();
+        let max_commitment = crate::proof::bulletproofs::pedersen_commit(max_value, &max_blinding)
+            .expect("Commitment should succeed");
         
         let max_statement = StatementBuilder::new().range(10, 20, max_commitment).build().unwrap();
         let max_witness = Witness::range(max_value, max_blinding);

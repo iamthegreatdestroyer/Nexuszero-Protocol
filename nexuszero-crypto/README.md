@@ -12,7 +12,8 @@ A quantum-resistant zero-knowledge proof system based on lattice cryptography.
 - 🚧 **Ring-LWE**: Efficient ring-based variant with NTT optimization
 - 🚧 **Zero-Knowledge Proofs**: Complete statement/witness/proof system
 - ✅ **Parameter Selection**: Standard NIST security levels (128/192/256-bit)
-- ✅ **Memory Security**: Automatic zeroization of sensitive data
+- ✅ **Memory Security**: Automatic zeroization of sensitive data with `zeroize`
+- ✅ **Constant-Time Operations**: Partial implementation using `subtle` crate
 - 🚧 **Comprehensive Testing**: Unit tests, integration tests, and benchmarks
 
 Legend: ✅ Implemented | 🚧 In Progress | ⏳ Planned
@@ -186,6 +187,32 @@ cargo bench lwe_encrypt
 - [ ] Threshold schemes
 - [ ] On-chain verification optimization
 
+## Performance
+
+Comprehensive benchmarks show excellent performance across all operations:
+
+- **LWE Encryption (128-bit):** 430 μs (~2,325 ops/sec)
+- **Ring-LWE Encryption (128-bit):** 1,309 μs (~764 ops/sec)
+- **Discrete Log Proof Generation:** 182 μs (~5,485 ops/sec)
+- **Discrete Log Proof Verification:** 273 μs (~3,660 ops/sec)
+- **End-to-End LWE Workflow:** 2.67 ms
+- **Polynomial NTT (n=1024):** 225 μs
+
+**All performance targets exceeded!** ✅
+
+For detailed performance analysis, optimization opportunities, and benchmark reproduction:
+
+📊 **[View Complete Benchmark Results](BENCHMARK_RESULTS.md)**
+
+### Running Benchmarks
+
+```bash
+cargo bench --bench comprehensive_benchmarks
+
+# View HTML reports
+explorer target\criterion\report\index.html
+```
+
 ## Contributing
 
 Contributions are welcome! This is an active research and development project.
@@ -202,9 +229,30 @@ Contributions are welcome! This is an active research and development project.
 
 ⚠️ **Warning**: This library is under active development and has not been audited. Do NOT use in production for security-critical applications.
 
+### Constant-Time Implementation Status
+
+This library has undergone a partial constant-time audit:
+
+- ✅ **Implemented:** Constant-time byte comparisons using `subtle` crate
+- ✅ **Implemented:** Constant-time final comparison in LWE decryption
+- ✅ **Implemented:** Memory zeroization with `zeroize` crate
+- ⚠️ **Documented:** Known timing vulnerabilities in modular exponentiation
+- ⚠️ **Documented:** Cache-timing risks in matrix operations
+- ⚠️ **Documented:** Early-return timing leaks in range checks
+
+**Critical Vulnerabilities:**
+
+- 🔴 **Modular exponentiation** (`num_bigint::modpow`) is NOT constant-time
+- 🔴 **Range checks** have early returns that leak timing information
+- 🔴 **Array indexing** on secret data may leak via cache timing
+
+For detailed side-channel analysis and mitigation strategies:
+
+🔒 **[Read SECURITY.md](SECURITY.md)** - Complete security documentation
+
 ### Reporting Security Issues
 
-If you discover a security vulnerability, please email security@nexuszero.dev with details.
+If you discover a security vulnerability, please email **security@nexuszero.dev** with details. Do not open public issues for security vulnerabilities.
 
 ## License
 

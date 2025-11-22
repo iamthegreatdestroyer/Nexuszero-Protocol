@@ -90,7 +90,14 @@ pub struct InnerProductProof {
 // ============================================================================
 
 /// Create Pedersen commitment C = g^v * h^r (mod p)
+/// 
+/// # Security
+/// 
+/// Uses constant-time modular exponentiation (ct_modpow) to prevent
+/// timing attacks that could leak the blinding factor or value.
 pub fn pedersen_commit(value: u64, blinding: &[u8]) -> CryptoResult<Vec<u8>> {
+    use crate::utils::constant_time::ct_modpow;
+    
     let g = generator_g();
     let h = generator_h();
     let p = modulus();
@@ -98,11 +105,11 @@ pub fn pedersen_commit(value: u64, blinding: &[u8]) -> CryptoResult<Vec<u8>> {
     let v = BigUint::from(value);
     let r = BigUint::from_bytes_be(blinding);
     
-    // g^v mod p
-    let g_v = g.modpow(&v, &p);
+    // g^v mod p (constant-time)
+    let g_v = ct_modpow(&g, &v, &p);
     
-    // h^r mod p
-    let h_r = h.modpow(&r, &p);
+    // h^r mod p (constant-time)
+    let h_r = ct_modpow(&h, &r, &p);
     
     // C = g^v * h^r mod p
     let commitment = (g_v * h_r) % &p;
@@ -187,9 +194,10 @@ pub fn prove_inner_product(
         let c_left = inner_product(a_left, b_right, &p);
         let c_right = inner_product(a_right, b_left, &p);
         
-        // Commit to cross terms
-        let l_commit = (g.modpow(&c_left, &p) * h.modpow(&BigUint::from(1u32), &p)) % &p;
-        let r_commit = (g.modpow(&c_right, &p) * h.modpow(&BigUint::from(1u32), &p)) % &p;
+        // Commit to cross terms (using constant-time exponentiation)
+        use crate::utils::constant_time::ct_modpow;
+        let l_commit = (ct_modpow(&g, &c_left, &p) * ct_modpow(&h, &BigUint::from(1u32), &p)) % &p;
+        let r_commit = (ct_modpow(&g, &c_right, &p) * ct_modpow(&h, &BigUint::from(1u32), &p)) % &p;
         
         left_commitments.push(l_commit.to_bytes_be());
         right_commitments.push(r_commit.to_bytes_be());

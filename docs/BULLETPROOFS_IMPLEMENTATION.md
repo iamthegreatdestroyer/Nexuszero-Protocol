@@ -42,6 +42,7 @@ Creates commitment: `C = g^v * h^r (mod p)`
 - `p`: 256-bit modulus
 
 **Properties**:
+
 - **Binding**: Different values → different commitments (computationally)
 - **Hiding**: Commitment reveals nothing about value (unconditionally)
 
@@ -50,11 +51,13 @@ Creates commitment: `C = g^v * h^r (mod p)`
 **Function**: `decompose_bits(value: u64, num_bits: usize) -> Vec<u8>`
 
 Converts value to binary representation:
+
 - Little-endian bit order
 - Supports arbitrary bit lengths
 - Validates value fits in range [0, 2^num_bits)
 
 **Example**:
+
 ```rust
 decompose_bits(42, 8) // Returns [0,1,0,1,0,1,0,0] (LSB first)
 ```
@@ -92,6 +95,7 @@ Proves knowledge of vectors `a` and `b` with specific inner product using recurs
 7. **Fiat-Shamir**: Compute challenges for non-interactivity
 
 **Output**:
+
 ```rust
 BulletproofRangeProof {
     commitment: Vec<u8>,           // Main Pedersen commitment
@@ -164,7 +168,8 @@ verify(&statement, &proof)?; // Returns Ok(()) if valid
 
 **Theorem**: If prover knows valid witness (value in range with correct blinding), verification always succeeds.
 
-**Proof**: 
+**Proof**:
+
 - Commitment equation holds by construction
 - Bit decomposition is correct
 - Inner product computes correctly
@@ -174,7 +179,8 @@ verify(&statement, &proof)?; // Returns Ok(()) if valid
 
 **Theorem**: Prover cannot convince verifier of false statement (value outside range).
 
-**Security Reduction**: 
+**Security Reduction**:
+
 - Breaking soundness ⟹ Breaking discrete log problem
 - Cheating prover must either:
   1. Break Pedersen commitment binding (computationally hard)
@@ -185,6 +191,7 @@ verify(&statement, &proof)?; // Returns Ok(()) if valid
 **Theorem**: Proof reveals nothing beyond validity of range claim.
 
 **Simulator**: Can generate indistinguishable proofs without witness by:
+
 1. Simulating bit commitments with random values
 2. Simulating inner product proof challenges
 3. Using commitment randomness to hide true value
@@ -193,12 +200,12 @@ verify(&statement, &proof)?; // Returns Ok(()) if valid
 
 ### Proof Size
 
-| Range Bits | Naive Size | Bulletproofs Size | Reduction |
-|-----------|-----------|-------------------|-----------|
-| 8         | 8 commitments | 3 rounds | 62.5% |
-| 16        | 16 commitments | 4 rounds | 75% |
-| 32        | 32 commitments | 5 rounds | 84.4% |
-| 64        | 64 commitments | 6 rounds | 90.6% |
+| Range Bits | Naive Size     | Bulletproofs Size | Reduction |
+| ---------- | -------------- | ----------------- | --------- |
+| 8          | 8 commitments  | 3 rounds          | 62.5%     |
+| 16         | 16 commitments | 4 rounds          | 75%       |
+| 32         | 32 commitments | 5 rounds          | 84.4%     |
+| 64         | 64 commitments | 6 rounds          | 90.6%     |
 
 ### Time Complexity
 
