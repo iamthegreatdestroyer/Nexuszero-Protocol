@@ -1,0 +1,50 @@
+name: Benchmark
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  criterion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo bench (crypto)
+        run: |
+          cargo bench -p nexuszero-crypto --benches --quiet || true
+
+      - name: Parse benchmarks
+        run: |
+          python3 scripts/parse_benchmarks.py --criterion-dir target/criterion --output-dir .
+
+      - name: Upload summary artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summary
+          path: |
+            benchmark_summary.json
+            benchmark_summary.md
+            target/criterion/**/new/estimates.json
+
+      - name: Fail on regression >10%
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          data=json.load(open('benchmark_summary.json'))
+          thr=data['regression_threshold_pct']
+          bad=[b for b in data['benchmarks'] if b.get('relative_change_pct',0) and b['relative_change_pct']>thr]
+          if bad:
+              print('Regressions detected:', bad)
+              sys.exit(1)
+          print('No regressions above threshold.')
+          PY
