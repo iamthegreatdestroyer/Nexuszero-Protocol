@@ -1,0 +1,62 @@
+# Baseline Configuration for Nexuszero Optimizer
+# Generated from hyperparameter tuning results
+
+# Model Configuration (tuned parameters from Trial 8 - best test_loss: 0.3076)
+# Persistent Optuna study: full_run (12 trials, seed=42)
+model:
+  hidden_dim: 256
+  num_layers: 7
+  num_heads: 8
+  dropout: 0.243
+  activation: gelu
+
+# Training Configuration
+training:
+  batch_size: 32
+  learning_rate: 0.00002176
+  num_epochs: 20 # Full training (no batch cap)
+  warmup_steps: 500
+  weight_decay: 0.01
+  grad_clip: 1.0
+
+  # Evaluation and checkpointing
+  eval_every: 100
+  save_every: 500
+  checkpoint_best_only: true
+  early_stopping_patience: 5
+
+  # Scheduler
+  scheduler_type: plateau
+  scheduler_factor: 0.5
+  scheduler_patience: 3
+
+  # Auxiliary loss weight
+  aux_metrics_loss_weight: 0.1
+
+  # Logging (disabled for baseline to avoid conflicts)
+  tensorboard_enabled: false
+  wandb_enabled: false
+
+# Optimization Configuration
+optimization:
+  security_level: 128
+  max_proof_size: 10000
+  target_verify_time: 50.0
+
+  # Parameter ranges
+  n_min: 256
+  n_max: 4096
+  q_min: 4096
+  q_max: 131072
+  sigma_min: 2.0
+  sigma_max: 5.0
+
+# Paths
+data_dir: nexuszero-optimizer/data
+checkpoint_dir: nexuszero-optimizer/checkpoints/baseline
+log_dir: nexuszero-optimizer/logs/baseline
+
+# Hardware Configuration
+device: cuda
+num_workers: 4
+seed: 42
