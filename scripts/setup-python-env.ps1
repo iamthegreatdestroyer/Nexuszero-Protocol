@@ -22,4 +22,4 @@ if (Test-Path "requirements.txt") {
     Write-Host "No requirements.txt or pyproject.toml found. No packages installed." -ForegroundColor Gray
 }
 
-Write-Host "✓ Python environment ready" -ForegroundColor Green
+Write-Host "Python environment ready" -ForegroundColor Green
