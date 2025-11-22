@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexuszero-optimizer"
+version = "0.1.0"
+description = "Neural optimizer for zero-knowledge proof parameters"
+requires-python = ">=3.9"
+authors = [
+    {name = "Nexuszero Protocol", email = "info@nexuszero.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+dependencies = [
+    "torch>=2.1.0",
+    "torch-geometric>=2.4.0",
+    "numpy>=1.24.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+    "ruff>=0.0.285",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false

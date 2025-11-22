@@ -1,0 +1,44 @@
+# Nexuszero Optimizer Configuration
+
+# Model Configuration
+model:
+  hidden_dim: 256 # Hidden dimension for GNN layers
+  num_layers: 6 # Number of GAT layers
+  num_heads: 8 # Number of attention heads
+  dropout: 0.1 # Dropout probability
+  activation: gelu # Activation function
+
+# Training Configuration
+training:
+  batch_size: 32 # Batch size for training
+  learning_rate: 0.0001 # Learning rate
+  num_epochs: 100 # Number of training epochs
+  warmup_steps: 1000 # Learning rate warmup steps
+  weight_decay: 0.01 # Weight decay for regularization
+  grad_clip: 1.0 # Gradient clipping threshold
+  eval_every: 100 # Evaluate every N steps
+  save_every: 500 # Save checkpoint every N steps
+
+# Optimization Configuration
+optimization:
+  security_level: 128 # Security level in bits (128, 192, 256)
+  max_proof_size: 10000 # Maximum proof size in bytes
+  target_verify_time: 50.0 # Target verification time in milliseconds
+
+  # Parameter ranges for normalization
+  n_min: 256
+  n_max: 4096
+  q_min: 4096
+  q_max: 131072
+  sigma_min: 2.0
+  sigma_max: 5.0
+
+# Paths
+data_dir: data # Directory containing datasets
+checkpoint_dir: checkpoints # Directory for model checkpoints
+log_dir: logs # Directory for training logs
+
+# Hardware Configuration
+device: cuda # Device to use ('cuda' or 'cpu')
+num_workers: 4 # Number of data loading workers
+seed: 42 # Random seed for reproducibility

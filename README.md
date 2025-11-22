@@ -91,7 +91,13 @@ Nexuszero-Protocol/
 ├── package.json                             # Node.js project configuration
 ├── .gitignore                               # Git exclusion rules
 ├── README.md                                # This file
-└── LICENSE                                  # MIT License
+├── LICENSE                                  # MIT License
+│
+├── nexuszero-crypto/                        # Rust cryptography library
+│   └── (Ring-LWE, NTT, Schnorr signatures)
+│
+└── nexuszero-optimizer/                     # Neural optimizer (NEW!)
+    └── (PyTorch GNN for proof parameter optimization)
 ```
 
 ---
@@ -118,6 +124,37 @@ Nexuszero-Protocol/
 
 - Proof size: ~6 rounds for 64-bit values (vs 64 commitments naive)
 - Verification: Sub-linear in range size
+
+### 0.5. Neural Optimizer for Proof Parameters 🧠 (NEW!)
+
+**PyTorch-based GNN for automatic parameter optimization:**
+
+- ✅ Graph Neural Network (GAT) analyzes proof circuit structure
+- ✅ Predicts optimal cryptographic parameters (n, q, σ)
+- ✅ Estimates performance metrics (proof size, timing)
+- ✅ Synthetic dataset generation with 10k+ training circuits
+- ✅ HDF5-based efficient data pipeline
+- ✅ Integration with Rust crypto library via FFI
+
+**Architecture:**
+
+- 6-layer Graph Attention Network (5.2M parameters)
+- Dual prediction heads (parameters + metrics)
+- Edge-aware attention mechanism
+- Residual connections for deep networks
+
+**Features:**
+
+- Complete PyTorch Geometric implementation
+- Comprehensive test suite (15+ tests)
+- Dataset generation and inspection tools
+- Configuration management with YAML
+- Ready for training loop implementation
+
+📁 **Location:** `nexuszero-optimizer/`  
+📚 **Docs:** See `nexuszero-optimizer/README.md` and `QUICKSTART.md`  
+🎯 **Status:** Days 1-4 complete (foundation ready)
+
 - Range [min, max] automatically normalized to [0, 2^n)
 
 **Example Usage:**
