@@ -20,3 +20,29 @@ Cargo.lock
 __pycache__/
 *.py[cod]
 *$py.class
+
+# ML experiment artifacts
+wandb/
+*.wandb
+**/*.wandb
+checkpoints/
+baseline_*.txt
+
+# Additional virtual environments
+venv-neural/
+
+# Logs
+*.log
+logs/
+
+# Storybook build output (if generated later)
+storybook-static/
+
+# Node / Frontend build artifacts
+dist/
+build/
+
+# Coverage reports
+coverage/
+**/coverage/
+
