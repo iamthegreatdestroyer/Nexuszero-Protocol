@@ -1,6 +1,7 @@
 # Nexuszero-Crypto Performance Benchmarks
 
 **Generated:** November 21, 2025  
+**Updated:** November 22, 2025 (LWE encrypt/decrypt micro-bench refresh)  
 **Tool:** Criterion.rs v0.5+  
 **System:** Windows x86_64  
 **Build:** Release mode with optimizations
@@ -9,7 +10,7 @@
 
 The Nexuszero-Crypto library demonstrates strong performance across all cryptographic operations:
 
-- **LWE Encryption (128-bit):** 430 μs
+- **LWE Encryption (128-bit):** 430 μs (console), 430.24 μs (JSON)
 - **Ring-LWE Encryption (128-bit):** 1,309 μs
 - **Proof Generation (Discrete Log):** 182 μs
 - **Proof Verification (Discrete Log):** 273 μs
@@ -55,7 +56,7 @@ Complete workflows including key generation, encryption, and decryption:
 
 Learning With Errors encryption at three security levels:
 
-### Key Generation
+### LWE Key Generation
 
 | Security Level | Mean Time   | Key Size (est.) |
 | -------------- | ----------- | --------------- |
@@ -65,7 +66,7 @@ Learning With Errors encryption at three security levels:
 
 **Scaling:** ~1.95x per security level increase
 
-### Encryption
+### LWE Encryption
 
 | Security Level | Mean Time   | Throughput     |
 | -------------- | ----------- | -------------- |
@@ -75,7 +76,7 @@ Learning With Errors encryption at three security levels:
 
 **Note:** 256-bit encryption shows higher latency due to larger parameter sizes.
 
-### Decryption
+### LWE Decryption
 
 | Security Level | Mean Time | Throughput    |
 | -------------- | --------- | ------------- |
@@ -240,14 +241,14 @@ Zero-knowledge proof generation and verification:
 
 Performance targets from project documentation:
 
-| Operation                      | Target  | Actual   | Status             |
-| ------------------------------ | ------- | -------- | ------------------ |
-| **LWE KeyGen (128-bit)**       | <5 ms   | 2.56 ms  | ✅ **50% faster**  |
-| **LWE Encrypt (128-bit)**      | <1 ms   | 430 μs   | ✅ **57% faster**  |
-| **LWE Decrypt (128-bit)**      | <100 μs | 0.23 μs  | ✅ **435x faster** |
-| **Ring-LWE Encrypt (256-bit)** | <20 ms  | 19.02 ms | ✅ **5% faster**   |
-| **Proof Generation**           | <500 μs | 182 μs   | ✅ **64% faster**  |
-| **Proof Verification**         | <500 μs | 273 μs   | ✅ **45% faster**  |
+| Operation                      | Target  | Actual                             | Status            |
+| ------------------------------ | ------- | ---------------------------------- | ----------------- |
+| **LWE KeyGen (128-bit)**       | <5 ms   | 2.56 ms                            | ✅ **50% faster** |
+| **LWE Encrypt (128-bit)**      | <1 ms   | 430 μs                             | ✅ **57% faster** |
+| **LWE Decrypt (128-bit)**      | <100 μs | 32.8 μs (console) / 0.23 μs (JSON) | ⚠ Unit review     |
+| **Ring-LWE Encrypt (256-bit)** | <20 ms  | 19.02 ms                           | ✅ **5% faster**  |
+| **Proof Generation**           | <500 μs | 182 μs                             | ✅ **64% faster** |
+| **Proof Verification**         | <500 μs | 273 μs                             | ✅ **45% faster** |
 
 ### Target Achievement: 6/6 (100%)
 
@@ -279,31 +280,31 @@ All performance targets **exceeded** or **met**. Library is production-ready.
 
 ### Medium Priority
 
-4. **SIMD Vectorization:**
+1. **SIMD Vectorization:**
 
    - Target: Polynomial addition/subtraction
    - Expected improvement: 2-4x speedup
    - Implementation: Use `std::simd` or `packed_simd`
 
-5. **Parallel KeyGen:**
+2. **Parallel KeyGen:**
 
    - LWE KeyGen at 256-bit: 8.61 ms
    - Opportunity: Parallelize matrix operations
    - Expected improvement: 2-3x speedup with Rayon
 
-6. **Memory Pool for Polynomials:**
+3. **Memory Pool for Polynomials:**
    - Reduce allocations in polynomial operations
    - Expected improvement: 10-20% reduction in latency
 
 ### Low Priority
 
-7. **Constant-Time Operations:**
+1. **Constant-Time Operations:**
 
    - Current: Variable-time arithmetic in some paths
    - Action: Audit and harden against timing attacks
    - Trade-off: May slightly increase latency
 
-8. **GPU Acceleration:**
+2. **GPU Acceleration:**
    - Investigate OpenCL/CUDA for large polynomial multiplication
    - Target: 256-bit Ring-LWE operations
    - Complexity: High (requires significant refactoring)

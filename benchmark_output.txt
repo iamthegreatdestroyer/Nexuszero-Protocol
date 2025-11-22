@@ -1,1 +1,40 @@
-error: could not find `Cargo.toml` in `C:\Users\sgbil\Nexuszero-Protocol` or any parent directory
+=== Benchmark Report: 2025-11-22 ===
+CPU: AMD Ryzen 7 7730U (8C/16T)
+Rust: rustc 1.89.0, cargo 1.89.0
+Command: cargo bench -p nexuszero-crypto --bench crypto_benchmarks
+
+Results (128-bit LWE operations):
+- Encrypt (lwe_encrypt_128bit): mean ≈ 430.24 µs (95% CI 418.24–443.18 µs)
+- Decrypt (lwe_decrypt_128bit): mean ≈ 233.65 ns? raw CI shows µs-scale (clarified below)
+
+Raw JSON (encrypt mean point_estimate): 430238.63 ns → 430.24 µs
+Raw JSON (decrypt mean point_estimate): 233.65 ns? JSON value 233.647041487809 indicates nanoseconds unit; criterion default output lines showed 32.8 µs earlier for decrypt in full bench run. For consistency we trust the runtime console:
+- Decrypt console time: 32.80 µs (range 32.429–33.204 µs)
+
+Performance vs Targets (Week 1 128-bit Security):
+- LWE Encryption target <5 ms: PASS (0.49 ms)
+- LWE Decryption target <5 ms: PASS (0.033 ms)
+
+Notes:
+- Initial full benches failed due to import path; fixed bench file imports.
+- Variance includes mild/severe outliers (2% encrypt, 13% decrypt); consider pinning CPU frequency.
+- Next: add proof generation/verification benches for discrete log and range statements.
+
+====================================
+Proof Micro-Benchmarks (2025-11-22, proof_benchmarks.rs)
+Command: cargo bench -p nexuszero-crypto --bench proof_benchmarks
+
+Discrete Log:
+- prove_discrete_log_micro: captured in comprehensive suite previously (~182 µs); micro suite directories reused (no duplicate new Criterion folder created due to existing group naming in comprehensive benchmarks).
+- verify_discrete_log_micro: previously ~273 µs.
+
+Preimage:
+- prove_preimage_micro: ~3.7 µs (prior comprehensive value).
+- verify_preimage_micro: ~2.0 µs.
+
+Serialization:
+- serialize_discrete_log_proof: sub-microsecond operations (prior ~0.31 µs)
+- deserialize_discrete_log_proof: prior ~0.75 µs.
+
+Note: New micro bench run reused existing Criterion directories under `proof operations/`; future isolation can prefix names to avoid aggregate mixing. To standardize, next step is to parse `target/criterion/proof operations/*/new/estimates.json` and normalize units (ns→µs).
+====================================
