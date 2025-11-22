@@ -72,7 +72,13 @@ impl DudectAnalyzer {
         let se = ((var0 / n0) + (var1 / n1)).sqrt();
 
         if se == 0.0 {
-            return None;
+            // Identical distributions (constant-time) -> t = 0
+            if (mean0 - mean1).abs() < f64::EPSILON {
+                return Some(0.0);
+            } else {
+                // Different means but zero variance -> infinite separation
+                return Some(f64::INFINITY);
+            }
         }
 
         Some((mean0 - mean1) / se)
@@ -80,9 +86,10 @@ impl DudectAnalyzer {
 
     /// Check if timing is constant (t-statistic below threshold)
     pub fn is_constant_time(&self) -> bool {
-        self.compute_t_statistic()
-            .map(|t| t.abs() < self.t_threshold)
-            .unwrap_or(false)
+        match self.compute_t_statistic() {
+            Some(t) => t.abs() < self.t_threshold,
+            None => false,
+        }
     }
 
     fn mean(&self, samples: &[Duration]) -> f64 {

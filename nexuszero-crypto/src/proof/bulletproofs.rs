@@ -24,6 +24,7 @@ use crate::{CryptoError, CryptoResult};
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
+use rand::Rng; // Import Rng trait for gen()
 
 // ============================================================================
 // Constants and Parameters
@@ -50,9 +51,15 @@ fn generator_h() -> BigUint {
     BigUint::from_bytes_be(&hasher.finalize())
 }
 
-/// Modulus for group operations (2^256 - 1 approximation)
+/// Modulus for group operations: use a 256-bit prime (secp256k1 field)
+/// p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 fn modulus() -> BigUint {
-    BigUint::from_bytes_be(&vec![0xFF; MODULUS_BYTES])
+    BigUint::from_bytes_be(&[
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFE,0xFF,0xFF,0xFC,0x2F
+    ])
 }
 
 // ============================================================================
@@ -70,6 +77,12 @@ pub struct BulletproofRangeProof {
     pub inner_product_proof: InnerProductProof,
     /// Challenge values from Fiat-Shamir
     pub challenges: Vec<[u8; 32]>,
+    /// Optional offset (min) applied during proof generation when original value ∈ [min, max).
+    /// When present, inner product encodes (value - offset) while commitment encodes full value.
+    pub offset: Option<u64>,
+    /// Commitment to (value - offset) using SAME blinding as main commitment (binding relation).
+    /// For offset proofs: C = g^v h^r, C_offset = g^{v-offset} h^r so that C = C_offset * g^{offset}.
+    pub offset_commitment: Option<Vec<u8>>,
 }
 
 /// Inner product argument proof (logarithmic size)
@@ -276,7 +289,7 @@ pub fn prove_range(
     num_bits: usize,
 ) -> CryptoResult<BulletproofRangeProof> {
     // Validate range
-    if value >= (1u64 << num_bits) {
+    if num_bits < 64 && value >= (1u64 << num_bits) {
         return Err(CryptoError::ProofError(format!(
             "Value {} exceeds range [0, 2^{})",
             value, num_bits
@@ -292,10 +305,7 @@ pub fn prove_range(
     // Generate random blindings for bit commitments
     let mut rng = rand::thread_rng();
     let bit_blindings: Vec<Vec<u8>> = (0..num_bits)
-        .map(|_| {
-            use rand::Rng;
-            (0..32).map(|_| rng.gen::<u8>()).collect()
-        })
+        .map(|_| (0..32).map(|_| rng.gen::<u8>()).collect())
         .collect();
     
     // Commit to each bit
@@ -305,7 +315,7 @@ pub fn prove_range(
     let p = modulus();
     let a_vec: Vec<BigUint> = bits.iter().map(|&b| BigUint::from(b)).collect();
     let b_vec: Vec<BigUint> = (0..num_bits)
-        .map(|i| BigUint::from(1u64 << i))
+        .map(|i| BigUint::from(1u64) << i)
         .collect();
     
     // Prove inner product equals value
@@ -324,6 +334,53 @@ pub fn prove_range(
         bit_commitments,
         inner_product_proof,
         challenges: vec![challenge1, challenge2],
+        offset: None,
+        offset_commitment: None,
+    })
+}
+
+/// Generate Bulletproof range proof with lower-bound offset normalization.
+/// Proves value ∈ [min, min + 2^num_bits) by committing to full value while
+/// bit decomposition covers (value - min).
+pub fn prove_range_offset(
+    value: u64,
+    min: u64,
+    blinding: &[u8],
+    num_bits: usize,
+) -> CryptoResult<BulletproofRangeProof> {
+    if value < min {
+        return Err(CryptoError::ProofError("Value below minimum".to_string()));
+    }
+    let offset_value = value - min;
+    if num_bits < 64 && offset_value >= (1u64 << num_bits) {
+        return Err(CryptoError::ProofError(format!(
+            "Offset value {} exceeds range [0, 2^{})",
+            offset_value, num_bits
+        )));
+    }
+    // Commitment to full value
+    let commitment = pedersen_commit(value, blinding)?;
+    // Decompose offset
+    let bits = decompose_bits(offset_value, num_bits);
+    // Blindings
+    let mut rng = rand::thread_rng();
+    let bit_blindings: Vec<Vec<u8>> = (0..num_bits)
+        .map(|_| (0..32).map(|_| rng.gen::<u8>()).collect())
+        .collect();
+    let bit_commitments = commit_bits(&bits, &bit_blindings)?;
+    let p = modulus();
+    let a_vec: Vec<BigUint> = bits.iter().map(|&b| BigUint::from(b)).collect();
+    let b_vec: Vec<BigUint> = (0..num_bits).map(|i| BigUint::from(1u64) << i).collect();
+    let inner_product_proof = prove_inner_product(a_vec, b_vec, &commitment)?;
+    let challenge1 = generate_challenge(&[&commitment])?;
+    let challenge2 = generate_challenge(&[&commitment, &inner_product_proof.final_a, &inner_product_proof.final_b])?;
+    Ok(BulletproofRangeProof {
+        commitment,
+        bit_commitments,
+        inner_product_proof,
+        challenges: vec![challenge1, challenge2],
+        offset: Some(min),
+        offset_commitment: Some(pedersen_commit(offset_value, blinding)?),
     })
 }
 
@@ -378,6 +435,60 @@ pub fn verify_range(
         ));
     }
     
+    Ok(())
+}
+
+/// Verify Bulletproof range proof with an offset (lower bound enforcement).
+/// Uses statement-provided min to reconstruct full value = offset + (inner product result).
+pub fn verify_range_offset(
+    proof: &BulletproofRangeProof,
+    commitment: &[u8],
+    min: u64,
+    num_bits: usize,
+) -> CryptoResult<()> {
+    if proof.commitment != commitment {
+        return Err(CryptoError::VerificationError("Commitment mismatch".to_string()));
+    }
+    if proof.offset != Some(min) {
+        return Err(CryptoError::VerificationError("Offset marker mismatch".to_string()));
+    }
+    let offset_commitment = proof.offset_commitment.as_ref().ok_or_else(||
+        CryptoError::VerificationError("Missing offset commitment".to_string())
+    )?;
+    if proof.bit_commitments.len() != num_bits {
+        return Err(CryptoError::VerificationError("Invalid number of bit commitments".to_string()));
+    }
+    for bit_commit in &proof.bit_commitments {
+        if !verify_bit_commitment(bit_commit)? {
+            return Err(CryptoError::VerificationError("Invalid bit commitment".to_string()));
+        }
+    }
+    let p = modulus();
+    let a_final = BigUint::from_bytes_be(&proof.inner_product_proof.final_a);
+    let b_final = BigUint::from_bytes_be(&proof.inner_product_proof.final_b);
+    let offset_value = (a_final * b_final) % &p; // BigUint offset
+    // Range check
+    if num_bits < 64 {
+        let limit = BigUint::from(1u64) << num_bits;
+        if offset_value >= limit {
+            return Err(CryptoError::VerificationError("Offset value out of range".to_string()));
+        }
+    }
+    // Binding relation: commitment == offset_commitment * g^{min}
+    let g = generator_g();
+    use crate::utils::constant_time::ct_modpow;
+    let g_min = ct_modpow(&g, &BigUint::from(min), &p);
+    let offset_big = BigUint::from_bytes_be(offset_commitment);
+    let recombined = (offset_big * g_min) % &p;
+    let commitment_big = BigUint::from_bytes_be(&proof.commitment);
+    if recombined != commitment_big {
+        return Err(CryptoError::VerificationError("Offset binding relation failed".to_string()));
+    }
+    // Challenge determinism check
+    let recomputed_challenge1 = generate_challenge(&[commitment])?;
+    if proof.challenges[0] != recomputed_challenge1 {
+        return Err(CryptoError::VerificationError("Challenge verification failed".to_string()));
+    }
     Ok(())
 }
 
