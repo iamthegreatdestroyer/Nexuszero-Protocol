@@ -6,10 +6,25 @@ import torch.nn.functional as F
 
 
 def parameter_mse(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    # Handle flattened target vectors (e.g., shape [batch_size * param_dim])
+    # that should match prediction shape [batch_size, param_dim]. This can
+    # occur if the DataLoader collates small fixed-size tensors differently.
+    if (
+        pred.dim() == 2
+        and target.dim() == 1
+        and target.numel() == pred.numel()
+    ):
+        target = target.view_as(pred)
     return F.mse_loss(pred, target)
 
 
 def metrics_mse(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    if (
+        pred.dim() == 2
+        and target.dim() == 1
+        and target.numel() == pred.numel()
+    ):
+        target = target.view_as(pred)
     return F.mse_loss(pred, target)
 
 
@@ -35,6 +50,7 @@ class MetricTracker:
     def to_dict(self) -> Dict[str, float]:
         return {k: self.average(k) for k in self.storage.keys()}
 
+ 
 __all__ = [
     "parameter_mse",
     "metrics_mse",

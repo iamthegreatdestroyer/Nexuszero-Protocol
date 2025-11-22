@@ -16,6 +16,9 @@ from ..verification.soundness import SoundnessVerifier
 from ..models.gnn import ProofOptimizationGNN
 from ..utils.config import Config
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Trainer:
@@ -64,6 +67,11 @@ class Trainer:
             sigma_max=config.optimization.sigma_max,
         )
         self.batch_validator = BatchSoundnessValidator(self.soundness_verifier)
+
+        # Optional batch limiting for fast tuning runs
+        self.max_batches_per_epoch: Optional[int] = getattr(
+            config.training, "max_batches_per_epoch", None
+        )
 
         # Tracking
         self.best_val_loss: Optional[float] = None
@@ -131,7 +139,26 @@ class Trainer:
     def train_epoch(self, epoch: int) -> Dict[str, float]:
         self.model.train()
         tracker = MetricTracker()
-        for batch in self.train_loader:
+        total_batches = len(self.train_loader)
+        logger.info(
+            "Epoch %d start batches=%d limit=%s" % (
+                epoch,
+                total_batches,
+                str(self.max_batches_per_epoch),
+            )
+        )
+        for batch_idx, batch in enumerate(self.train_loader):
+            if (
+                self.max_batches_per_epoch is not None
+                and batch_idx >= self.max_batches_per_epoch
+            ):
+                logger.info(
+                    "Early stop batch %d limit=%d" % (
+                        batch_idx,
+                        self.max_batches_per_epoch,
+                    )
+                )
+                break
             out = self._forward_batch(batch)
             p_loss = parameter_mse(out["params_pred"], out["params_target"])
             m_loss = (
@@ -162,7 +189,25 @@ class Trainer:
             tracker.update("bit_security", batch_metrics["bit_security_mean"])
             tracker.update("hardness", batch_metrics["hardness_mean"])
 
+            if batch_idx % 10 == 0:
+                logger.info(
+                    "Epoch %d batch %d loss=%.4f sec=%.4f" % (
+                        epoch,
+                        batch_idx,
+                        total_loss.item(),
+                        batch_metrics["security_score_mean"],
+                    )
+                )
+
         avg = tracker.to_dict()
+        logger.info(
+            "Epoch %d train summary loss=%.4f param=%.4f sec=%.4f" % (
+                epoch,
+                avg.get("loss", 0.0),
+                avg.get("param_loss", 0.0),
+                avg.get("security_score", 0.0),
+            )
+        )
         if self.tb_writer:
             for k, v in avg.items():
                 self.tb_writer.add_scalar(f"train/{k}", v, epoch)
@@ -199,6 +244,13 @@ class Trainer:
             tracker.update("hardness", batch_metrics["hardness_mean"])
 
         avg = tracker.to_dict()
+        logger.info(
+            "Epoch %d val summary loss=%.4f sec=%.4f" % (
+                epoch,
+                avg.get("loss", 0.0),
+                avg.get("security_score", 0.0),
+            )
+        )
         if self.tb_writer:
             for k, v in avg.items():
                 self.tb_writer.add_scalar(f"val/{k}", v, epoch)
@@ -283,5 +335,6 @@ class Trainer:
             tracker.update("hardness", batch_metrics["hardness_mean"])
 
         return tracker.to_dict()
+
 
 __all__ = ["Trainer"]
