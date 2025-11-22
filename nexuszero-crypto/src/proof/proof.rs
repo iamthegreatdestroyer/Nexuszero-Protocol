@@ -1167,4 +1167,207 @@ mod tests {
         let result = verify(&statement, &proof);
         assert!(matches!(result, Err(CryptoError::VerificationError(msg)) if msg.contains("Invalid hash output")));
     }
+
+    // ===================== Additional Proof Verification Edge Cases =====================
+
+    #[test]
+    fn test_proof_with_mismatched_commitment_response_counts() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        // Create valid statement
+        let generator = vec![2u8; 32];
+        let secret = vec![42u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        
+        let statement = StatementBuilder::new()
+            .discrete_log(generator, public_value)
+            .build()
+            .unwrap();
+        
+        let witness = Witness::discrete_log(secret);
+        let mut proof = prove(&statement, &witness).unwrap();
+        
+        // Add extra commitment to mismatch counts
+        proof.commitments.push(Commitment { value: vec![0xFF; 32] });
+        
+        // Should fail during verification due to challenge mismatch
+        let result = verify(&statement, &proof);
+        assert!(result.is_err(), "Proof with mismatched commitment count should fail");
+    }
+
+    #[test]
+    fn test_proof_verification_with_all_zero_challenge() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let secret = vec![42u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        
+        let statement = StatementBuilder::new()
+            .discrete_log(generator, public_value)
+            .build()
+            .unwrap();
+        
+        let witness = Witness::discrete_log(secret);
+        let mut proof = prove(&statement, &witness).unwrap();
+        
+        // Set challenge to all zeros (weak challenge)
+        proof.challenge.value = [0u8; 32];
+        
+        // Verification should fail due to challenge mismatch
+        let result = verify(&statement, &proof);
+        assert!(result.is_err(), "Proof with manipulated zero challenge should fail");
+    }
+
+    #[test]
+    fn test_proof_verification_with_oversized_response() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let secret = vec![42u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        
+        let statement = StatementBuilder::new()
+            .discrete_log(generator, public_value)
+            .build()
+            .unwrap();
+        
+        let witness = Witness::discrete_log(secret);
+        let mut proof = prove(&statement, &witness).unwrap();
+        
+        // Replace response with oversized value (1024 bytes instead of ~32)
+        proof.responses[0].value = vec![0xFF; 1024];
+        
+        // Verification should fail during equation check
+        let result = verify(&statement, &proof);
+        assert!(result.is_err(), "Proof with oversized response should fail verification");
+    }
+
+    #[test]
+    fn test_range_proof_with_zero_range() {
+        use crate::proof::statement::StatementBuilder;
+        
+        // Create statement with zero-width range [10, 10]
+        let value: u64 = 10;
+        let blinding = vec![0xCC; 32];
+        let commitment = crate::proof::bulletproofs::pedersen_commit(value, &blinding).unwrap();
+        
+        // Zero-width range should be rejected by StatementBuilder
+        let statement = StatementBuilder::new()
+            .range(10, 10, commitment)
+            .build();
+        
+        // Should fail with InvalidParameter error
+        assert!(statement.is_err(), "Zero-width range [10,10] should be rejected");
+        
+        if let Err(e) = statement {
+            // Verify it's the expected error
+            match e {
+                CryptoError::InvalidParameter(msg) => {
+                    assert!(msg.contains("min must be less than max"), 
+                           "Error should indicate min < max requirement");
+                }
+                _ => panic!("Expected InvalidParameter error for zero-width range"),
+            }
+        }
+    }
+
+    // ===================== Witness Validation Corner Cases =====================
+
+    #[test]
+    fn test_witness_with_empty_secret_data() {
+        use crate::proof::statement::{HashFunction, StatementBuilder};
+        use sha3::{Digest, Sha3_256};
+        
+        // Create statement expecting non-empty preimage
+        let preimage = b"test".to_vec();
+        let mut hasher = Sha3_256::new();
+        hasher.update(&preimage);
+        let hash = hasher.finalize().to_vec();
+        
+        let statement = StatementBuilder::new()
+            .preimage(HashFunction::SHA3_256, hash)
+            .build()
+            .unwrap();
+        
+        // Create witness with empty preimage
+        let empty_witness = Witness::preimage(vec![]);
+        
+        // Should fail satisfaction check
+        assert!(!empty_witness.satisfies_statement(&statement), 
+                "Witness with empty secret should not satisfy statement");
+    }
+
+    #[test]
+    fn test_witness_range_value_at_exact_boundaries() {
+        use crate::proof::statement::StatementBuilder;
+        
+        // Test exact minimum boundary (10)
+        let min_value: u64 = 10;
+        let blinding_min = vec![0xDD; 32];
+        let commitment_min = crate::proof::bulletproofs::pedersen_commit(min_value, &blinding_min).unwrap();
+        
+        let statement_min = StatementBuilder::new()
+            .range(10, 20, commitment_min)
+            .build()
+            .unwrap();
+        
+        let witness_min = Witness::range(min_value, blinding_min);
+        assert!(witness_min.satisfies_statement(&statement_min),
+                "Witness at exact minimum boundary should satisfy statement");
+        
+        // Test exact maximum boundary (19, since range is [10, 20) exclusive)
+        let max_value: u64 = 19;
+        let blinding_max = vec![0xEE; 32];
+        let commitment_max = crate::proof::bulletproofs::pedersen_commit(max_value, &blinding_max).unwrap();
+        
+        let statement_max = StatementBuilder::new()
+            .range(10, 20, commitment_max)
+            .build()
+            .unwrap();
+        
+        let witness_max = Witness::range(max_value, blinding_max);
+        assert!(witness_max.satisfies_statement(&statement_max),
+                "Witness at exact maximum boundary should satisfy statement");
+    }
+
+    #[test]
+    fn test_witness_satisfies_wrong_statement_type() {
+        use crate::proof::statement::{HashFunction, StatementBuilder};
+        use sha3::{Digest, Sha3_256};
+        
+        // Create discrete log witness
+        let secret = vec![42u8; 32];
+        let dlog_witness = Witness::discrete_log(secret);
+        
+        // Create preimage statement (different type)
+        let preimage = b"test".to_vec();
+        let mut hasher = Sha3_256::new();
+        hasher.update(&preimage);
+        let hash = hasher.finalize().to_vec();
+        
+        let preimage_statement = StatementBuilder::new()
+            .preimage(HashFunction::SHA3_256, hash)
+            .build()
+            .unwrap();
+        
+        // Discrete log witness should not satisfy preimage statement
+        assert!(!dlog_witness.satisfies_statement(&preimage_statement),
+                "Witness of wrong type should not satisfy statement");
+    }
 }

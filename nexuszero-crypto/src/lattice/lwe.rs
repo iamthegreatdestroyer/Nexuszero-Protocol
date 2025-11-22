@@ -148,22 +148,48 @@ pub fn encrypt<R: Rng + CryptoRng>(
 }
 
 /// Decrypt a ciphertext
+/// 
+/// # Constant-Time Considerations
+/// 
+/// This function uses constant-time operations to prevent timing side-channels:
+/// - Uses constant-time dot product (ct_dot_product) to prevent cache-timing attacks
+/// - All arithmetic operations are performed regardless of intermediate values
+/// - The final comparison uses constant-time selection via `subtle` crate
+/// 
+/// **Security Properties:**
+/// 1. No secret-dependent array indexing (prevents cache-timing attacks)
+/// 2. Constant-time final comparison (prevents timing leaks)
+/// 3. All operations execute in time independent of secret key values
+/// 
+/// **Note:** For maximum security in adversarial environments, also consider:
+/// 1. Running in isolated execution environments
+/// 2. Applying blinding techniques to ciphertext values
 pub fn decrypt(
     sk: &LWESecretKey,
     ct: &LWECiphertext,
     params: &LWEParameters,
 ) -> CryptoResult<bool> {
+    use subtle::ConstantTimeGreater;
+    use crate::utils::constant_time::ct_dot_product;
+    
     // Compute m' = v - s^T u (mod q)
-    let m_prime = (ct.v - sk.s.dot(&ct.u)).rem_euclid(params.q as i64);
+    // Use constant-time dot product to prevent cache-timing attacks
+    let s_slice = sk.s.as_slice().expect("Secret key must be contiguous");
+    let u_slice = ct.u.as_slice().expect("Ciphertext u must be contiguous");
+    let dot_prod = ct_dot_product(s_slice, u_slice);
+    let m_prime = (ct.v - dot_prod).rem_euclid(params.q as i64);
 
     // Decode: if m' is closer to q/2 than to 0, message is 1
-    let _threshold = (params.q / 4) as i64;
+    // Use constant-time comparison to avoid timing leaks in the decision
     let distance_to_zero = m_prime.min(params.q as i64 - m_prime);
     let distance_to_half = (m_prime - (params.q / 2) as i64)
         .abs()
         .min((params.q / 2) as i64);
 
-    Ok(distance_to_half < distance_to_zero)
+    // Constant-time comparison: distance_to_zero > distance_to_half
+    let ct_result = (distance_to_zero as u64).ct_gt(&(distance_to_half as u64));
+    
+    Ok(bool::from(ct_result))
 }
 
 // Helper functions
