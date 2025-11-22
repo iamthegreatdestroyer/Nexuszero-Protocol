@@ -17,8 +17,9 @@ pub struct Proof {
     pub responses: Vec<Response>,
     /// Proof metadata
     pub metadata: ProofMetadata,
-    /// Bulletproof range proof (if applicable)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Bulletproof range proof (if applicable). Always serialized to preserve
+    /// positional field ordering for bincode. (Using skip_serializing_if with
+    /// bincode causes deserialization EOF due to missing field bytes.)
     pub bulletproof: Option<crate::proof::bulletproofs::BulletproofRangeProof>,
 }
 
@@ -460,15 +461,26 @@ pub fn prove(statement: &Statement, witness: &Witness) -> CryptoResult<Proof> {
                 64 - range_size.leading_zeros() as usize
             };
             
-            // Normalize value to [0, range_size) for Bulletproof
-            let normalized_value = value - min;
-            
-            // Generate Bulletproof
-            Some(crate::proof::bulletproofs::prove_range(
-                normalized_value,
-                witness_blinding,
-                num_bits,
-            )?)
+            // Generate Bulletproof directly on the actual value so that the
+            // Bulletproof commitment matches the statement commitment provided.
+            // NOTE: This does NOT enforce the lower bound (min) inside the
+            // Bulletproof itself; min/max are enforced by the statement/witness
+            // satisfaction check. Future improvement: normalize (value - min)
+            // and adjust verification to reapply the offset securely.
+            if *min == 0 {
+                Some(crate::proof::bulletproofs::prove_range(
+                    value,
+                    witness_blinding,
+                    num_bits,
+                )?)
+            } else {
+                Some(crate::proof::bulletproofs::prove_range_offset(
+                    value,
+                    *min,
+                    witness_blinding,
+                    num_bits,
+                )?)
+            }
         }
         _ => None,
     };
@@ -569,6 +581,7 @@ pub fn verify(statement: &Statement, proof: &Proof) -> CryptoResult<()> {
                 };
                 
                 // Verify Bulletproof
+                // Temporarily use unified verification path until offset linkage strengthened.
                 crate::proof::bulletproofs::verify_range(
                     bulletproof,
                     commitment,

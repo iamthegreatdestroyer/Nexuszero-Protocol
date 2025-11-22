@@ -1,4 +1,44 @@
-# WEEK 1 CRYPTOGRAPHY MODULE - PROGRESS TRACKER
+# Week 1 Progress Tracker
+
+Goal: ≥90% foundational crypto & benchmarking readiness before advancing to Week 2.
+
+## Core Deliverables
+
+- Parameter selection module (builder, constraints, security estimation): COMPLETE
+- Miller-Rabin primality & prime generation utilities: COMPLETE
+- Security level heuristic (dimension/modulus/sigma factors): COMPLETE
+- Comprehensive benches (LWE, Ring-LWE, polynomial ops, proofs, E2E workflows): COMPLETE
+- Benchmark results captured (initial summary): IN PROGRESS (baseline recorded)
+- Test suite expansion (parameter selector + edge cases): COMPLETE
+- Documentation (benchmark summary + tracker): COMPLETE (this file + BENCHMARK_RESULTS.md)
+
+## Completion Estimate
+
+Tasks scoped for Week 1: 10 (approx aggregation of tracked subtasks)  
+Completed: 8  
+In Progress: 2  
+Deferred (Week 3 security hardening items): context binding, domain separation, serialization versioning, backward compatibility flags.
+
+Estimated Completion Percentage: 80% (will reach ≥90% once benchmark extraction automation + Ring-LWE detailed table added).
+
+## Remaining Week 1 Actions
+
+1. Extract Ring-LWE detailed timing table (keygen/encrypt/decrypt per security tier).
+2. Add ops/sec + variance % columns to benchmark report.
+3. Automate benchmark parsing script (future: `scripts/parse_benchmarks.rs`).
+
+## Risk & Notes
+
+- Current security estimation heuristic is simplified; formal hardness model (BKZ cost estimation) deferred to Week 2.
+- Benchmark environment variability (single machine) — need reproducibility harness later.
+
+## Hand-off
+
+Foundational cryptographic parameter and performance scaffolding is stable for Week 2 feature build-out. Security augmentation postponed per roadmap.
+
+_Generated: Week 1 milestone tracking._
+
+## Week 1 Cryptography Module - Detailed Tracker
 
 **Project:** Nexuszero Crypto - Lattice-Based Zero-Knowledge Proof System  
 **Start Date:** November 20, 2025  
@@ -9,7 +49,7 @@
 
 ## 📊 OVERALL PROGRESS
 
-```
+```text
 Day 1-2: Lattice-Based Crypto Library    [██████████] 100% ✅
 Day 3-4: Proof Structures                [██████████] 100% ✅
 Day 5:   Parameter Selection             [██████████] 100% ✅
@@ -285,15 +325,23 @@ OVERALL:                                 [█████████▱] 90%
 
 ### Completed Test Improvements ✅
 
-**Wave 1: Negative Tests (78.12% → 83.27%, +5.15%)**
+### Wave 1: Negative Tests (78.12% → 83.27%, +5.15%)
 
 1. ✅ Added statement validation tests (empty fields, invalid ranges, missing builder type) → **+42.59% coverage**
 2. ✅ Added witness mismatch tests (discrete log, preimage, range) → **+13.79% coverage**
 3. ✅ Added proof tampering tests (commitment/response/challenge, Blake3, truncated) → **+5.08% coverage**
 
-**Wave 2: Edge Case & Statistical Tests (83.27% → 87.13%, +3.86%)** 4. ✅ Added LWE statistical tests (error distribution, magnitude bounds, invalid params, encryption randomness) → **+10.91% coverage** → 92.7% 5. ✅ Added selector edge cases (extreme dimensions, boundary modulus, ratio/sigma extremes, prime generation, ring-LWE) → **+10.65% coverage** → 83.4% 6. ✅ Added security boundary tests (level progression, validation edge cases, proof size/timing estimates) → **+21.43% coverage** → **100%** ✨
+### Wave 2: Edge Case & Statistical Tests (83.27% → 87.13%, +3.86%)
 
-**Wave 3: Error Path & Validation Tests (87.13% → 89.45%, +2.32%)** 7. ✅ Added LWE edge case tests (keygen with various params, decrypt edge values, small modulus) → kept at 92.7% 8. ✅ Added selector error path tests (dimension too small, ring-LWE min, modulus < dimension, prime bit length errors, security estimation edge cases, all constraints) → **+10.7% coverage** → 94.1% 9. ✅ Added selector power-of-2 rounding tests (rounding up/down for Ring-LWE dimensions)
+4. ✅ Added LWE statistical tests (error distribution, magnitude bounds, invalid params, encryption randomness) → **+10.91% coverage** → 92.7%
+5. ✅ Added selector edge cases (extreme dimensions, boundary modulus, ratio/sigma extremes, prime generation, ring-LWE) → **+10.65% coverage** → 83.4%
+6. ✅ Added security boundary tests (level progression, validation edge cases, proof size/timing estimates) → **+21.43% coverage** → **100%** ✨
+
+### Wave 3: Error Path & Validation Tests (87.13% → 89.45%, +2.32%)
+
+7. ✅ Added LWE edge case tests (keygen with various params, decrypt edge values, small modulus) → kept at 92.7%
+8. ✅ Added selector error path tests (dimension too small, ring-LWE min, modulus < dimension, prime bit length errors, security estimation edge cases, all constraints) → **+10.7% coverage** → 94.1%
+9. ✅ Added selector power-of-2 rounding tests (rounding up/down for Ring-LWE dimensions)
 
 **Overall Progress:** 78.12% → 89.45% (**+10.33%** total, +31 tests added across 3 waves)
 **Test Count:** 60 → 91 unit tests (+31 new tests, 100% passing)
