@@ -1,25 +1,25 @@
 autonomy:
   default_level: 4
   levels:
-    '0': "No automation - propose only"
-    '1': "Conservative - PR only"
-    '2': "Moderate - docs/tests auto-merge"
-    '3': "High - features auto-merge"
-    '4': "Full - auto-merge with safeties"
+    "0": "No automation - propose only"
+    "1": "Conservative - PR only"
+    "2": "Moderate - docs/tests auto-merge"
+    "3": "High - features auto-merge"
+    "4": "Full - auto-merge with safeties"
   allowed_files_by_level:
-    '1':
+    "1":
       - "docs/**"
       - "examples/**"
       - "README*.md"
-    '2':
+    "2":
       - "nexuszero-optimizer/**"
       - "nexuszero-crypto/**"
       - "scripts/**"
-    '3':
+    "3":
       - "nexuszero-crypto/**"
       - "nexuszero-optimizer/**"
       - "examples/**"
-    '4':
+    "4":
       - "**/*"
   must_confirm:
     - "infra/**"
