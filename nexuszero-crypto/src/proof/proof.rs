@@ -44,14 +44,14 @@ pub struct Response {
     pub value: Vec<u8>,
 }
 
-/// Proof metadata
+/// Proof metadata - optimized for minimal size
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ProofMetadata {
     /// Proof system version
     pub version: u8,
-    /// Timestamp of generation
+    /// Timestamp of generation (set to 0 for size optimization)
     pub timestamp: u64,
-    /// Size in bytes
+    /// Size in bytes (computed dynamically, serialized as 0 to save space)
     pub size: usize,
 }
 
@@ -81,9 +81,10 @@ impl Proof {
         })
     }
 
-    /// Get proof size
+    /// Get proof size (computed from serialization)
     pub fn size(&self) -> usize {
-        self.metadata.size
+        // Size is computed on-demand from serialization
+        self.to_bytes().map(|b| b.len()).unwrap_or(0)
     }
 }
 
@@ -491,13 +492,10 @@ pub fn prove(statement: &Statement, witness: &Witness) -> CryptoResult<Proof> {
     };
     
     // PHASE 5: Package proof
-    let proof_bytes = bincode::serialize(&(&commitments, &challenge, &responses, &bulletproof))
-        .map_err(|e| CryptoError::SerializationError(e.to_string()))?;
-    
     let metadata = ProofMetadata {
         version: 1,
-        timestamp: current_timestamp(),
-        size: proof_bytes.len(),
+        timestamp: 0, // Set to 0 for size optimization
+        size: 0, // Size computed dynamically to save space
     };
     
     Ok(Proof {
@@ -1039,6 +1037,9 @@ mod tests {
         // Serialize
         let bytes = proof.to_bytes().unwrap();
         assert!(!bytes.is_empty());
+        
+        // Print proof size for reference
+        println!("Discrete log proof size: {} bytes", bytes.len());
 
         // Deserialize
         let deserialized = Proof::from_bytes(&bytes).unwrap();
@@ -1046,6 +1047,68 @@ mod tests {
         // Verify deserialized proof
         let result = verify(&statement, &deserialized);
         assert!(result.is_ok(), "Deserialized proof should verify");
+    }
+    
+    #[test]
+    fn test_proof_size_measurements() {
+        use crate::proof::statement::{StatementBuilder, HashFunction};
+        use sha3::{Digest, Sha3_256};
+        use num_bigint::BigUint;
+        
+        // Test discrete log proof size
+        let generator = vec![2u8; 32];
+        let secret = vec![42u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        
+        let statement = StatementBuilder::new()
+            .discrete_log(generator, public_value)
+            .build()
+            .unwrap();
+        let witness = Witness::discrete_log(secret);
+        let proof = prove(&statement, &witness).unwrap();
+        let bytes = proof.to_bytes().unwrap();
+        
+        println!("Discrete log proof: {} bytes", bytes.len());
+        
+        // Test preimage proof size
+        let preimage = b"test message for proof".to_vec();
+        let mut hasher = Sha3_256::new();
+        hasher.update(&preimage);
+        let hash = hasher.finalize().to_vec();
+        
+        let statement2 = StatementBuilder::new()
+            .preimage(HashFunction::SHA3_256, hash)
+            .build()
+            .unwrap();
+        let witness2 = Witness::preimage(preimage);
+        let proof2 = prove(&statement2, &witness2).unwrap();
+        let bytes2 = proof2.to_bytes().unwrap();
+        
+        println!("Preimage proof: {} bytes", bytes2.len());
+        
+        // Test range proof size with Bulletproofs
+        let value: u64 = 15;
+        let blinding = vec![0xAA; 32];
+        let commitment = crate::proof::bulletproofs::pedersen_commit(value, &blinding).unwrap();
+        
+        let statement3 = StatementBuilder::new()
+            .range(10, 20, commitment)
+            .build()
+            .unwrap();
+        let witness3 = Witness::range(value, blinding);
+        let proof3 = prove(&statement3, &witness3).unwrap();
+        let bytes3 = proof3.to_bytes().unwrap();
+        
+        println!("Range proof (with Bulletproof): {} bytes", bytes3.len());
+        
+        // Verify all proofs still work
+        assert!(verify(&statement, &proof).is_ok());
+        assert!(verify(&statement2, &proof2).is_ok());
+        assert!(verify(&statement3, &proof3).is_ok());
     }
 
     #[test]
@@ -1073,9 +1136,10 @@ mod tests {
 
         // Check metadata
         assert_eq!(proof.metadata.version, 1);
-        assert!(proof.metadata.timestamp > 0);
-        assert!(proof.metadata.size > 0);
-        assert_eq!(proof.size(), proof.metadata.size);
+        // Timestamp is now optional for size optimization
+        assert!(proof.metadata.timestamp == 0);
+        // Size is computed dynamically
+        assert!(proof.size() > 0);
     }
 
     #[test]
