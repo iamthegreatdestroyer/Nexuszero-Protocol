@@ -102,6 +102,65 @@ Nexuszero-Protocol/
 
 ---
 
+## 🐳 Deployment
+
+Nexuszero Protocol includes comprehensive DevOps infrastructure for local development and production deployment.
+
+### Local Development with Docker Compose
+
+```bash
+# Start all services (crypto, optimizer, monitoring stack)
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+
+# Access services
+# - Grafana: http://localhost:3000 (admin/admin)
+# - Prometheus: http://localhost:9090
+# - Crypto Service: http://localhost:13001
+# - Optimizer Service: http://localhost:13002
+```
+
+### Production Deployment with Kubernetes
+
+```bash
+# Create namespace and resources
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secrets.yaml  # Update with real secrets first!
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/pvc.yaml
+
+# Deploy services
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+# Check deployment
+kubectl get all -n nexuszero
+```
+
+### CI/CD Pipeline
+
+The project includes automated CI/CD with GitHub Actions:
+
+- ✅ Automated testing on every push
+- ✅ Docker image builds and push to GitHub Container Registry
+- ✅ Auto-deploy to staging on main branch
+- ✅ Manual approval for production deployments
+- ✅ Security scanning with Trivy
+
+**Documentation:**
+- [Complete Deployment Guide](docs/DEPLOYMENT.md)
+- [Kubernetes Setup](k8s/README.md)
+- [Metrics & Monitoring](docs/METRICS_ENDPOINTS.md)
+
+---
+
 ## 🎯 Key Features
 
 ### 0. Bulletproofs Zero-Knowledge Range Proofs 🔒
@@ -585,13 +644,15 @@ gp              # Push
 
 | Metric                  | Count  | Status        |
 | ----------------------- | ------ | ------------- |
-| Documentation Lines     | 6,300+ | ✅ Complete   |
+| Documentation Lines     | 9,000+ | ✅ Complete   |
 | Reference Codes         | 26     | ✅ Complete   |
 | Configuration Templates | 12+    | ✅ Ready      |
 | Setup Scripts           | 3      | ✅ Production |
 | PowerShell Aliases      | 35+    | ✅ Active     |
 | Utility Functions       | 10+    | ✅ Active     |
 | Environment Variables   | 40+    | ✅ Documented |
+| DevOps Manifests        | 20+    | ✅ Complete   |
+| CI/CD Workflows         | 8      | ✅ Active     |
 | Sessions Complete       | 4/6    | ✅ On Track   |
 
 ---
