@@ -1,0 +1,64 @@
+# Rust
+target/
+**/*.rs.bk
+*.pdb
+
+# Build artifacts
+Cargo.lock
+
+# Testing and coverage
+*.profraw
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Python (for optimizer)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Logs and temporary files
+logs/
+*.log
+*.db
+*.sqlite
+
+# Examples and tests
+examples/
+tests/
+benches/
+
+# CI/CD
+.github/
+
+# History and tracking files
+.history/
+SESSION_*.md
+WEEK_*.md
+CURRENT_SPRINT.md
+PROJECT_OVERVIEW.md
+BENCHMARK_RESULTS.md
+benchmark_*.txt
+benchmark_*.json
+benchmark_*.md
