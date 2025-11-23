@@ -50,3 +50,72 @@ jobs:
       - name: Smoke test python server
         run: |
           curl --retry 3 --retry-connrefused --max-time 10 http://localhost:5000 | grep -q "NexusZero Protocol - Python Example"
+
+  optimizer-tracing:
+    runs-on: ubuntu-latest
+    needs: python-example
+    services:
+      otel-collector:
+        image: otel/opentelemetry-collector-contrib:0.74.0
+        ports:
+          - 4317:4317
+        options: >-
+          --entrypoint /otelcol
+          -v ${{ github.workspace }}/.github/otlp-config.yaml:/etc/otel-config.yaml
+          -v ${{ github.workspace }}/.github/otel-traces.json:/tmp/otel-traces.json
+          /otelcol --config /etc/otel-config.yaml
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install dependencies (optimizer)
+        working-directory: nexuszero-optimizer
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+      - name: Create OTEL artifact file
+        run: |
+          mkdir -p .github
+          touch .github/otel-traces.json
+      - name: Wait for OTEL collector
+        run: |
+          sleep 2
+      - name: Run console exporter smoke test
+        working-directory: nexuszero-optimizer
+        env:
+          NEXUSZERO_OTEL_CONSOLE: 1
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          pytest -q tests/test_tracing.py::test_tracing_trainer_export_console -q
+      - name: Run OTLP exporter smoke test
+        working-directory: nexuszero-optimizer
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          pytest -q tests/test_tracing.py::test_tracing_trainer_export_otlp -q
+      - name: Assert OTLP collector received span via file exporter
+        run: |
+          # Install jq so we can parse JSON reliably
+          sudo apt-get update && sudo apt-get install -y jq
+          CONTAINER=$(docker ps --filter ancestor=otel/opentelemetry-collector-contrib --format '{{.ID}}' | head -n1)
+          echo "Collector container: $CONTAINER"
+          if [ -z "$CONTAINER" ]; then echo "Collector not running" && docker ps -a && exit 1; fi
+          # Wait for the collector to flush writes; tolerant backoff
+          for i in 1 2 3 4 5; do
+              docker exec $CONTAINER sh -c 'if [ -f /tmp/otel-traces.json ]; then cat /tmp/otel-traces.json; fi' > otel_traces.json || true
+              SIZE=$(wc -c < otel_traces.json || echo 0)
+              if [ "$SIZE" -gt 0 ]; then break; fi
+              sleep 1
+          done
+          echo "Trace file content size:" $(wc -c < otel_traces.json || echo 0)
+          # Parse as newline-delimited JSON or an array using jq -s
+          HAS_TRAIN_EPOCH=$(jq -s 'map(select(.name=="train_epoch")) | length' otel_traces.json || echo 0)
+          if [ "$HAS_TRAIN_EPOCH" -gt 0 ]; then echo "Found train_epoch span in OTLP file exports"; else echo "Span not found in file, dumping file:" && cat otel_traces.json && exit 1; fi
