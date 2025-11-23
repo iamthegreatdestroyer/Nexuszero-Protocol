@@ -4,7 +4,7 @@
 //! using ctypes or cffi. It enables the Python neural optimizer to interact
 //! with the Rust cryptographic primitives.
 
-use std::ffi::{CString, c_char};
+use std::ffi::c_char;
 use std::ptr;
 use crate::params::security::SecurityLevel;
 use crate::params::selector::ParameterSelector;
