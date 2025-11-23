@@ -1,4 +1,5 @@
-# Autonomy Check Script
+Autonomy Check Script
+=====================
 
 This directory contains `autonomy_check.py`, a script used by CI to enforce the
 repo's autonomy policy.
