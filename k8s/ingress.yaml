@@ -1,0 +1,141 @@
+---
+# Ingress for Nexuszero Services
+# Requires an Ingress Controller (e.g., nginx-ingress, traefik)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexuszero-ingress
+  namespace: nexuszero
+  annotations:
+    # Example annotations for nginx-ingress
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    # CORS settings (adjust as needed)
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  tls:
+  - hosts:
+    - api.nexuszero.io
+    - optimizer.nexuszero.io
+    - monitor.nexuszero.io
+    - grafana.nexuszero.io
+    secretName: nexuszero-tls
+  rules:
+  # Main API endpoint
+  - host: api.nexuszero.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nexuszero-crypto
+            port:
+              number: 13001
+  
+  # Optimizer service
+  - host: optimizer.nexuszero.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nexuszero-optimizer
+            port:
+              number: 13002
+  
+  # Monitor service
+  - host: monitor.nexuszero.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nexuszero-monitor
+            port:
+              number: 13003
+  
+  # Grafana dashboard
+  - host: grafana.nexuszero.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+
+---
+# Alternative: Single domain with path-based routing
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexuszero-path-ingress
+  namespace: nexuszero
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  tls:
+  - hosts:
+    - nexuszero.io
+    secretName: nexuszero-tls-main
+  rules:
+  - host: nexuszero.io
+    http:
+      paths:
+      # API routes
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nexuszero-crypto
+            port:
+              number: 13001
+      
+      # Optimizer routes
+      - path: /optimizer(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nexuszero-optimizer
+            port:
+              number: 13002
+      
+      # Monitor routes
+      - path: /monitor(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nexuszero-monitor
+            port:
+              number: 13003
+      
+      # Grafana dashboard
+      - path: /grafana(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+      
+      # Prometheus (if needed externally - usually internal only)
+      - path: /prometheus(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090

@@ -1,0 +1,146 @@
+---
+# Nexuszero Crypto Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexuszero-crypto
+  namespace: nexuszero
+  labels:
+    app: nexuszero-crypto
+    tier: core
+spec:
+  type: ClusterIP
+  ports:
+  - port: 13001
+    targetPort: 13001
+    protocol: TCP
+    name: http
+  selector:
+    app: nexuszero-crypto
+
+---
+# Nexuszero Optimizer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexuszero-optimizer
+  namespace: nexuszero
+  labels:
+    app: nexuszero-optimizer
+    tier: ml
+spec:
+  type: ClusterIP
+  ports:
+  - port: 13002
+    targetPort: 13002
+    protocol: TCP
+    name: http
+  selector:
+    app: nexuszero-optimizer
+
+---
+# Nexuszero Monitor Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexuszero-monitor
+  namespace: nexuszero
+  labels:
+    app: nexuszero-monitor
+    tier: monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - port: 13003
+    targetPort: 13003
+    protocol: TCP
+    name: http
+  selector:
+    app: nexuszero-monitor
+
+---
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: nexuszero
+  labels:
+    app: prometheus
+    tier: monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: http
+  selector:
+    app: prometheus
+
+---
+# Grafana Service (LoadBalancer for external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: nexuszero
+  labels:
+    app: grafana
+    tier: monitoring
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: grafana
+
+---
+# Loki Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: nexuszero
+  labels:
+    app: loki
+    tier: logging
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3100
+    targetPort: 3100
+    protocol: TCP
+    name: http
+  selector:
+    app: loki
+
+---
+# API Gateway Service (LoadBalancer for external access to core services)
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexuszero-gateway
+  namespace: nexuszero
+  labels:
+    tier: gateway
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 13001
+    protocol: TCP
+    name: crypto
+  - port: 8080
+    targetPort: 13002
+    protocol: TCP
+    name: optimizer
+  - port: 8081
+    targetPort: 13003
+    protocol: TCP
+    name: monitor
+  selector:
+    tier: core
