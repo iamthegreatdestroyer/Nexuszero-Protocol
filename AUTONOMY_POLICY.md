@@ -53,36 +53,3 @@ and the change doesn’t touch `must_confirm` patterns.
 
 This file is intentionally lightweight and intended for humans; modify `autonomy.yaml`
 to adjust enforcement and fine-grained rules.
-
-## Implementation details (autonomy_check)
-
-- `scripts/autonomy_check.py` implements the enforcement logic and several
-  reliability improvements:
-  - Idempotent CheckRun posting (updates existing checks instead of creating
-    duplicates) with retry/backoff on transient errors.
-  - Idempotent PR comment behavior (updates owned bot comments with a marker).
-  - Merge rule evaluation: polls for required reviews and required checks
-    (supports both modern `check-runs` and legacy commit `statuses`).
-  - Writes `autonomy-summary-<PR|SHA>.json` artifact for CI traceability.
-  - `--skip-heavy-tests` fast path for local iteration and `--merge-if-allowed`
-    to perform auto-merge under the configured rules.
-
-These behaviors are designed to keep automation robust and traceable while
-minimizing the need for human approvals for safe, policy-compliant changes.
-
-### Local testing & validation
-
-To test the autonomy check locally (fast path):
-
-```pwsh
-powershell -ExecutionPolicy Bypass -File .\scripts\setup-python-env.ps1
-python scripts/autonomy_check.py --dry-run --skip-heavy-tests --post-check --post-comment
-```
-
-For a full check (privileged), run the same command inside a `pull_request_target`
-context (for CI) or a safe environment with `GITHUB_TOKEN` set, then run:
-
-```pwsh
-# Example in CI (privileged):
-python scripts/autonomy_check.py --merge-if-allowed --post-check --post-comment
-```
