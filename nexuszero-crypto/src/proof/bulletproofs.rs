@@ -1177,4 +1177,83 @@ mod tests {
         assert_eq!(val1, val2, "Results should be deterministic");
         assert_eq!(val1, true, "Both runs should validate proofs");
     }
+
+    // ============================================================================
+    // Additional Negative/Edge Case Tests for Offset Batch Verification
+    // ============================================================================
+
+    #[test]
+    fn test_batch_range_proofs_offset_empty_inputs() {
+        let result = verify_batch_range_proofs_offset(&[], &[], &[], 8);
+        assert!(result.is_err(), "Empty inputs should return Err");
+    }
+
+    #[test]
+    fn test_batch_range_proofs_offset_length_mismatch() {
+        // Single proof but mismatched mins vector
+        let value = 110u64;
+        let min = 100u64;
+        let blinding = vec![0x11; 32];
+        let proof = prove_range_offset(value, min, &blinding, 8).unwrap();
+        let commitment = proof.commitment.clone();
+        let result = verify_batch_range_proofs_offset(&[proof], &[commitment], &[min, 101], 8);
+        assert!(result.is_err(), "Length mismatch should return Err");
+    }
+
+    #[test]
+    fn test_batch_range_proofs_offset_bit_commitment_len_failure() {
+        let value = 110u64;
+        let min = 100u64;
+        let blinding = vec![0x11; 32];
+        let mut proof = prove_range_offset(value, min, &blinding, 8).unwrap();
+        // Tamper: remove a bit commitment
+        if !proof.bit_commitments.is_empty() {
+            proof.bit_commitments.pop();
+        }
+        let commitment = proof.commitment.clone();
+        let result = verify_batch_range_proofs_offset(&[proof], &[commitment], &[min], 8);
+        assert!(result.is_ok(), "Should return Ok(false) on invalid bit commitments len");
+        assert!(!result.unwrap(), "Bit commitment length mismatch should fail");
+    }
+
+    #[test]
+    fn test_batch_range_proofs_offset_challenge_tamper() {
+        let value = 110u64;
+        let min = 100u64;
+        let blinding = vec![0x11; 32];
+        let mut proof = prove_range_offset(value, min, &blinding, 8).unwrap();
+        // Tamper first challenge byte
+        if !proof.challenges.is_empty() {
+            proof.challenges[0][0] ^= 0xFF;
+        }
+        let commitment = proof.commitment.clone();
+        let result = verify_batch_range_proofs_offset(&[proof], &[commitment], &[min], 8).unwrap();
+        assert!(!result, "Tampered challenge should invalidate proof");
+    }
+
+    #[test]
+    fn test_batch_range_proofs_offset_wrong_num_bits() {
+        let value = 110u64;
+        let min = 100u64;
+        let blinding = vec![0x11; 32];
+        let proof = prove_range_offset(value, min, &blinding, 8).unwrap();
+        let commitment = proof.commitment.clone();
+        let result = verify_batch_range_proofs_offset(&[proof], &[commitment], &[min], 16).unwrap();
+        assert!(!result, "Wrong num_bits should fail verification");
+    }
+
+    #[test]
+    fn test_batch_range_proofs_offset_inner_product_range_failure() {
+        let value = 110u64;
+        let min = 100u64;
+        let blinding = vec![0x11; 32];
+        let mut proof = prove_range_offset(value, min, &blinding, 8).unwrap();
+        // Force inner product components above 2^8 by tampering final_a/final_b
+        let large = (1u64 << 10).to_be_bytes(); // larger than 2^8
+        proof.inner_product_proof.final_a = large.to_vec();
+        proof.inner_product_proof.final_b = large.to_vec();
+        let commitment = proof.commitment.clone();
+        let result = verify_batch_range_proofs_offset(&[proof], &[commitment], &[min], 8).unwrap();
+        assert!(!result, "Out-of-range inner product should fail");
+    }
 }
