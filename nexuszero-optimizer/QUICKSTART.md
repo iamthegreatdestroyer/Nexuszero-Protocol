@@ -2,7 +2,7 @@
 
 # Nexuszero Optimizer - Quick Start Guide
 
-<!-- AUTONOMY LEVEL 2 TEST: Do not worry about this line. This PR is to validate the secure pull_request_target workflow and check-run/comment behavior. -->
+<!-- Removed AUTONOMY LEVEL 2 test comment (reverting test artifacts) -->
 
 ## 🚀 Getting Started
 
@@ -264,4 +264,4 @@ python scripts/generate_dataset.py --output_dir data
 **Status:** Days 1-4 Complete ✅  
 **Next:** Days 5-7 (Soundness verification & training loop)  
 **Last Updated:** November 2024
-\n<!-- AUTONOMY LEVEL 2 FORK PR:  -->\n
+\n<!-- Removed AUTONOMY LEVEL 2 fork PR marker -->\n
