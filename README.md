@@ -118,6 +118,14 @@ Nexuszero-Protocol/
 │   └── (Ring-LWE, NTT, Schnorr signatures)
 │
 └── nexuszero-optimizer/                     # Neural optimizer (NEW!)
+
+---
+
+## ⚖️ Legal & IP
+
+Legal and Intellectual Property (IP) templates, filing notes, and licensing guidance live in the `legal/` directory. This includes patent templates, trademark application guidance, licensing strategy, copyright header templates, and related artifacts.
+
+See: `legal/README.md` for more details and templates.
     └── (PyTorch GNN for proof parameter optimization)
 ```
 
