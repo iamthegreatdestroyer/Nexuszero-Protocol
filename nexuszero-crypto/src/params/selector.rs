@@ -371,6 +371,8 @@ pub fn is_prime_miller_rabin(n: u64, k: u32) -> bool {
         r += 1;
     }
     
+    use crate::utils::constant_time::ct_modpow;
+    
     let n_big = BigUint::from(n);
     let mut rng = thread_rng();
     
