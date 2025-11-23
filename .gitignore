@@ -1,0 +1,69 @@
+# Environment
+.env.local
+.env.*.local
+.vscode
+.venv
+__pycache__/
+node_modules/
+.DS_Store
+
+# VSCode history
+.history/
+
+# Rust
+target/
+Cargo.lock
+*.pdb
+
+# Python
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ML experiment artifacts
+wandb/
+*.wandb
+**/*.wandb
+checkpoints/
+baseline_*.txt
+
+# Additional virtual environments
+venv-neural/
+
+# Logs
+*.log
+logs/
+
+# Storybook build output (if generated later)
+storybook-static/
+
+# Node / Frontend build artifacts
+dist/
+build/
+
+# Coverage reports
+coverage/
+**/coverage/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+k8s/secrets.yaml.local
+
+# Monitoring data (local)
+prometheus-data/
+grafana-data/
+loki-data/
+
+# Secrets and credentials
+.env.production
+.env.staging
+secrets/
+*.pem
+*.key
+

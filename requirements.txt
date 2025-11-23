@@ -1,0 +1,7 @@
+# Core web example dependency
+flask>=2.0
+
+# Hyperparameter tuning & experiment tracking
+optuna>=3.6.0
+wandb>=0.17.0
+ray>=2.9.0

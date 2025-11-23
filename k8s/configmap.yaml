@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexuszero-config
+  namespace: nexuszero
+data:
+  # Rust Services Configuration
+  RUST_LOG: "info"
+  RUST_BACKTRACE: "1"
+  
+  # Python/ML Configuration
+  PYTHONUNBUFFERED: "1"
+  
+  # Prometheus Configuration
+  PROMETHEUS_SCRAPE_INTERVAL: "15s"
+  
+  # Application Configuration
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "production"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: nexuszero
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'nexuszero-k8s'
+        replica: 'prometheus-1'
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+            labels:
+              service: 'prometheus'
+
+      - job_name: 'nexuszero-crypto'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - nexuszero
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: nexuszero-crypto
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:13001
+            target_label: __address__
+
+      - job_name: 'nexuszero-optimizer'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - nexuszero
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: nexuszero-optimizer
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:13002
+            target_label: __address__
+
+      - job_name: 'nexuszero-monitor'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - nexuszero
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: nexuszero-monitor
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:13003
+            target_label: __address__
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: nexuszero
+data:
+  loki.yml: |
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      ingestion_rate_mb: 10
+      ingestion_burst_size_mb: 20

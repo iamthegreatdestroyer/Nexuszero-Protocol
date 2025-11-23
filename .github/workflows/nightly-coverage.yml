@@ -1,0 +1,57 @@
+name: Nightly Coverage
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  coverage:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Run coverage update script
+        shell: pwsh
+        run: |
+          .\scripts\update-coverage.ps1 -WorkspacePath . -FailUnder 90
+
+      - name: Generate coverage badge
+        shell: pwsh
+        run: |
+          .\scripts\update-badge.ps1
+
+      - name: Commit and push if changed
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/coverage/HISTORY.md docs/coverage/badge.svg README.md
+          $changed = git diff --staged --quiet; $LASTEXITCODE -ne 0
+          if ($changed) {
+            $date = Get-Date -Format "yyyy-MM-dd"
+            git commit -m "chore(coverage): nightly coverage update for $date [skip ci]"
+            git push
+          } else {
+            Write-Host "No coverage changes to commit"
+          }

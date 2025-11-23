@@ -1,0 +1,15 @@
+{
+  "name": "nexuszero-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node examples/node-app/index.js",
+    "start": "node examples/node-app/index.js",
+    "test": "cd nexuszero-sdk && npm test",
+    "build:sdk": "cd nexuszero-sdk && npm run build",
+    "docs:dev": "cd docs-site && npm run docs:dev",
+    "docs:build": "cd docs-site && npm run docs:build",
+    "docs:preview": "cd docs-site && npm run docs:preview"
+  },
+  "license": "MIT"
+}
