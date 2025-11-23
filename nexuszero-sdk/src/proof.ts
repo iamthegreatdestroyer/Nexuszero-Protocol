@@ -179,8 +179,12 @@ export class ProofBuilder {
     // Fill with some deterministic data based on witness
     if (this.witness) {
       const valueBytes = BigInt(this.witness.value).toString(16).padStart(16, "0");
-      for (let i = 0; i < Math.min(8, proofSize); i++) {
-        proof[i] = parseInt(valueBytes.slice(i * 2, i * 2 + 2), 16);
+      const maxBytes = Math.min(valueBytes.length / 2, proofSize);
+      for (let i = 0; i < maxBytes; i++) {
+        const byteStr = valueBytes.slice(i * 2, i * 2 + 2);
+        if (byteStr.length === 2) {
+          proof[i] = parseInt(byteStr, 16);
+        }
       }
     }
 
@@ -277,6 +281,9 @@ export async function verifyProof(proof: Proof): Promise<VerificationResult> {
   }
 }
 
+/** Minimum expected proof size for validation */
+const MIN_PROOF_SIZE = 256;
+
 /**
  * Mock proof verification for testing
  * TODO: Replace with actual Rust FFI call
@@ -284,7 +291,7 @@ export async function verifyProof(proof: Proof): Promise<VerificationResult> {
  */
 async function verifyMockProof(proof: Proof): Promise<boolean> {
   // Basic sanity checks
-  if (proof.data.length < 256) {
+  if (proof.data.length < MIN_PROOF_SIZE) {
     return false;
   }
 
