@@ -167,10 +167,13 @@ jobs:
                   <p><a href="html/index.html">View Rust HTML Coverage Report →</a></p>
                 </div>
 
-                <div class="card">
-                  <h2>🐍 Python Optimizer Coverage</h2>
-                  <p><a href="python/html/index.html">View Python HTML Coverage Report →</a></p>
-                </div>
+                  <div class="card">
+                    <h2>🐍 Python Optimizer Coverage</h2>
+                    <div class="coverage-badge">
+                      <img src="python/badge.svg" alt="PyCoverage Badge">
+                    </div>
+                    <p><a href="python/html/index.html">View Python HTML Coverage Report →</a></p>
+                  </div>
               
               <div class="card">
                   <h2>📈 Coverage History</h2>
