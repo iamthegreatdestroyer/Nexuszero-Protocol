@@ -202,9 +202,13 @@ class AdvancedGNNOptimizer(nn.Module):
             x = dropout(x)
             
             # Residual connection (skip connection)
-            # For first layer, no residual; for others, add residual
-            if i > 0 and x_in.shape == x.shape:
-                x = x + x_in
+            # Add residual only when shapes match (after first layer)
+            # Note: GAT with concat=True outputs hidden_dim (num_heads * out_channels)
+            # which matches our input dimension, so shapes should align
+            if i > 0:
+                if x_in.shape == x.shape:
+                    x = x + x_in
+                # If shapes don't match, skip residual (shouldn't happen with our config)
         
         # Multi-scale global pooling (combine mean, add, and max pooling)
         x_mean = global_mean_pool(x, batch)

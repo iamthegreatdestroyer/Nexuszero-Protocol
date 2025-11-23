@@ -78,20 +78,24 @@ def calculate_security_bits(n: int, q: int, sigma: float) -> int:
     """
     Estimate security bits based on parameters.
     
+    **WARNING**: This is a highly simplified heuristic for training data generation only.
+    For production use, actual security analysis must be performed using established
+    cryptographic security estimation tools (e.g., lattice estimator).
+    
     Args:
         n: Lattice dimension
         q: Modulus
         sigma: Error distribution parameter
     
     Returns:
-        Estimated security level in bits
+        Estimated security level in bits (128, 192, or 256)
     """
-    # Simplified security estimation
-    # In practice, this would use proper cryptographic analysis
+    # SIMPLIFIED HEURISTIC - NOT FOR PRODUCTION SECURITY ANALYSIS
+    # This is purely for dataset labeling during training
     log_q = np.log2(q)
     security = min(256, int((n * log_q) / (4 * sigma)))
     
-    # Round to nearest security level
+    # Round to nearest standard security level
     if security < 160:
         return 128
     elif security < 224:
