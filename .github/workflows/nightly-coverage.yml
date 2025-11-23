@@ -76,6 +76,12 @@ jobs:
         run: |
           ./scripts/update-python-coverage.ps1 -WorkspacePath . -FailUnder 90
 
+      - name: Upload Python coverage XML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-main
+          path: nexuszero-optimizer/coverage.xml
+
       - name: Commit and push if changed
         shell: pwsh
         run: |
