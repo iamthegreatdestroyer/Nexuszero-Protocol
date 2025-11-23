@@ -1,0 +1,67 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'nexuszero-local'
+    replica: 'prometheus-1'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# Load rules once and periodically evaluate them
+# rule_files:
+#   - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Nexuszero services
+  - job_name: 'nexuszero-crypto'
+    static_configs:
+      - targets: ['nexuszero-crypto:13001']
+        labels:
+          service: 'nexuszero-crypto'
+          tier: 'core'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'nexuszero-optimizer'
+    static_configs:
+      - targets: ['nexuszero-optimizer:13002']
+        labels:
+          service: 'nexuszero-optimizer'
+          tier: 'ml'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'nexuszero-monitor'
+    static_configs:
+      - targets: ['nexuszero-monitor:13003']
+        labels:
+          service: 'nexuszero-monitor'
+          tier: 'monitoring'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Container metrics (if cAdvisor is added)
+  # - job_name: 'cadvisor'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']
+  #       labels:
+  #         service: 'cadvisor'
+
+  # Node exporter (if added)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+  #       labels:
+  #         service: 'node-exporter'
