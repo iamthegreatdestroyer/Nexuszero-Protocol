@@ -1,0 +1,18 @@
+receivers:
+  otlp:
+    protocols:
+      grpc: {}
+
+exporters:
+  logging:
+    loglevel: debug
+  file:
+    path: /tmp/otel-traces.json
+    # JSON format is friendly for parsing in CI steps
+    format: json
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [logging, file]

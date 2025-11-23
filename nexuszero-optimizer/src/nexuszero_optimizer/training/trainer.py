@@ -17,6 +17,7 @@ from ..models.gnn import ProofOptimizationGNN
 from ..utils.config import Config
 from pathlib import Path
 import logging
+from ..utils.tracing import init_tracer, get_tracer, span
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,12 @@ class Trainer:
 
         # Ensure checkpoint dir exists
         Path(config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
+        # Initialize tracing (noop if not installed)
+        try:
+            init_tracer(service_name="nexuszero-optimizer")
+        except Exception:
+            pass
+        self._tracer = get_tracer(__name__)
 
     def _build_scheduler(self):
         tcfg = self.config.training
@@ -136,6 +143,7 @@ class Trainer:
             "metrics_target": batch.metrics,
         }
 
+    @span("train_epoch")
     def train_epoch(self, epoch: int) -> Dict[str, float]:
         self.model.train()
         tracker = MetricTracker()
@@ -147,61 +155,76 @@ class Trainer:
                 str(self.max_batches_per_epoch),
             )
         )
-        for batch_idx, batch in enumerate(self.train_loader):
-            if (
-                self.max_batches_per_epoch is not None
-                and batch_idx >= self.max_batches_per_epoch
-            ):
-                logger.info(
-                    "Early stop batch %d limit=%d" % (
-                        batch_idx,
-                        self.max_batches_per_epoch,
+        with self._tracer.start_as_current_span("train_epoch.inner") as span:
+            span.set_attribute("epoch", epoch)
+            span.set_attribute("batch_size", self.config.training.batch_size)
+            for batch_idx, batch in enumerate(self.train_loader):
+                if (
+                    self.max_batches_per_epoch is not None
+                    and batch_idx >= self.max_batches_per_epoch
+                ):
+                    logger.info(
+                        "Early stop batch %d limit=%d" % (
+                            batch_idx,
+                            self.max_batches_per_epoch,
+                        )
                     )
+                    break
+
+                with self._tracer.start_as_current_span(
+                    "train_epoch.batch"
+                ) as batch_span:
+                    batch_span.set_attribute("batch_idx", batch_idx)
+                    out = self._forward_batch(batch)
+                p_loss = parameter_mse(
+                    out["params_pred"], out["params_target"]
                 )
-                break
-            out = self._forward_batch(batch)
-            p_loss = parameter_mse(out["params_pred"], out["params_target"])
-            m_loss = (
-                metrics_mse(out["metrics_pred"], out["metrics_target"])
-                * self.config.training.aux_metrics_loss_weight
-            )
-            batch_metrics = self.batch_validator.evaluate_batch(
-                out["params_pred"]
-            )
-            s_pen = security_penalty(batch_metrics["security_score_mean"])
-            total_loss = p_loss + m_loss + s_pen
-
-            self.optimizer.zero_grad()
-            total_loss.backward()
-            if self.config.training.grad_clip > 0:
-                torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), self.config.training.grad_clip
+                m_loss = (
+                    metrics_mse(out["metrics_pred"], out["metrics_target"])
+                    * self.config.training.aux_metrics_loss_weight
                 )
-            self.optimizer.step()
+                batch_metrics = self.batch_validator.evaluate_batch(
+                    out["params_pred"]
+                )
+                s_pen = security_penalty(batch_metrics["security_score_mean"])
+                total_loss = p_loss + m_loss + s_pen
 
-            tracker.update("loss", float(total_loss.item()))
-            tracker.update("param_loss", float(p_loss.item()))
-            tracker.update("metrics_loss", float(m_loss.item()))
-            tracker.update("security_penalty", float(s_pen))
-            tracker.update(
-                "security_score", batch_metrics["security_score_mean"]
-            )
-            tracker.update("bit_security", batch_metrics["bit_security_mean"])
-            tracker.update("hardness", batch_metrics["hardness_mean"])
-            
-            # Track proof size predictions (first element of metrics prediction)
-            # Metrics are [proof_size, prove_time, verify_time] normalized to [0, 1]
-            tracker.update("proof_size_norm", float(out["metrics_pred"][:, 0].mean().item()))
-
-            if batch_idx % 10 == 0:
-                logger.info(
-                    "Epoch %d batch %d loss=%.4f sec=%.4f" % (
-                        epoch,
-                        batch_idx,
-                        total_loss.item(),
-                        batch_metrics["security_score_mean"],
+                self.optimizer.zero_grad()
+                total_loss.backward()
+                if self.config.training.grad_clip > 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        self.model.parameters(), self.config.training.grad_clip
                     )
+                self.optimizer.step()
+
+                tracker.update("loss", float(total_loss.item()))
+                tracker.update("param_loss", float(p_loss.item()))
+                tracker.update("metrics_loss", float(m_loss.item()))
+                tracker.update("security_penalty", float(s_pen))
+                tracker.update(
+                    "security_score", batch_metrics["security_score_mean"]
                 )
+                tracker.update(
+                    "bit_security", batch_metrics["bit_security_mean"]
+                )
+                tracker.update("hardness", batch_metrics["hardness_mean"])
+
+                # Track proof size predictions
+                # Metrics are [proof_size, prove_time, verify_time]
+                tracker.update(
+                    "proof_size_norm",
+                    float(out["metrics_pred"][:, 0].mean().item()),
+                )
+
+                if batch_idx % 10 == 0:
+                    logger.info(
+                        "Epoch %d batch %d loss=%.4f sec=%.4f" % (
+                            epoch,
+                            batch_idx,
+                            total_loss.item(),
+                            batch_metrics["security_score_mean"],
+                        )
+                    )
 
         avg = tracker.to_dict()
         logger.info(
@@ -221,6 +244,7 @@ class Trainer:
         return avg
 
     @torch.no_grad()
+    @span("validate_epoch")
     def validate(self, epoch: int) -> Dict[str, float]:
         self.model.eval()
         tracker = MetricTracker()
@@ -263,6 +287,7 @@ class Trainer:
             wandb.log({f"val_{k}": v for k, v in avg.items()}, step=epoch)
         return avg
 
+    @span("checkpoint")
     def _maybe_checkpoint(self, val_metrics: Dict[str, float], epoch: int):
         val_loss = val_metrics["loss"]
         tcfg = self.config.training
@@ -281,6 +306,7 @@ class Trainer:
         if not tcfg.checkpoint_best_only:
             torch.save(self.model.state_dict(), save_path)
 
+    @span("training_run")
     def fit(self):
         for epoch in range(1, self.config.training.num_epochs + 1):
             self.train_epoch(epoch)
@@ -312,6 +338,7 @@ class Trainer:
                 pass
 
     @torch.no_grad()
+    @span("evaluate_test")
     def evaluate_test(self) -> Dict[str, float]:
         self.model.eval()
         tracker = MetricTracker()
