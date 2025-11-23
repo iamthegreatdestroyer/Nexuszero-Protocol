@@ -230,30 +230,6 @@ else:
 - **Tests:** See `tests/` for usage examples
 - **Week 2 Prompts:** See `../scripts/WEEK_2_NEURAL_OPTIMIZER_PROMPTS.md`
 
-## 🔍 Tracing & Observability
-
-The optimizer integrates OpenTelemetry for tracing. By default tracing is disabled
-when OpenTelemetry packages are not installed; the library maintains a no-op
-fallback to ensure tests and environments without OTEL still function.
-
-Environment variables:
-
-- `NEXUSZERO_SERVICE` - override the global service name (default: `nexuszero-optimizer`)
-- `NEXUSZERO_OTEL_CONSOLE` - set to `1` or `true` to enable console span exporter (useful in dev/test)
-- `OTEL_EXPORTER_OTLP_ENDPOINT` - provide an OTLP collector endpoint to enable OTLP exporting
-
-Example usage (console exporter, local run):
-
-```bash
-# Export spans to console and set a service name
-export NEXUSZERO_OTEL_CONSOLE=1
-export NEXUSZERO_SERVICE=nexuszero-dev
-python scripts/train_traced.py --config config.yaml
-```
-
-When running in CI or production, prefer OTLP exporter by setting
-`OTEL_EXPORTER_OTLP_ENDPOINT` to your collector endpoint instead of `NEXUSZERO_OTEL_CONSOLE`.
-
 ## ❓ Troubleshooting
 
 ### CUDA Out of Memory
