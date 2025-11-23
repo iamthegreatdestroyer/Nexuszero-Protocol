@@ -155,7 +155,7 @@ spec:
     spec:
       containers:
       - name: nexuszero-monitor
-        image: alpine:latest
+        image: alpine:3.18
         command:
         - sh
         - -c
@@ -334,6 +334,11 @@ spec:
 
 ---
 # Promtail DaemonSet (runs on each node)
+# NOTE: This configuration assumes Docker as the container runtime
+# For managed Kubernetes (GKE, EKS, AKS), consider using native logging solutions:
+# - GKE: Cloud Logging
+# - EKS: Fluent Bit with CloudWatch
+# - AKS: Azure Monitor for containers
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -355,15 +360,15 @@ spec:
       serviceAccountName: promtail
       containers:
       - name: promtail
-        image: grafana/promtail:latest
+        image: grafana/promtail:2.9.3
         args:
         - -config.file=/etc/promtail/promtail.yml
         volumeMounts:
         - name: varlog
           mountPath: /var/log
           readOnly: true
-        - name: varlibdockercontainers
-          mountPath: /var/lib/docker/containers
+        - name: pods
+          mountPath: /var/log/pods
           readOnly: true
         resources:
           requests:
@@ -376,6 +381,6 @@ spec:
       - name: varlog
         hostPath:
           path: /var/log
-      - name: varlibdockercontainers
+      - name: pods
         hostPath:
-          path: /var/lib/docker/containers
+          path: /var/log/pods
