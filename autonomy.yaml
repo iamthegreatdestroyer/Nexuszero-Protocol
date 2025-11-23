@@ -29,6 +29,9 @@ autonomy:
   tests_required:
     - "pytest -q"
     - "flake8 --max-line-length=100 || true"
+  fast_tests_required:
+    - "flake8 --max-line-length=100 || true"
+    - 'pytest -q -k "not heavy" || true'
   merge_rules:
     required_reviewers: 0
     required_checks:
