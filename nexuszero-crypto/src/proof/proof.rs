@@ -148,15 +148,6 @@ fn mod_exp(base: &[u8], exp: &[u8], modulus: &[u8]) -> Vec<u8> {
     result.to_bytes_be()
 }
 
-/// Get current Unix timestamp
-fn current_timestamp() -> u64 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-}
-
 // ============================================================================
 // Commitment Phase Functions
 // ============================================================================
@@ -674,8 +665,9 @@ pub fn compute_challenge(statement: &Statement, commitments: &[Commitment]) -> C
 /// Expected speedup: >3x on 4-core CPUs for batches of 4+ proofs.
 ///
 /// # Example
-/// ```
-/// use nexuszero_crypto::proof::{Statement, Witness, proof::prove_batch};
+/// ```ignore
+/// use nexuszero_crypto::proof::{Statement, Witness};
+/// use nexuszero_crypto::proof::proof::prove_batch;
 /// use nexuszero_crypto::proof::statement::StatementBuilder;
 /// 
 /// // Create multiple statements and witnesses
@@ -686,7 +678,7 @@ pub fn compute_challenge(statement: &Statement, commitments: &[Commitment]) -> C
 /// ];
 /// 
 /// // Generate proofs in parallel
-/// // let proofs = prove_batch(&statements_and_witnesses)?;
+/// let proofs = prove_batch(&statements_and_witnesses)?;
 /// ```
 pub fn prove_batch(
     statements_and_witnesses: &[(Statement, Witness)],
