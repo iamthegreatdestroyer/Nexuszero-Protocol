@@ -234,54 +234,117 @@ class ProofCircuitGenerator:
     def find_optimal_parameters(
         self,
         circuit: Dict,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        security_level: Optional[int] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, int]:
         """
-        Find optimal parameters for circuit.
+        Find optimal parameters for circuit with diverse parameter combinations.
         
-        Uses heuristics based on circuit size. In production, this would
-        call the Rust crypto library to measure actual performance.
+        Generates diverse parameters covering:
+        - n: 64-2048 (powers of 2)
+        - q: varying primes (4096-131072)
+        - sigma: 1.0-8.0
+        - Security levels: 128/192/256-bit
+        - Edge cases and boundary conditions
         
         Args:
             circuit: Circuit dictionary from generate_random_circuit
+            security_level: Optional security level override (128, 192, or 256)
         
         Returns:
-            Tuple of (optimal_params, metrics)
+            Tuple of (optimal_params, metrics, security_level)
             - optimal_params: [n, q, sigma] (normalized to [0, 1])
             - metrics: [proof_size, prove_time, verify_time] (normalized to [0, 1])
+            - security_level: Assigned security level in bits
         """
         num_nodes = circuit['num_nodes']
         
-        # Heuristic: larger circuits need larger parameters
-        if num_nodes < 50:
-            n, q, sigma = 512, 12289, 3.2
-        elif num_nodes < 200:
-            n, q, sigma = 1024, 40961, 3.2
-        elif num_nodes < 500:
-            n, q, sigma = 1024, 65537, 3.2
-        else:
-            n, q, sigma = 2048, 65537, 3.2
+        # Randomly assign security level if not specified (covering all 3 levels)
+        if security_level is None:
+            security_level = np.random.choice([128, 192, 256])
         
-        # Add some randomness to make dataset more diverse
-        n = int(n * (0.9 + 0.2 * np.random.random()))
-        q = int(q * (0.95 + 0.1 * np.random.random()))
-        sigma = sigma * (0.9 + 0.2 * np.random.random())
+        # Define parameter ranges based on security level and circuit complexity
+        # Extended ranges per issue requirements: n=64-2048, sigma=1.0-8.0
+        if security_level == 128:
+            # 128-bit security: smaller parameters
+            n_options = [64, 128, 256, 512]
+            q_options = [4096, 8192, 12289, 16384, 20480]
+            sigma_range = (1.0, 4.0)
+        elif security_level == 192:
+            # 192-bit security: medium parameters
+            n_options = [256, 512, 1024]
+            q_options = [12289, 20480, 40961, 65537]
+            sigma_range = (2.0, 6.0)
+        else:  # 256-bit security
+            # 256-bit security: larger parameters
+            n_options = [512, 1024, 2048]
+            q_options = [40961, 65537, 98304, 131072]
+            sigma_range = (3.0, 8.0)
+        
+        # Select parameters based on circuit size
+        if num_nodes < 50:
+            n = np.random.choice(n_options[:2]) if len(n_options) >= 2 else n_options[0]
+        elif num_nodes < 200:
+            n = np.random.choice(n_options[1:3]) if len(n_options) >= 3 else n_options[-1]
+        elif num_nodes < 500:
+            n = np.random.choice(n_options[2:]) if len(n_options) >= 3 else n_options[-1]
+        else:
+            n = n_options[-1]
+        
+        # Select q (prime modulus) with diversity
+        q = np.random.choice(q_options)
+        
+        # Select sigma with full range diversity
+        sigma = np.random.uniform(sigma_range[0], sigma_range[1])
+        
+        # Add edge cases randomly (5% probability)
+        if np.random.random() < 0.05:
+            # Boundary conditions
+            edge_case = np.random.choice(['min_n', 'max_n', 'min_sigma', 'max_sigma', 'min_q', 'max_q'])
+            if edge_case == 'min_n':
+                n = 64
+            elif edge_case == 'max_n':
+                n = 2048
+            elif edge_case == 'min_sigma':
+                sigma = 1.0
+            elif edge_case == 'max_sigma':
+                sigma = 8.0
+            elif edge_case == 'min_q':
+                q = 4096
+            elif edge_case == 'max_q':
+                q = 131072
+        
+        # Add small randomness for diversity (±5%)
+        n = int(n * (0.95 + 0.1 * np.random.random()))
+        q = int(q * (0.98 + 0.04 * np.random.random()))
+        sigma = sigma * (0.95 + 0.1 * np.random.random())
+        
+        # Clamp to valid ranges
+        n = max(64, min(2048, n))
+        q = max(4096, min(131072, q))
+        sigma = max(1.0, min(8.0, sigma))
+        
+        # Ensure n is power of 2
+        n = 2 ** int(np.round(np.log2(n)))
         
         # Normalize parameters for neural network
-        # n: 256-4096 -> 0-1
+        # n: 64-2048 -> 0-1
         # q: 4096-131072 -> 0-1
-        # sigma: 2.0-5.0 -> 0-1
-        n_norm = (n - 256) / (4096 - 256)
+        # sigma: 1.0-8.0 -> 0-1
+        n_norm = (n - 64) / (2048 - 64)
         q_norm = (q - 4096) / (131072 - 4096)
-        sigma_norm = (sigma - 2.0) / (5.0 - 2.0)
+        sigma_norm = (sigma - 1.0) / (8.0 - 1.0)
         
         params = np.array([n_norm, q_norm, sigma_norm], dtype=np.float32)
         
-        # Simulate metrics based on parameters
-        proof_size = num_nodes * (n / 100) * 16  # bytes
-        prove_time = num_nodes * (n / 1000) * 0.1  # ms
-        verify_time = num_nodes * (n / 1000) * 0.05  # ms
+        # Simulate metrics based on parameters and security level
+        # Higher security level = larger proof size and time
+        security_factor = security_level / 128.0
         
-        # Add noise
+        proof_size = num_nodes * (n / 100) * 16 * security_factor  # bytes
+        prove_time = num_nodes * (n / 1000) * 0.1 * security_factor  # ms
+        verify_time = num_nodes * (n / 1000) * 0.05 * security_factor  # ms
+        
+        # Add noise (±10%)
         proof_size *= (0.9 + 0.2 * np.random.random())
         prove_time *= (0.9 + 0.2 * np.random.random())
         verify_time *= (0.9 + 0.2 * np.random.random())
@@ -295,7 +358,7 @@ class ProofCircuitGenerator:
         
         metrics = np.array([size_norm, prove_norm, verify_norm], dtype=np.float32)
         
-        return params, metrics
+        return params, metrics, security_level
     
     def generate_dataset(
         self,
@@ -329,7 +392,7 @@ class ProofCircuitGenerator:
         
         for i in iterator:
             circuit = self.generate_random_circuit()
-            params, metrics = self.find_optimal_parameters(circuit)
+            params, metrics, security_level = self.find_optimal_parameters(circuit)
             
             # Save circuit
             with h5py.File(output_path / f"circuit_{i}.h5", 'w') as f:
@@ -338,6 +401,7 @@ class ProofCircuitGenerator:
                 f.create_dataset('edge_attr', data=circuit['edge_attr'])
                 f.create_dataset('optimal_params', data=params)
                 f.create_dataset('metrics', data=metrics)
+                f.create_dataset('security_level', data=security_level)
         
         logger.info(f"✓ Generated {num_samples} circuits in {output_path}")
 
@@ -416,6 +480,7 @@ if __name__ == "__main__":
     print(f"  Node features shape: {circuit['node_features'].shape}")
     print(f"  Edge index shape: {circuit['edge_index'].shape}")
     
-    params, metrics = generator.find_optimal_parameters(circuit)
+    params, metrics, security_level = generator.find_optimal_parameters(circuit)
     print(f"✓ Optimal parameters: {params}")
     print(f"  Metrics: {metrics}")
+    print(f"  Security level: {security_level}-bit")
