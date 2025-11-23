@@ -43,6 +43,9 @@ thiserror = "1.0"
 log = "0.4"
 anyhow = "1.0"
 
+# Parallelism
+rayon = "1.8"
+
 [dev-dependencies]
 # Benchmarking
 criterion = { version = "0.5", features = ["html_reports"] }
