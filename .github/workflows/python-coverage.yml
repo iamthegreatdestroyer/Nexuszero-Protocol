@@ -1,0 +1,81 @@
+name: Python Coverage (Optimizer)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nexuszero-optimizer/**'
+      - '.github/workflows/python-coverage.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nexuszero-optimizer/**'
+      - '.github/workflows/python-coverage.yml'
+  workflow_dispatch: {}
+
+jobs:
+  test-and-coverage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: nexuszero-optimizer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            nexuszero-optimizer/pyproject.toml
+
+      - name: Install PyTorch (CPU) matching wheels
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir \
+            torch==2.1.0+cpu \
+            torchvision==0.16.0+cpu \
+            torchaudio==2.1.0+cpu \
+            -f https://download.pytorch.org/whl/torch_stable.html
+
+      - name: Install PyG dependencies and torch-geometric
+        run: |
+          pip install --no-cache-dir \
+            pyg_lib \
+            torch_scatter \
+            torch_sparse \
+            torch_cluster \
+            torch_spline_conv \
+            -f https://data.pyg.org/whl/torch-2.1.0+cpu.html
+          pip install --no-cache-dir torch-geometric>=2.4.0
+
+      - name: Install package (dev) and test deps
+        run: |
+          pip install -e .[dev]
+          pip install pytest-cov
+
+      - name: Run tests with coverage (fail under 90%)
+        env:
+          PYTHONPATH: ${{ github.workspace }}/nexuszero-optimizer/src
+        run: |
+          pytest tests \
+            -v \
+            --maxfail=1 \
+            --cov=nexuszero_optimizer \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov \
+            --cov-fail-under=90
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-optimizer
+          path: |
+            nexuszero-optimizer/coverage.xml
+            nexuszero-optimizer/htmlcov/**
+          retention-days: 14
