@@ -19,7 +19,7 @@ jobs:
     permissions:
       checks: write
     env:
-      AUTONOMY_LEVEL: 2
+      AUTONOMY_LEVEL: 4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
