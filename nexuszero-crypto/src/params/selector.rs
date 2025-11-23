@@ -370,6 +370,8 @@ pub fn is_prime_miller_rabin(n: u64, k: u32) -> bool {
         r += 1;
     }
     
+    use crate::utils::constant_time::ct_modpow;
+    
     let n_big = BigUint::from(n);
     let mut rng = thread_rng();
     
@@ -378,8 +380,8 @@ pub fn is_prime_miller_rabin(n: u64, k: u32) -> bool {
         let a = rng.gen_range(2..n-1);
         let a_big = BigUint::from(a);
         
-        // Compute x = a^d mod n
-        let mut x = a_big.modpow(&BigUint::from(d), &n_big);
+        // Compute x = a^d mod n (constant-time)
+        let mut x = ct_modpow(&a_big, &BigUint::from(d), &n_big);
         
         if x == One::one() || x == &n_big - BigUint::one() {
             continue 'witness;
