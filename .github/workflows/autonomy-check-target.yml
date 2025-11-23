@@ -1,0 +1,107 @@
+name: Autonomy Check (Secure)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  fast-check:
+    name: Fast unprivileged checks (PR)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (PR head)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies (fast)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install pytest flake8 || true
+
+      - name: Lint and fast tests
+        run: |
+          flake8 --max-line-length=100 || true
+          pytest -q -k "not heavy" || true
+      - name: Fast autonomy script run
+        run: |
+          python scripts/autonomy_check.py --dry-run --skip-heavy-tests
+
+  check-and-merge:
+    name: Autonomy check and merge (privileged)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request_target' }}
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+    env:
+      AUTONOMY_LEVEL: 4
+    steps:
+      - name: Checkout base branch (safe context)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies (required)
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML requests
+          pip install -r requirements.txt
+          pip install pytest flake8 pytest-cov
+
+      - name: Run autonomy check (dry run)
+        id: autonomy_check
+        run: |
+          python scripts/autonomy_check.py --dry-run --post-check --post-comment
+
+      - name: Run autonomy check and autosubmit merge
+        if: always()
+        run: |
+          python scripts/autonomy_check.py --merge-if-allowed --post-check \
+            --post-comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload autonomy summary (if generated)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autonomy-summary
+          path: |
+            autonomy-summary-*.json
+            coverage-head.xml
