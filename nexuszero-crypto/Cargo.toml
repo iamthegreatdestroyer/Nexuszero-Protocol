@@ -43,8 +43,8 @@ thiserror = "1.0"
 log = "0.4"
 anyhow = "1.0"
 
-# Parallelism
-rayon = "1.8"
+# Iterator utilities for batch verification
+itertools = "0.12"
 
 [dev-dependencies]
 # Benchmarking
