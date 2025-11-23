@@ -1,4 +1,7 @@
 # Nexuszero Optimizer - Quick Start Guide
+# Nexuszero Optimizer - Quick Start Guide
+
+<!-- AUTONOMY LEVEL 2 TEST: Do not worry about this line. This PR is to validate the secure pull_request_target workflow and check-run/comment behavior. -->
 
 ## 🚀 Getting Started
 
