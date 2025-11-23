@@ -8,7 +8,7 @@ on:
 
 jobs:
   coverage:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,12 +34,12 @@ jobs:
       - name: Run coverage update script
         shell: pwsh
         run: |
-          .\scripts\update-coverage.ps1 -WorkspacePath . -FailUnder 90
+          ./scripts/update-coverage.ps1 -WorkspacePath . -FailUnder 90
 
       - name: Generate coverage badge
         shell: pwsh
         run: |
-          .\scripts\update-badge.ps1
+          ./scripts/update-badge.ps1
 
       - name: Commit and push if changed
         shell: pwsh
