@@ -5,6 +5,7 @@
 use crate::proof::{Statement, Witness};
 use crate::{CryptoError, CryptoResult};
 use serde::{Deserialize, Serialize};
+use crate::utils::constant_time::ct_modpow;
 
 /// A zero-knowledge proof
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -798,7 +799,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
 
         let statement = StatementBuilder::new()
             .discrete_log(generator.clone(), public_value.clone())
@@ -832,7 +833,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
 
         let statement = StatementBuilder::new()
             .discrete_log(generator, public_value)
@@ -916,7 +917,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         
         let statement = StatementBuilder::new()
             .discrete_log(generator, public_value)
@@ -984,7 +985,7 @@ mod tests {
             
             // Compute correct public_value = generator^secret (mod p)
             let secret_big = BigUint::from_bytes_be(&secret);
-            let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+            let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
             
             let statement = StatementBuilder::new()
                 .discrete_log(generator.clone(), public_value)
@@ -1016,7 +1017,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         
         let statement = StatementBuilder::new()
             .discrete_log(generator, public_value)
@@ -1116,7 +1117,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         
         let statement = StatementBuilder::new()
             .discrete_log(generator, public_value)
@@ -1148,7 +1149,7 @@ mod tests {
         let generator = vec![2u8;32]; let secret = vec![42u8;32];
         let modulus_bytes = vec![0xFF;32];
         let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
         let witness = Witness::discrete_log(secret);
         let mut proof = prove(&statement,&witness).unwrap();
@@ -1164,7 +1165,7 @@ mod tests {
         let generator = vec![2u8;32]; let secret = vec![42u8;32];
         let modulus_bytes = vec![0xFF;32];
         let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
         let witness = Witness::discrete_log(secret);
         let mut proof = prove(&statement,&witness).unwrap();
@@ -1193,7 +1194,7 @@ mod tests {
     fn test_truncated_proof_deserialization_failure() {
         use crate::proof::statement::StatementBuilder; use num_bigint::BigUint;
         let generator = vec![2u8;32]; let secret = vec![42u8;32];
-        let modulus_bytes = vec![0xFF;32]; let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes); let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let modulus_bytes = vec![0xFF;32]; let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes); let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
         let witness = Witness::discrete_log(secret);
         let proof = prove(&statement,&witness).unwrap();
@@ -1207,7 +1208,7 @@ mod tests {
     fn test_commitment_reordering_challenge_mismatch() {
         use crate::proof::statement::StatementBuilder; use num_bigint::BigUint;
         let generator = vec![2u8;32]; let secret = vec![42u8;32];
-        let modulus_bytes = vec![0xFF;32]; let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes); let public_value = gen_big.modpow(&secret_big,&mod_big).to_bytes_be();
+        let modulus_bytes = vec![0xFF;32]; let gen_big = BigUint::from_bytes_be(&generator); let secret_big = BigUint::from_bytes_be(&secret); let mod_big = BigUint::from_bytes_be(&modulus_bytes); let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         let statement = StatementBuilder::new().discrete_log(generator.clone(), public_value).build().unwrap();
         let witness = Witness::discrete_log(secret);
         let mut proof = prove(&statement,&witness).unwrap();
@@ -1283,8 +1284,8 @@ mod tests {
         let v_big = BigUint::from(value);
         let r_big = BigUint::from_bytes_be(&blinding);
         
-        let g_v = g_big.modpow(&v_big, &mod_big);
-        let h_r = h_big.modpow(&r_big, &mod_big);
+        let g_v = ct_modpow(&g_big, &v_big, &mod_big);
+        let h_r = ct_modpow(&h_big, &r_big, &mod_big);
         let commitment = (g_v * h_r) % &mod_big;
         let commitment_bytes = commitment.to_bytes_be();
         
@@ -1349,7 +1350,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         
         let statement = StatementBuilder::new()
             .discrete_log(generator, public_value)
@@ -1378,7 +1379,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         
         let statement = StatementBuilder::new()
             .discrete_log(generator, public_value)
@@ -1407,7 +1408,7 @@ mod tests {
         let gen_big = BigUint::from_bytes_be(&generator);
         let secret_big = BigUint::from_bytes_be(&secret);
         let mod_big = BigUint::from_bytes_be(&modulus_bytes);
-        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        let public_value = ct_modpow(&gen_big, &secret_big, &mod_big).to_bytes_be();
         
         let statement = StatementBuilder::new()
             .discrete_log(generator, public_value)

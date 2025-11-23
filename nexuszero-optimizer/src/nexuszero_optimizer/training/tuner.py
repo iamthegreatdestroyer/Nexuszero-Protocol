@@ -1,6 +1,6 @@
 """Hyperparameter tuning utilities (Optuna + Ray)."""
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import copy
 
 try:
@@ -18,33 +18,114 @@ from ..utils.config import Config
 
 
 class OptunaTuner:
-    def __init__(self, base_config: Config, n_trials: int = 10):
+    def __init__(
+        self,
+        base_config: Config,
+        n_trials: int = 50,
+        study_name: Optional[str] = None,
+        storage: Optional[str] = None,
+    ):
+        """
+        Initialize Optuna tuner for hyperparameter optimization.
+        
+        Args:
+            base_config: Base configuration to modify
+            n_trials: Number of trials to run (default 50 as per requirements)
+            study_name: Optional name for the study
+            storage: Optional storage URL for persistence
+        """
         self.base_config = base_config
         self.n_trials = n_trials
+        self.study_name = study_name
+        self.storage = storage
 
     def _objective(self, trial: "optuna.trial.Trial"):
+        """
+        Objective function for Optuna optimization.
+        
+        Tunes:
+        - learning_rate: 1e-5 to 5e-4
+        - hidden_dim: 128, 256, 384
+        - num_layers: 3 to 8
+        - dropout: 0.05 to 0.3
+        
+        Target: minimize validation loss
+        """
         cfg = copy.deepcopy(self.base_config)
+        
+        # Hyperparameters to tune
         cfg.model.hidden_dim = trial.suggest_categorical(
             "hidden_dim", [128, 256, 384]
         )
         cfg.model.num_layers = trial.suggest_int("num_layers", 3, 8)
         cfg.model.num_heads = trial.suggest_categorical("num_heads", [4, 8])
         cfg.model.dropout = trial.suggest_float("dropout", 0.05, 0.3)
-        cfg.training.learning_rate = trial.suggest_loguniform(
-            "learning_rate", 1e-5, 5e-4
+        # Log-scale distribution for learning rate (better for hyperparameter search)
+        cfg.training.learning_rate = trial.suggest_float(
+            "learning_rate", 1e-5, 5e-4, log=True
         )
-        cfg.training.num_epochs = 10  # short runs for tuning
+        
+        # Short runs for tuning
+        cfg.training.num_epochs = 10
+        
+        # Train model
         trainer = Trainer(cfg)
         trainer.fit()
         metrics = trainer.evaluate_test()
+        
         return metrics.get("loss", 1e9)
 
     def run(self):
+        """
+        Run hyperparameter optimization.
+        
+        Returns:
+            Optuna study object with best parameters
+        """
         if optuna is None:
             raise RuntimeError("Optuna not installed")
-        study = optuna.create_study(direction="minimize")
+        
+        # Create study with optional persistence
+        study = optuna.create_study(
+            study_name=self.study_name,
+            storage=self.storage,
+            direction="minimize",
+            load_if_exists=True,
+        )
+        
+        # Run optimization
         study.optimize(self._objective, n_trials=self.n_trials)
+        
         return study
+    
+    def save_best_config(self, study, output_path: str):
+        """
+        Save best hyperparameters to config file.
+        
+        Args:
+            study: Optuna study object
+            output_path: Path to save config YAML
+        """
+        import yaml
+        
+        best_params = study.best_params
+        best_config = copy.deepcopy(self.base_config)
+        
+        # Update with best parameters
+        best_config.model.hidden_dim = best_params['hidden_dim']
+        best_config.model.num_layers = best_params['num_layers']
+        best_config.model.num_heads = best_params['num_heads']
+        best_config.model.dropout = best_params['dropout']
+        best_config.training.learning_rate = best_params['learning_rate']
+        
+        # Save to YAML
+        config_dict = best_config.to_dict()
+        with open(output_path, 'w') as f:
+            yaml.dump(config_dict, f, default_flow_style=False)
+        
+        print(f"✓ Saved best config to {output_path}")
+        print(f"  Best loss: {study.best_value:.6f}")
+        print(f"  Best params: {best_params}")
 
 
 def ray_trainable(config: Dict[str, Any]):  # Ray Tune trainable

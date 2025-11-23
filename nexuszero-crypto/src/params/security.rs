@@ -86,22 +86,65 @@ impl ParameterSet {
     }
 
     /// Validate parameter set
+    /// 
+    /// # Security Warnings
+    /// 
+    /// This function validates parameters and emits warnings for potentially insecure configurations.
     pub fn validate(&self) -> CryptoResult<()> {
+        // Check dimension is power of 2
         if !self.n.is_power_of_two() {
             return Err(CryptoError::InvalidParameter(
                 "Dimension must be power of 2".to_string(),
             ));
         }
+        
+        // Check modulus
         if self.q < 2 {
             return Err(CryptoError::InvalidParameter(
                 "Modulus must be at least 2".to_string(),
             ));
         }
+        
+        // Check sigma
         if self.sigma <= 0.0 {
             return Err(CryptoError::InvalidParameter(
                 "Sigma must be positive".to_string(),
             ));
         }
+        
+        // Security warnings for weak parameters
+        if self.n < 256 {
+            log::warn!(
+                "⚠️ SECURITY WARNING: Dimension n={} is below recommended minimum (256). \
+                This provides less than 128-bit security and should only be used for testing.",
+                self.n
+            );
+        }
+        
+        if self.q < 2048 {
+            log::warn!(
+                "⚠️ SECURITY WARNING: Modulus q={} is below recommended minimum (2048). \
+                This may be vulnerable to lattice reduction attacks.",
+                self.q
+            );
+        }
+        
+        if self.sigma < 2.0 {
+            log::warn!(
+                "⚠️ SECURITY WARNING: Error parameter sigma={:.2} is below recommended minimum (2.0). \
+                This reduces noise and may enable statistical attacks.",
+                self.sigma
+            );
+        }
+        
+        if self.sigma > 10.0 {
+            log::warn!(
+                "⚠️ SECURITY WARNING: Error parameter sigma={:.2} is above recommended maximum (10.0). \
+                This may cause decryption failures.",
+                self.sigma
+            );
+        }
+        
         Ok(())
     }
 }
@@ -117,9 +160,25 @@ pub struct CryptoParameters {
 
 impl CryptoParameters {
     /// Create parameters from security level
+    /// 
+    /// # Security Notice
+    /// 
+    /// This function creates standard parameters that have been reviewed but NOT independently audited.
+    /// For production use, validate parameters and follow deployment guidelines in SECURITY_AUDIT.md.
     pub fn from_security_level(level: SecurityLevel) -> Self {
         let param_set = ParameterSet::from_security_level(level);
+        
+        // Validate parameters and emit warnings
+        if let Err(e) = param_set.validate() {
+            log::error!("❌ Parameter validation failed: {}", e);
+        }
+        
         let ring_params = RingLWEParameters::new(param_set.n, param_set.q, param_set.sigma);
+
+        log::info!(
+            "✅ Created {:?} parameters: n={}, q={}, sigma={:.2}",
+            level, param_set.n, param_set.q, param_set.sigma
+        );
 
         Self {
             security_level: level,

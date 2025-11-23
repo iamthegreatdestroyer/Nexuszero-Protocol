@@ -1,0 +1,386 @@
+---
+# Nexuszero Crypto Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexuszero-crypto
+  namespace: nexuszero
+  labels:
+    app: nexuszero-crypto
+    tier: core
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nexuszero-crypto
+  template:
+    metadata:
+      labels:
+        app: nexuszero-crypto
+        tier: core
+    spec:
+      containers:
+      - name: nexuszero-crypto
+        image: ghcr.io/iamthegreatdestroyer/nexuszero-crypto:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 13001
+          name: http
+          protocol: TCP
+        env:
+        - name: RUST_LOG
+          valueFrom:
+            configMapKeyRef:
+              name: nexuszero-config
+              key: RUST_LOG
+        - name: SERVICE_NAME
+          value: "nexuszero-crypto"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "true"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "true"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Nexuszero Optimizer Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexuszero-optimizer
+  namespace: nexuszero
+  labels:
+    app: nexuszero-optimizer
+    tier: ml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexuszero-optimizer
+  template:
+    metadata:
+      labels:
+        app: nexuszero-optimizer
+        tier: ml
+    spec:
+      containers:
+      - name: nexuszero-optimizer
+        image: ghcr.io/iamthegreatdestroyer/nexuszero-optimizer:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 13002
+          name: http
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: nexuszero-config
+              key: PYTHONUNBUFFERED
+        - name: SERVICE_NAME
+          value: "nexuszero-optimizer"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: optimizer-data
+          mountPath: /app/data
+        - name: optimizer-checkpoints
+          mountPath: /app/checkpoints
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: optimizer-data
+        persistentVolumeClaim:
+          claimName: optimizer-data-pvc
+      - name: optimizer-checkpoints
+        persistentVolumeClaim:
+          claimName: optimizer-checkpoints-pvc
+
+---
+# Nexuszero Monitor Service Deployment (Placeholder)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexuszero-monitor
+  namespace: nexuszero
+  labels:
+    app: nexuszero-monitor
+    tier: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexuszero-monitor
+  template:
+    metadata:
+      labels:
+        app: nexuszero-monitor
+        tier: monitoring
+    spec:
+      containers:
+      - name: nexuszero-monitor
+        image: alpine:3.18
+        command:
+        - sh
+        - -c
+        - "echo 'Monitor service placeholder' && sleep infinity"
+        ports:
+        - containerPort: 13003
+          name: http
+          protocol: TCP
+        env:
+        - name: SERVICE_NAME
+          value: "nexuszero-monitor"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+
+---
+# Prometheus Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: nexuszero
+  labels:
+    app: prometheus
+    tier: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        tier: monitoring
+    spec:
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+        - '--web.console.templates=/usr/share/prometheus/consoles'
+        ports:
+        - containerPort: 9090
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-data
+          mountPath: /prometheus
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-data
+        persistentVolumeClaim:
+          claimName: prometheus-data-pvc
+
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: nexuszero
+  labels:
+    app: grafana
+    tier: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+        tier: monitoring
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nexuszero-secrets
+              key: GRAFANA_ADMIN_PASSWORD
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
+        volumeMounts:
+        - name: grafana-data
+          mountPath: /var/lib/grafana
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: grafana-data
+        persistentVolumeClaim:
+          claimName: grafana-data-pvc
+
+---
+# Loki Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: nexuszero
+  labels:
+    app: loki
+    tier: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+        tier: logging
+    spec:
+      containers:
+      - name: loki
+        image: grafana/loki:latest
+        args:
+        - -config.file=/etc/loki/loki.yml
+        ports:
+        - containerPort: 3100
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: loki-config
+          mountPath: /etc/loki
+        - name: loki-data
+          mountPath: /loki
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: loki-config
+        configMap:
+          name: loki-config
+      - name: loki-data
+        persistentVolumeClaim:
+          claimName: loki-data-pvc
+
+---
+# Promtail DaemonSet (runs on each node)
+# NOTE: This configuration assumes Docker as the container runtime
+# For managed Kubernetes (GKE, EKS, AKS), consider using native logging solutions:
+# - GKE: Cloud Logging
+# - EKS: Fluent Bit with CloudWatch
+# - AKS: Azure Monitor for containers
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: nexuszero
+  labels:
+    app: promtail
+    tier: logging
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+        tier: logging
+    spec:
+      serviceAccountName: promtail
+      containers:
+      - name: promtail
+        image: grafana/promtail:2.9.3
+        args:
+        - -config.file=/etc/promtail/promtail.yml
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+          readOnly: true
+        - name: pods
+          mountPath: /var/log/pods
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: pods
+        hostPath:
+          path: /var/log/pods

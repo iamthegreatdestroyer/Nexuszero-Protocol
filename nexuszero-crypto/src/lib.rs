@@ -3,12 +3,34 @@
 //! This library provides lattice-based cryptographic primitives for building
 //! zero-knowledge proof systems that are resistant to quantum attacks.
 //!
+//! # ⚠️ SECURITY WARNING ⚠️
+//!
+//! **THIS LIBRARY IS UNDER ACTIVE DEVELOPMENT AND HAS NOT BEEN INDEPENDENTLY AUDITED.**
+//!
+//! ## DO NOT USE IN PRODUCTION without:
+//!
+//! 1. ✅ Independent third-party security review
+//! 2. ✅ Comprehensive side-channel analysis on target hardware
+//! 3. ✅ Formal threat modeling for your specific use case
+//! 4. ✅ Infrastructure hardening (dedicated hardware, disabled hyperthreading)
+//!
+//! ## Security Status:
+//!
+//! - **Timing Attacks:** ✅ Mitigated (constant-time implementations)
+//! - **Cache Attacks:** ⚠️ Partially mitigated (requires hardware isolation)
+//! - **Formal Verification:** ✅ 34 Kani proofs implemented
+//! - **Side-Channel Testing:** ✅ 14 resistance tests passing
+//! - **Independent Audit:** ❌ NOT YET COMPLETED
+//!
+//! See `SECURITY_AUDIT.md` for detailed security analysis and recommendations.
+//!
 //! # Features
 //!
 //! - **LWE Encryption**: Learning With Errors based encryption
 //! - **Ring-LWE**: Efficient ring-based variant with NTT optimization
 //! - **Zero-Knowledge Proofs**: Statement/Witness/Proof system
 //! - **Parameter Selection**: Automatic security parameter optimization
+//! - **Constant-Time Operations**: Timing attack resistant implementations
 //!
 //! # Example
 //!
@@ -27,6 +49,10 @@
 
 #![warn(missing_docs)]
 #![warn(clippy::all)]
+#![cfg_attr(
+    not(any(test, feature = "allow-insecure")),
+    deprecated = "This library has not been independently audited. Do not use in production without proper security review."
+)]
 
 pub mod lattice;
 pub mod params;
