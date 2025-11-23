@@ -329,7 +329,7 @@ def test_summary_file_written(tmp_path, monkeypatch):
         "scripts.autonomy_check.run_tests", lambda x: True
     ), patch(
         "scripts.autonomy_check.read_yaml", lambda path: {
-            "autonomy": {"allowed_files_by_level": {"4": ["**/*"]}}
+            "autonomy": {"allowed_files_by_level": {"2": ["**/*"]}}
         },
     ), patch(
         "scripts.autonomy_check.get_changed_files",
