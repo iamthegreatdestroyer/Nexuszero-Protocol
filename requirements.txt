@@ -5,6 +5,3 @@ flask>=2.0
 optuna>=3.6.0
 wandb>=0.17.0
 ray>=2.9.0
-PyYAML>=6.0
-requests>=2.31.0
-flake8>=6.0
