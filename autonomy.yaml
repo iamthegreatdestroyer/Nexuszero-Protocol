@@ -1,5 +1,5 @@
 autonomy:
-  default_level: 4
+  default_level: 2
   levels:
     "0": "No automation - propose only"
     "1": "Conservative - PR only"
