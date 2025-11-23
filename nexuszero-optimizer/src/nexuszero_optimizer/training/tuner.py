@@ -60,8 +60,8 @@ class OptunaTuner:
         cfg.model.num_layers = trial.suggest_int("num_layers", 3, 8)
         cfg.model.num_heads = trial.suggest_categorical("num_heads", [4, 8])
         cfg.model.dropout = trial.suggest_float("dropout", 0.05, 0.3)
-        cfg.training.learning_rate = trial.suggest_loguniform(
-            "learning_rate", 1e-5, 5e-4
+        cfg.training.learning_rate = trial.suggest_float(
+            "learning_rate", 1e-5, 5e-4, log=True
         )
         
         # Short runs for tuning

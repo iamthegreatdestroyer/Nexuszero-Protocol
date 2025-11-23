@@ -123,7 +123,10 @@ class TestProofOptimizationGNN:
         assert loaded_model.edge_feat_dim == model.edge_feat_dim
         assert loaded_model.hidden_dim == model.hidden_dim
         
-        # Check outputs match
+        # Check outputs match - both models in eval mode
+        model.eval()
+        loaded_model.eval()
+        
         x = torch.randn(10, 10)
         edge_index = torch.randint(0, 10, (2, 15))
         edge_attr = torch.randn(15, 4)
