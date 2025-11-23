@@ -1,0 +1,45 @@
+{
+  "regression_threshold_pct": 10.0,
+  "benchmarks": [
+    {
+      "name": "lwe_decrypt_128bit",
+      "mean_ns": 33457.9202315594,
+      "mean_us": 33.4579202315594,
+      "mean_ms": 0.0334579202315594,
+      "std_ns": 3372.502360590704,
+      "std_us": 3.372502360590704,
+      "std_ms": 0.003372502360590704,
+      "relative_change_pct": null
+    },
+    {
+      "name": "lwe_encrypt_128bit",
+      "mean_ns": 513052.88823611266,
+      "mean_us": 513.0528882361126,
+      "mean_ms": 0.5130528882361126,
+      "std_ns": 72482.99594241683,
+      "std_us": 72.48299594241684,
+      "std_ms": 0.07248299594241683,
+      "relative_change_pct": null
+    },
+    {
+      "name": "prove_range_8bits",
+      "mean_ns": 6490206.5,
+      "mean_us": 6490.2065,
+      "mean_ms": 6.4902065,
+      "std_ns": 219041.43812912836,
+      "std_us": 219.04143812912835,
+      "std_ms": 0.21904143812912835,
+      "relative_change_pct": null
+    },
+    {
+      "name": "verify_range_8bits",
+      "mean_ns": 3389.291077961733,
+      "mean_us": 3.389291077961733,
+      "mean_ms": 0.003389291077961733,
+      "std_ns": 142.8184674977144,
+      "std_us": 0.1428184674977144,
+      "std_ms": 0.0001428184674977144,
+      "relative_change_pct": null
+    }
+  ]
+}
