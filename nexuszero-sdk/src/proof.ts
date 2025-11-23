@@ -17,6 +17,12 @@ import {
 } from "./types";
 import { createCommitment, generateBlinding } from "./crypto";
 
+/** Standard mock proof size for testing */
+const MOCK_PROOF_SIZE = 256;
+
+/** Minimum expected proof size for validation */
+const MIN_PROOF_SIZE = MOCK_PROOF_SIZE;
+
 /**
  * Builder pattern for constructing and generating zero-knowledge proofs
  * 
@@ -173,14 +179,13 @@ export class ProofBuilder {
    */
   private async generateMockProof(): Promise<Uint8Array> {
     // Create a deterministic "proof" for testing
-    const proofSize = 256; // Mock proof size
-    const proof = new Uint8Array(proofSize);
+    const proof = new Uint8Array(MOCK_PROOF_SIZE);
     
     // Fill with some deterministic data based on witness
     if (this.witness) {
       const valueBytes = BigInt(this.witness.value).toString(16).padStart(16, "0");
-      const maxBytes = Math.min(valueBytes.length / 2, proofSize);
-      for (let i = 0; i < maxBytes; i++) {
+      const maxBytes = Math.min(valueBytes.length / 2, MOCK_PROOF_SIZE);
+      for (let i = 0; i < maxBytes && i < MOCK_PROOF_SIZE; i++) {
         const byteStr = valueBytes.slice(i * 2, i * 2 + 2);
         if (byteStr.length === 2) {
           proof[i] = parseInt(byteStr, 16);
@@ -280,9 +285,6 @@ export async function verifyProof(proof: Proof): Promise<VerificationResult> {
     };
   }
 }
-
-/** Minimum expected proof size for validation */
-const MIN_PROOF_SIZE = 256;
 
 /**
  * Mock proof verification for testing
