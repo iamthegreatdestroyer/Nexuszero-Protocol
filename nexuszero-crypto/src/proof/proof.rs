@@ -135,13 +135,15 @@ fn mul_mod(a: &BigUint, b: &[u8], modulus: &BigUint) -> Vec<u8> {
     bytes
 }
 
-/// Modular exponentiation: base^exp mod modulus
+/// Modular exponentiation: base^exp mod modulus (constant-time)
 fn mod_exp(base: &[u8], exp: &[u8], modulus: &[u8]) -> Vec<u8> {
+    use crate::utils::constant_time::ct_modpow;
+    
     let base_big = BigUint::from_bytes_be(base);
     let exp_big = BigUint::from_bytes_be(exp);
     let mod_big = BigUint::from_bytes_be(modulus);
     
-    let result = base_big.modpow(&exp_big, &mod_big);
+    let result = ct_modpow(&base_big, &exp_big, &mod_big);
     result.to_bytes_be()
 }
 
@@ -180,23 +182,24 @@ fn commit_preimage(blinding: &[u8]) -> CryptoResult<Commitment> {
     Ok(Commitment { value: commitment })
 }
 
-/// Pedersen commitment for range proof: C = g^v * h^r
+/// Pedersen commitment for range proof: C = g^v * h^r (constant-time)
 fn commit_range(value: u64, blinding_r: &[u8], generator_g: &[u8], generator_h: &[u8]) -> CryptoResult<Commitment> {
     use num_bigint::BigUint;
+    use crate::utils::constant_time::ct_modpow;
     
     let modulus_bytes = vec![0xFF; 32];
     let mod_big = BigUint::from_bytes_be(&modulus_bytes);
     
-    // g^v
+    // g^v (constant-time)
     let g_big = BigUint::from_bytes_be(generator_g);
     let v_bytes = value.to_be_bytes();
     let v_big = BigUint::from_bytes_be(&v_bytes);
-    let g_v = g_big.modpow(&v_big, &mod_big);
+    let g_v = ct_modpow(&g_big, &v_big, &mod_big);
     
-    // h^r
+    // h^r (constant-time)
     let h_big = BigUint::from_bytes_be(generator_h);
     let r_big = BigUint::from_bytes_be(blinding_r);
-    let h_r = h_big.modpow(&r_big, &mod_big);
+    let h_r = ct_modpow(&h_big, &r_big, &mod_big);
     
     // C = g^v * h^r (mod p)
     let commitment = (g_v * h_r) % &mod_big;
@@ -262,7 +265,7 @@ fn compute_range_response(
 // Verification Functions
 // ============================================================================
 
-/// Verify discrete log proof: check g^s = t * h^c
+/// Verify discrete log proof: check g^s = t * h^c (constant-time)
 fn verify_discrete_log_proof(
     generator: &[u8],
     public_value: &[u8],
@@ -270,21 +273,23 @@ fn verify_discrete_log_proof(
     challenge: &Challenge,
     response: &Response,
 ) -> CryptoResult<()> {
+    use crate::utils::constant_time::ct_modpow;
+    
     let modulus_bytes = vec![0xFF; 32];
     let mod_big = BigUint::from_bytes_be(&modulus_bytes);
     
-    // Compute g^s (mod p)
+    // Compute g^s (mod p) - constant-time
     let gs_big = {
         let gen_big = BigUint::from_bytes_be(generator);
         let response_big = BigUint::from_bytes_be(&response.value);
-        gen_big.modpow(&response_big, &mod_big)
+        ct_modpow(&gen_big, &response_big, &mod_big)
     };
     
-    // Compute h^c (mod p)
+    // Compute h^c (mod p) - constant-time
     let hc_big = {
         let h_big = BigUint::from_bytes_be(public_value);
         let c_big = BigUint::from_bytes_be(&challenge.value);
-        h_big.modpow(&c_big, &mod_big)
+        ct_modpow(&h_big, &c_big, &mod_big)
     };
     
     // Compute t * h^c (mod p)
@@ -588,7 +593,7 @@ pub fn verify(statement: &Statement, proof: &Proof) -> CryptoResult<()> {
                     num_bits,
                 )?;
             } else {
-                // Fallback to simplified verification for backward compatibility
+                // Fallback to simplified verification for backward compatibility (constant-time)
                 if proof.commitments.is_empty() || proof.responses.is_empty() {
                     return Err(CryptoError::VerificationError(
                         "Invalid proof structure".to_string(),
@@ -596,6 +601,8 @@ pub fn verify(statement: &Statement, proof: &Proof) -> CryptoResult<()> {
                 }
                 
                 use num_bigint::BigUint;
+                use crate::utils::constant_time::ct_modpow;
+                
                 let modulus_bytes = vec![0xFF; 32];
                 let mod_big = BigUint::from_bytes_be(&modulus_bytes);
                 
@@ -603,12 +610,12 @@ pub fn verify(statement: &Statement, proof: &Proof) -> CryptoResult<()> {
                 let t_big = BigUint::from_bytes_be(&proof.commitments[0].value);
                 let c_big = BigUint::from_bytes_be(commitment);
                 let challenge_big = BigUint::from_bytes_be(&proof.challenge.value);
-                let c_pow_c = c_big.modpow(&challenge_big, &mod_big);
+                let c_pow_c = ct_modpow(&c_big, &challenge_big, &mod_big);
                 let left_side = (t_big * c_pow_c) % &mod_big;
                 
                 let h_big = BigUint::from_bytes_be(&gen_h);
                 let s_big = BigUint::from_bytes_be(&proof.responses[0].value);
-                let right_side = h_big.modpow(&s_big, &mod_big);
+                let right_side = ct_modpow(&h_big, &s_big, &mod_big);
                 
                 if left_side != right_side {
                     return Err(CryptoError::VerificationError(
