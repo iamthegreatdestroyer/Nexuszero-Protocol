@@ -119,28 +119,6 @@ spec:
     app: loki
 
 ---
-# API Gateway Service (LoadBalancer for external access to core services)
-apiVersion: v1
-kind: Service
-metadata:
-  name: nexuszero-gateway
-  namespace: nexuszero
-  labels:
-    tier: gateway
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 80
-    targetPort: 13001
-    protocol: TCP
-    name: crypto
-  - port: 8080
-    targetPort: 13002
-    protocol: TCP
-    name: optimizer
-  - port: 8081
-    targetPort: 13003
-    protocol: TCP
-    name: monitor
-  selector:
-    tier: core
+# Note: For production, use separate LoadBalancer services or configure Ingress
+# This multi-port gateway is provided as an example only
+# Consider using the ingress.yaml configuration for production deployments
