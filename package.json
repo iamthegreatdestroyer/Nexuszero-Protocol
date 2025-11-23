@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "node examples/node-app/index.js",
     "start": "node examples/node-app/index.js",
-    "test": "echo \"No tests configured\" && exit 0"
+    "test": "cd nexuszero-sdk && npm test",
+    "build:sdk": "cd nexuszero-sdk && npm run build",
+    "docs:dev": "cd docs-site && npm run docs:dev",
+    "docs:build": "cd docs-site && npm run docs:build",
+    "docs:preview": "cd docs-site && npm run docs:preview"
   },
   "license": "MIT"
 }

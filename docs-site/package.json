@@ -1,0 +1,22 @@
+{
+  "name": "nexuszero-docs",
+  "version": "1.0.0",
+  "description": "Documentation site for Nexuszero Protocol",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "keywords": [
+    "documentation",
+    "nexuszero",
+    "zero-knowledge",
+    "cryptography"
+  ],
+  "author": "Steve <iamthegreatdestroyer@github.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
