@@ -18,7 +18,7 @@ made autonomously should preserve the project's core principles and objectives.
 - Level 3 — High: Auto-merge standard features if CI passes
 - Level 4 — Full: Auto-merge & merge changes including infra and workflows when safety checks pass
 
-This repository is configured to operate by default at **Level 2**.
+This repository is configured to operate by default at **Level 4**.
 
 ## Criteria for Automatic Changes
 
@@ -32,9 +32,8 @@ Autonomous changes must:
 
 ## Approvals & Merge Rules
 
-At Level 2, PRs are eligible for automatic merging for low-impact changes (docs, tests) when CI checks pass and no
-policy violations are detected, and no disallowed file changes are included.
-
+- At Level 4, PRs are eligible for automatic merging when all CI checks pass, no
+  policy violations are detected, and no disallowed file changes are included.
 - `must_confirm` paths may require explicit owner approval regardless of Level.
 
 ## Traceability & Rollback
@@ -47,7 +46,7 @@ policy violations are detected, and no disallowed file changes are included.
 ## How to Modify the Policy
 
 Edit `autonomy.yaml` and create a PR. Autonomous systems should not modify
-`autonomy.yaml` without explicit human owner approval unless operating at Level 2
+`autonomy.yaml` without explicit human owner approval unless operating at Level 4
 and the change doesn’t touch `must_confirm` patterns.
 
 ---

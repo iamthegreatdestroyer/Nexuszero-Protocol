@@ -56,7 +56,7 @@ jobs:
       pull-requests: write
       checks: write
     env:
-      AUTONOMY_LEVEL: 2
+      AUTONOMY_LEVEL: 4
     steps:
       - name: Checkout base branch (safe context)
         uses: actions/checkout@v4
