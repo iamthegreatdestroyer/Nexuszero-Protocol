@@ -198,13 +198,13 @@ function bigIntToBytes(value: bigint): Uint8Array {
 }
 
 /**
- * Convert bytes to a bigint (little-endian)
+ * Convert bytes to a bigint (big-endian)
  * @param bytes - Byte array
  * @returns BigInt value
  */
 export function bytesToBigInt(bytes: Uint8Array): bigint {
   let result = 0n;
-  for (let i = bytes.length - 1; i >= 0; i--) {
+  for (let i = 0; i < bytes.length; i++) {
     result = (result << 8n) + BigInt(bytes[i]);
   }
   return result;

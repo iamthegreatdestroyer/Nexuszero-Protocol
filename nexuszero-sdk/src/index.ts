@@ -51,6 +51,10 @@ import {
 import type {
   SDKConfig,
   CryptoParameters,
+  Proof,
+  VerificationResult,
+  Commitment,
+  RangeProofOptions,
 } from "./types";
 import {
   SecurityLevel,
@@ -80,7 +84,7 @@ import {
  * ```
  */
 export class NexuszeroClient {
-  private config: Required<SDKConfig>;
+  private config: SDKConfig & { securityLevel: SecurityLevel; debug: boolean };
   private parameters: CryptoParameters;
 
   /**
@@ -91,7 +95,7 @@ export class NexuszeroClient {
     // Set default configuration
     this.config = {
       securityLevel: config?.securityLevel || SecurityLevel.Bit128,
-      customParameters: config?.customParameters || undefined,
+      customParameters: config?.customParameters,
       debug: config?.debug || false,
     };
 
@@ -132,7 +136,7 @@ export class NexuszeroClient {
    * });
    * ```
    */
-  async proveRange(options: import("./types").RangeProofOptions): Promise<import("./types").Proof> {
+  async proveRange(options: RangeProofOptions): Promise<Proof> {
     if (this.config.debug) {
       console.log("Generating range proof for value in range", [options.min, options.max]);
     }
@@ -154,7 +158,7 @@ export class NexuszeroClient {
    * }
    * ```
    */
-  async verifyProof(proof: import("./types").Proof): Promise<import("./types").VerificationResult> {
+  async verifyProof(proof: Proof): Promise<VerificationResult> {
     if (this.config.debug) {
       console.log("Verifying proof for statement:", proof.statement);
     }
@@ -177,7 +181,7 @@ export class NexuszeroClient {
   async createCommitment(
     value: bigint,
     blinding?: Uint8Array
-  ): Promise<import("./types").Commitment> {
+  ): Promise<Commitment> {
     if (this.config.debug) {
       console.log("Creating commitment for value");
     }
