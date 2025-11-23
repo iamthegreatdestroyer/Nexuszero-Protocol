@@ -264,11 +264,40 @@ def run_check(args):
     if getattr(args, "post_check", False):
         owner_repo = os.environ.get("GITHUB_REPOSITORY")
         token = os.environ.get("GITHUB_TOKEN")
+        # Prefer PR head SHA when running in pull_request_target so that
+        # the check-run is attached to the PR's head commit instead of
+        # an unrelated base SHA.
         sha = os.environ.get("GITHUB_SHA") or ""
+        pr_num = get_pr_number()
+        if pr_num and owner_repo and token:
+            # Try to fetch PR head SHA via API; fall back to environment SHA
+            try:
+                owner, repo = owner_repo.split("/", 1)
+                pr_url = (
+                    "https://api.github.com/repos/"
+                    f"{owner}/{repo}/pulls/{pr_num}"
+                )
+                headers = {
+                    "Authorization": f"token {token}",
+                    "Accept": "application/vnd.github.v3+json",
+                }
+                r = requests.get(pr_url, headers=headers)
+                if r.status_code == 200:
+                    pr = r.json()
+                    head_sha = pr.get("head", {}).get("sha")
+                    if head_sha:
+                        sha = head_sha
+                        print(f"Using PR head sha for check-run: {sha}")
+            except Exception as e:
+                print("Failed to fetch PR head SHA", e)
         if owner_repo and token and sha:
             owner, repo = owner_repo.split("/", 1)
             title = f"Autonomy check (level {level})"
             summary = f"Autonomy check passed for files: {files}"
+            print(
+                f"Posting check-run for {owner}/{repo} sha={sha} "
+                f"(token set={bool(token)})"
+            )
             ok = post_check_run(
                 owner, repo, sha, token, title, summary, "success"
             )
@@ -287,6 +316,10 @@ def run_check(args):
             owner, repo = owner_repo.split("/", 1)
             body = (
                 f"AUTONOMY SUMMARY\n\nFiles: {files}\n\nLevel: {level}\n"
+            )
+            print(
+                f"Posting PR comment to {owner}/{repo} PR#{pr_num} "
+                f"(token set={bool(token)})"
             )
             ok = post_or_update_pr_comment(
                 owner, repo, pr_num, token, body, marker="AUTONOMY SUMMARY"
