@@ -50,6 +50,5 @@ Edit `autonomy.yaml` and create a PR. Autonomous systems should not modify
 and the change doesn’t touch `must_confirm` patterns.
 
 ---
-
 This file is intentionally lightweight and intended for humans; modify `autonomy.yaml`
 to adjust enforcement and fine-grained rules.
