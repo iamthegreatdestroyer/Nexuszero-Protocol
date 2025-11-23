@@ -2,6 +2,60 @@
 //!
 //! This module provides constant-time implementations of common operations
 //! to prevent timing side-channel attacks.
+//!
+//! # Security Assumptions
+//!
+//! These implementations make the following assumptions:
+//!
+//! ## 1. Compiler Assumptions
+//! - The Rust compiler does NOT optimize away constant-time guarantees
+//! - Release builds with optimization maintain timing properties
+//! - LTO (Link-Time Optimization) preserves constant-time behavior
+//!
+//! **Mitigation:** Regular assembly inspection and side-channel testing
+//!
+//! ## 2. Hardware Assumptions
+//! - CPU executes instructions in predictable time
+//! - No secret-dependent execution time variations from:
+//!   - Branch prediction
+//!   - Speculative execution
+//!   - Out-of-order execution
+//!   - Cache prefetching
+//!
+//! **Mitigation:** Test on target hardware, disable hyperthreading
+//!
+//! ## 3. Platform Assumptions
+//! - Operating system provides consistent timing
+//! - No context switches during critical operations (acceptable with statistical sampling)
+//! - Memory is not paged/swapped during operations
+//!
+//! **Mitigation:** Use `mlock()`, disable swap, dedicated hardware
+//!
+//! ## 4. Side-Channel Scope
+//! - **Protected:** Timing attacks via network/local timing measurement
+//! - **Partially Protected:** Cache-timing attacks (requires constant-time indexing)
+//! - **NOT Protected:** Power analysis (requires hardware countermeasures)
+//! - **NOT Protected:** EM radiation (requires hardware countermeasures)
+//! - **NOT Protected:** Fault injection attacks
+//!
+//! ## 5. Limitations
+//! - Constant-time guarantees are **algorithmic**, not **hardware-level**
+//! - Physical side-channels require additional hardware-based protections
+//! - Statistical analysis with sufficient samples can still detect some patterns
+//!
+//! # Usage Guidelines
+//!
+//! 1. **Always use these functions for secret-dependent operations**
+//! 2. **Test timing properties on your target hardware**
+//! 3. **Inspect assembly output** for data-dependent branches
+//! 4. **Deploy on isolated hardware** (no VM co-tenancy)
+//! 5. **Monitor for timing anomalies** in production
+//!
+//! # References
+//!
+//! - [Constant-Time Crypto](https://github.com/veorq/cryptocoding)
+//! - [Timing Attack Prevention](https://www.bearssl.org/ctmul.html)
+//! - [Side-Channel Analysis](https://github.com/Daeinar/ctgrind)
 
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
