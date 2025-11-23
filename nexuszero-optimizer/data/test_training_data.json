@@ -1,0 +1,1429 @@
+{
+  "metadata": {
+    "num_samples": 100,
+    "min_nodes": 10,
+    "max_nodes": 1000,
+    "seed": 42,
+    "security_levels": {
+      "128": 2,
+      "192": 1,
+      "256": 97
+    },
+    "parameter_ranges": {
+      "n": {
+        "min": 64,
+        "max": 2048
+      },
+      "q": {
+        "min": 4096,
+        "max": 131072
+      },
+      "sigma": {
+        "min": 1.0,
+        "max": 7.780460834503174
+      }
+    }
+  },
+  "data": [
+    {
+      "id": 0,
+      "params": {
+        "n": 1024,
+        "q": 66395,
+        "sigma": 7.734428405761719
+      },
+      "metrics": {
+        "proof_size": 33253,
+        "prove_time": 21.581750869750977,
+        "verify_time": 11.102742195129395,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 1,
+      "params": {
+        "n": 512,
+        "q": 12507,
+        "sigma": 3.308997631072998
+      },
+      "metrics": {
+        "proof_size": 77650,
+        "prove_time": 50.59031295776367,
+        "verify_time": 22.855531692504883,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 2,
+      "params": {
+        "n": 2048,
+        "q": 40475,
+        "sigma": 4.7861714363098145
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 318.6159362792969,
+        "verify_time": 174.0689239501953,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 3,
+      "params": {
+        "n": 1024,
+        "q": 65603,
+        "sigma": 6.492706775665283
+      },
+      "metrics": {
+        "proof_size": 32033,
+        "prove_time": 20.83245277404785,
+        "verify_time": 10.068305969238281,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 4,
+      "params": {
+        "n": 1024,
+        "q": 20730,
+        "sigma": 5.804403305053711
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 89.6242446899414,
+        "verify_time": 39.666194915771484,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 5,
+      "params": {
+        "n": 2048,
+        "q": 131072,
+        "sigma": 7.669823169708252
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 305.5971984863281,
+        "verify_time": 156.11988830566406,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 6,
+      "params": {
+        "n": 512,
+        "q": 16687,
+        "sigma": 3.2392466068267822
+      },
+      "metrics": {
+        "proof_size": 17912,
+        "prove_time": 10.012019157409668,
+        "verify_time": 5.561415195465088,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 7,
+      "params": {
+        "n": 2048,
+        "q": 99909,
+        "sigma": 6.571965217590332
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 143.51470947265625,
+        "verify_time": 72.05686950683594,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 8,
+      "params": {
+        "n": 2048,
+        "q": 130010,
+        "sigma": 1.0
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 351.9802551269531,
+        "verify_time": 167.52171325683594,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 9,
+      "params": {
+        "n": 1024,
+        "q": 40810,
+        "sigma": 2.216235637664795
+      },
+      "metrics": {
+        "proof_size": 25146,
+        "prove_time": 15.999098777770996,
+        "verify_time": 7.001389980316162,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 10,
+      "params": {
+        "n": 1024,
+        "q": 40681,
+        "sigma": 3.9400558471679688
+      },
+      "metrics": {
+        "proof_size": 95220,
+        "prove_time": 54.392765045166016,
+        "verify_time": 25.6878662109375,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 11,
+      "params": {
+        "n": 512,
+        "q": 4100,
+        "sigma": 2.8533904552459717
+      },
+      "metrics": {
+        "proof_size": 54566,
+        "prove_time": 37.603797912597656,
+        "verify_time": 18.009021759033203,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 12,
+      "params": {
+        "n": 2048,
+        "q": 100107,
+        "sigma": 4.904768466949463
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 189.14779663085938,
+        "verify_time": 107.54743957519531,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 13,
+      "params": {
+        "n": 2048,
+        "q": 99248,
+        "sigma": 5.3794779777526855
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 149.1236114501953,
+        "verify_time": 73.07585144042969,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 14,
+      "params": {
+        "n": 1024,
+        "q": 12439,
+        "sigma": 2.5358405113220215
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 84.11589813232422,
+        "verify_time": 48.045589447021484,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 15,
+      "params": {
+        "n": 512,
+        "q": 8131,
+        "sigma": 1.8341963291168213
+      },
+      "metrics": {
+        "proof_size": 51095,
+        "prove_time": 31.944416046142578,
+        "verify_time": 16.27360725402832,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 16,
+      "params": {
+        "n": 512,
+        "q": 16379,
+        "sigma": 2.8423500061035156
+      },
+      "metrics": {
+        "proof_size": 65793,
+        "prove_time": 39.93989562988281,
+        "verify_time": 20.372323989868164,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 17,
+      "params": {
+        "n": 1024,
+        "q": 40150,
+        "sigma": 2.2726101875305176
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 101.46296691894531,
+        "verify_time": 50.26601028442383,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 18,
+      "params": {
+        "n": 256,
+        "q": 4096,
+        "sigma": 1.692700743675232
+      },
+      "metrics": {
+        "proof_size": 6403,
+        "prove_time": 3.675475835800171,
+        "verify_time": 1.934791088104248,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 19,
+      "params": {
+        "n": 2048,
+        "q": 12278,
+        "sigma": 5.9722161293029785
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 281.34539794921875,
+        "verify_time": 131.5530548095703,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 20,
+      "params": {
+        "n": 2048,
+        "q": 65074,
+        "sigma": 5.971508979797363
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 385.009521484375,
+        "verify_time": 209.8756561279297,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 21,
+      "params": {
+        "n": 512,
+        "q": 65804,
+        "sigma": 2.4071593284606934
+      },
+      "metrics": {
+        "proof_size": 16841,
+        "prove_time": 12.28406047821045,
+        "verify_time": 5.411772727966309,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 22,
+      "params": {
+        "n": 128,
+        "q": 4096,
+        "sigma": 1.7684690952301025
+      },
+      "metrics": {
+        "proof_size": 2164,
+        "prove_time": 1.4430694580078125,
+        "verify_time": 0.6946737766265869,
+        "security_bits": 192
+      }
+    },
+    {
+      "id": 23,
+      "params": {
+        "n": 1024,
+        "q": 65570,
+        "sigma": 4.175593376159668
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 100.52264404296875,
+        "verify_time": 50.52893829345703,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 24,
+      "params": {
+        "n": 1024,
+        "q": 12524,
+        "sigma": 4.069549083709717
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 121.9414291381836,
+        "verify_time": 56.148651123046875,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 25,
+      "params": {
+        "n": 2048,
+        "q": 130208,
+        "sigma": 5.311142444610596
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 83.28008270263672,
+        "verify_time": 40.22739791870117,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 26,
+      "params": {
+        "n": 1024,
+        "q": 40990,
+        "sigma": 4.218632698059082
+      },
+      "metrics": {
+        "proof_size": 79697,
+        "prove_time": 49.72052001953125,
+        "verify_time": 25.333091735839844,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 27,
+      "params": {
+        "n": 512,
+        "q": 8203,
+        "sigma": 2.8123092651367188
+      },
+      "metrics": {
+        "proof_size": 60984,
+        "prove_time": 37.427982330322266,
+        "verify_time": 18.87712860107422,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 28,
+      "params": {
+        "n": 1024,
+        "q": 12138,
+        "sigma": 2.7039780616760254
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 124.77056121826172,
+        "verify_time": 55.02526092529297,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 29,
+      "params": {
+        "n": 512,
+        "q": 4096,
+        "sigma": 2.169069290161133
+      },
+      "metrics": {
+        "proof_size": 22760,
+        "prove_time": 13.309049606323242,
+        "verify_time": 6.532162666320801,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 30,
+      "params": {
+        "n": 2048,
+        "q": 98552,
+        "sigma": 1.0400241613388062
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 226.1990203857422,
+        "verify_time": 123.1682357788086,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 31,
+      "params": {
+        "n": 1024,
+        "q": 20528,
+        "sigma": 4.750149726867676
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 57.11503982543945,
+        "verify_time": 27.812984466552734,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 32,
+      "params": {
+        "n": 2048,
+        "q": 65440,
+        "sigma": 3.930656909942627
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 265.173828125,
+        "verify_time": 132.51638793945312,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 33,
+      "params": {
+        "n": 1024,
+        "q": 12106,
+        "sigma": 2.3901638984680176
+      },
+      "metrics": {
+        "proof_size": 61674,
+        "prove_time": 33.64616012573242,
+        "verify_time": 18.003828048706055,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 34,
+      "params": {
+        "n": 512,
+        "q": 16580,
+        "sigma": 2.4265246391296387
+      },
+      "metrics": {
+        "proof_size": 30556,
+        "prove_time": 19.148971557617188,
+        "verify_time": 10.13280963897705,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 35,
+      "params": {
+        "n": 1024,
+        "q": 20195,
+        "sigma": 3.641848564147949
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 111.2248764038086,
+        "verify_time": 62.57051086425781,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 36,
+      "params": {
+        "n": 64,
+        "q": 41304,
+        "sigma": 2.349575996398926
+      },
+      "metrics": {
+        "proof_size": 15871,
+        "prove_time": 9.306280136108398,
+        "verify_time": 4.68194055557251,
+        "security_bits": 128
+      }
+    },
+    {
+      "id": 37,
+      "params": {
+        "n": 512,
+        "q": 20810,
+        "sigma": 1.7905974388122559
+      },
+      "metrics": {
+        "proof_size": 51566,
+        "prove_time": 30.731796264648438,
+        "verify_time": 16.67460823059082,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 38,
+      "params": {
+        "n": 2048,
+        "q": 131072,
+        "sigma": 4.9096269607543945
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 163.71669006347656,
+        "verify_time": 85.44876098632812,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 39,
+      "params": {
+        "n": 2048,
+        "q": 129981,
+        "sigma": 4.512452602386475
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 279.6361389160156,
+        "verify_time": 122.14640045166016,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 40,
+      "params": {
+        "n": 512,
+        "q": 66830,
+        "sigma": 3.5445873737335205
+      },
+      "metrics": {
+        "proof_size": 1489,
+        "prove_time": 1.097435474395752,
+        "verify_time": 0.4930262267589569,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 41,
+      "params": {
+        "n": 256,
+        "q": 16066,
+        "sigma": 2.644463300704956
+      },
+      "metrics": {
+        "proof_size": 14805,
+        "prove_time": 9.896927833557129,
+        "verify_time": 5.114634990692139,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 42,
+      "params": {
+        "n": 2048,
+        "q": 40935,
+        "sigma": 7.780460834503174
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 320.3377380371094,
+        "verify_time": 187.65951538085938,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 43,
+      "params": {
+        "n": 1024,
+        "q": 64722,
+        "sigma": 5.6542253494262695
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 156.75079345703125,
+        "verify_time": 68.37281036376953,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 44,
+      "params": {
+        "n": 2048,
+        "q": 131072,
+        "sigma": 5.372885704040527
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 101.0044174194336,
+        "verify_time": 57.88967514038086,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 45,
+      "params": {
+        "n": 512,
+        "q": 8041,
+        "sigma": 1.5764210224151611
+      },
+      "metrics": {
+        "proof_size": 21794,
+        "prove_time": 15.77305793762207,
+        "verify_time": 7.624188423156738,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 46,
+      "params": {
+        "n": 2048,
+        "q": 41511,
+        "sigma": 3.4287099838256836
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 199.52276611328125,
+        "verify_time": 102.0887680053711,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 47,
+      "params": {
+        "n": 512,
+        "q": 12392,
+        "sigma": 3.4328746795654297
+      },
+      "metrics": {
+        "proof_size": 45062,
+        "prove_time": 26.693138122558594,
+        "verify_time": 13.498529434204102,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 48,
+      "params": {
+        "n": 2048,
+        "q": 40769,
+        "sigma": 4.787132740020752
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 260.88507080078125,
+        "verify_time": 129.891357421875,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 49,
+      "params": {
+        "n": 1024,
+        "q": 12244,
+        "sigma": 2.890683889389038
+      },
+      "metrics": {
+        "proof_size": 55812,
+        "prove_time": 33.1087532043457,
+        "verify_time": 18.858901977539062,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 50,
+      "params": {
+        "n": 2048,
+        "q": 66304,
+        "sigma": 6.672089576721191
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 81.2032699584961,
+        "verify_time": 42.93962860107422,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 51,
+      "params": {
+        "n": 1024,
+        "q": 12142,
+        "sigma": 3.1582443714141846
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 91.10521697998047,
+        "verify_time": 45.9820556640625,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 52,
+      "params": {
+        "n": 512,
+        "q": 12224,
+        "sigma": 3.9479057788848877
+      },
+      "metrics": {
+        "proof_size": 46069,
+        "prove_time": 28.222156524658203,
+        "verify_time": 16.037961959838867,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 53,
+      "params": {
+        "n": 2048,
+        "q": 41179,
+        "sigma": 6.616301536560059
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 437.15338134765625,
+        "verify_time": 217.08021545410156,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 54,
+      "params": {
+        "n": 512,
+        "q": 20086,
+        "sigma": 3.967590570449829
+      },
+      "metrics": {
+        "proof_size": 69076,
+        "prove_time": 37.039859771728516,
+        "verify_time": 21.252260208129883,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 55,
+      "params": {
+        "n": 1024,
+        "q": 20436,
+        "sigma": 2.1421656608581543
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 103.7625961303711,
+        "verify_time": 56.62957000732422,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 56,
+      "params": {
+        "n": 2048,
+        "q": 41725,
+        "sigma": 4.517784595489502
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 333.0872802734375,
+        "verify_time": 177.89544677734375,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 57,
+      "params": {
+        "n": 512,
+        "q": 16299,
+        "sigma": 1.4829281568527222
+      },
+      "metrics": {
+        "proof_size": 52996,
+        "prove_time": 28.06080436706543,
+        "verify_time": 15.720414161682129,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 58,
+      "params": {
+        "n": 256,
+        "q": 16173,
+        "sigma": 3.6278202533721924
+      },
+      "metrics": {
+        "proof_size": 8435,
+        "prove_time": 5.641412258148193,
+        "verify_time": 2.350691795349121,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 59,
+      "params": {
+        "n": 256,
+        "q": 12405,
+        "sigma": 2.1393661499023438
+      },
+      "metrics": {
+        "proof_size": 20001,
+        "prove_time": 12.937933921813965,
+        "verify_time": 6.680549621582031,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 60,
+      "params": {
+        "n": 1024,
+        "q": 20350,
+        "sigma": 3.322974681854248
+      },
+      "metrics": {
+        "proof_size": 61393,
+        "prove_time": 42.66965866088867,
+        "verify_time": 21.8774471282959,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 61,
+      "params": {
+        "n": 1024,
+        "q": 12114,
+        "sigma": 2.416572093963623
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 123.11863708496094,
+        "verify_time": 61.40025329589844,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 62,
+      "params": {
+        "n": 512,
+        "q": 20517,
+        "sigma": 3.751141309738159
+      },
+      "metrics": {
+        "proof_size": 52019,
+        "prove_time": 29.93047332763672,
+        "verify_time": 13.789648056030273,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 63,
+      "params": {
+        "n": 512,
+        "q": 20266,
+        "sigma": 3.2753171920776367
+      },
+      "metrics": {
+        "proof_size": 73960,
+        "prove_time": 49.802528381347656,
+        "verify_time": 21.455717086791992,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 64,
+      "params": {
+        "n": 1024,
+        "q": 12527,
+        "sigma": 3.4518654346466064
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 69.34590148925781,
+        "verify_time": 33.08367156982422,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 65,
+      "params": {
+        "n": 2048,
+        "q": 40802,
+        "sigma": 3.173363208770752
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 259.37274169921875,
+        "verify_time": 153.1681671142578,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 66,
+      "params": {
+        "n": 256,
+        "q": 12474,
+        "sigma": 3.7051010131835938
+      },
+      "metrics": {
+        "proof_size": 16863,
+        "prove_time": 9.16141414642334,
+        "verify_time": 4.973850727081299,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 67,
+      "params": {
+        "n": 2048,
+        "q": 41389,
+        "sigma": 5.052425384521484
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 280.4530334472656,
+        "verify_time": 137.0854034423828,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 68,
+      "params": {
+        "n": 1024,
+        "q": 12481,
+        "sigma": 4.456463813781738
+      },
+      "metrics": {
+        "proof_size": 90358,
+        "prove_time": 64.79564666748047,
+        "verify_time": 29.760282516479492,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 69,
+      "params": {
+        "n": 2048,
+        "q": 98476,
+        "sigma": 6.71750020980835
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 290.0473937988281,
+        "verify_time": 165.11822509765625,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 70,
+      "params": {
+        "n": 2048,
+        "q": 129630,
+        "sigma": 7.47658634185791
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 220.97427368164062,
+        "verify_time": 110.12178039550781,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 71,
+      "params": {
+        "n": 1024,
+        "q": 12279,
+        "sigma": 3.8875985145568848
+      },
+      "metrics": {
+        "proof_size": 87514,
+        "prove_time": 50.315879821777344,
+        "verify_time": 27.926265716552734,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 72,
+      "params": {
+        "n": 512,
+        "q": 8334,
+        "sigma": 1.5085272789001465
+      },
+      "metrics": {
+        "proof_size": 73076,
+        "prove_time": 46.324501037597656,
+        "verify_time": 22.135862350463867,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 73,
+      "params": {
+        "n": 512,
+        "q": 20276,
+        "sigma": 2.228296995162964
+      },
+      "metrics": {
+        "proof_size": 36407,
+        "prove_time": 24.154176712036133,
+        "verify_time": 12.983346939086914,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 74,
+      "params": {
+        "n": 2048,
+        "q": 99381,
+        "sigma": 3.2257492542266846
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 294.92474365234375,
+        "verify_time": 136.98606872558594,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 75,
+      "params": {
+        "n": 1024,
+        "q": 41558,
+        "sigma": 5.16923713684082
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 87.54959106445312,
+        "verify_time": 43.29142379760742,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 76,
+      "params": {
+        "n": 2048,
+        "q": 131004,
+        "sigma": 7.3760480880737305
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 324.2565002441406,
+        "verify_time": 155.75384521484375,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 77,
+      "params": {
+        "n": 1024,
+        "q": 40698,
+        "sigma": 5.113579273223877
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 107.31045532226562,
+        "verify_time": 45.66030502319336,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 78,
+      "params": {
+        "n": 256,
+        "q": 12382,
+        "sigma": 2.8617210388183594
+      },
+      "metrics": {
+        "proof_size": 18319,
+        "prove_time": 12.298696517944336,
+        "verify_time": 6.470983028411865,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 79,
+      "params": {
+        "n": 2048,
+        "q": 131072,
+        "sigma": 4.894082069396973
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 402.1995544433594,
+        "verify_time": 175.6405487060547,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 80,
+      "params": {
+        "n": 512,
+        "q": 20759,
+        "sigma": 2.5651793479919434
+      },
+      "metrics": {
+        "proof_size": 68889,
+        "prove_time": 43.5861701965332,
+        "verify_time": 22.67152976989746,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 81,
+      "params": {
+        "n": 512,
+        "q": 20411,
+        "sigma": 2.6314029693603516
+      },
+      "metrics": {
+        "proof_size": 41951,
+        "prove_time": 27.883087158203125,
+        "verify_time": 12.77318286895752,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 82,
+      "params": {
+        "n": 2048,
+        "q": 97235,
+        "sigma": 6.138479232788086
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 320.2965393066406,
+        "verify_time": 159.7257537841797,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 83,
+      "params": {
+        "n": 2048,
+        "q": 41032,
+        "sigma": 6.144350051879883
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 410.63543701171875,
+        "verify_time": 197.04014587402344,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 84,
+      "params": {
+        "n": 1024,
+        "q": 40192,
+        "sigma": 5.611738204956055
+      },
+      "metrics": {
+        "proof_size": 13647,
+        "prove_time": 8.326891899108887,
+        "verify_time": 3.9194235801696777,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 85,
+      "params": {
+        "n": 512,
+        "q": 20426,
+        "sigma": 1.0566902160644531
+      },
+      "metrics": {
+        "proof_size": 76730,
+        "prove_time": 41.70181655883789,
+        "verify_time": 21.149431228637695,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 86,
+      "params": {
+        "n": 2048,
+        "q": 96434,
+        "sigma": 7.509890079498291
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 216.8216552734375,
+        "verify_time": 109.96406555175781,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 87,
+      "params": {
+        "n": 1024,
+        "q": 66364,
+        "sigma": 2.385718822479248
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 118.83712005615234,
+        "verify_time": 60.21026611328125,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 88,
+      "params": {
+        "n": 2048,
+        "q": 40654,
+        "sigma": 7.355629920959473
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 234.8148193359375,
+        "verify_time": 120.2852554321289,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 89,
+      "params": {
+        "n": 2048,
+        "q": 41226,
+        "sigma": 4.446113109588623
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 341.6229553222656,
+        "verify_time": 150.66531372070312,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 90,
+      "params": {
+        "n": 2048,
+        "q": 131072,
+        "sigma": 6.616198539733887
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 134.1209716796875,
+        "verify_time": 72.38040924072266,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 91,
+      "params": {
+        "n": 1024,
+        "q": 4162,
+        "sigma": 2.0281314849853516
+      },
+      "metrics": {
+        "proof_size": 45042,
+        "prove_time": 28.81290626525879,
+        "verify_time": 13.952641487121582,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 92,
+      "params": {
+        "n": 512,
+        "q": 12234,
+        "sigma": 1.4900264739990234
+      },
+      "metrics": {
+        "proof_size": 50891,
+        "prove_time": 35.562255859375,
+        "verify_time": 15.885343551635742,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 93,
+      "params": {
+        "n": 128,
+        "q": 12109,
+        "sigma": 3.5327885150909424
+      },
+      "metrics": {
+        "proof_size": 1056,
+        "prove_time": 0.7494249939918518,
+        "verify_time": 0.35441291332244873,
+        "security_bits": 128
+      }
+    },
+    {
+      "id": 94,
+      "params": {
+        "n": 256,
+        "q": 20353,
+        "sigma": 1.0
+      },
+      "metrics": {
+        "proof_size": 14936,
+        "prove_time": 7.955592155456543,
+        "verify_time": 4.547135353088379,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 95,
+      "params": {
+        "n": 2048,
+        "q": 98526,
+        "sigma": 7.233711242675781
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 373.1962890625,
+        "verify_time": 185.16162109375,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 96,
+      "params": {
+        "n": 512,
+        "q": 20348,
+        "sigma": 1.8802189826965332
+      },
+      "metrics": {
+        "proof_size": 27027,
+        "prove_time": 18.5474796295166,
+        "verify_time": 8.865286827087402,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 97,
+      "params": {
+        "n": 512,
+        "q": 8102,
+        "sigma": 1.7848583459854126
+      },
+      "metrics": {
+        "proof_size": 70272,
+        "prove_time": 40.945899963378906,
+        "verify_time": 20.774290084838867,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 98,
+      "params": {
+        "n": 1024,
+        "q": 12082,
+        "sigma": 4.8643598556518555
+      },
+      "metrics": {
+        "proof_size": 100000,
+        "prove_time": 109.5736083984375,
+        "verify_time": 59.12891387939453,
+        "security_bits": 256
+      }
+    },
+    {
+      "id": 99,
+      "params": {
+        "n": 1024,
+        "q": 41204,
+        "sigma": 3.862002372741699
+      },
+      "metrics": {
+        "proof_size": 72684,
+        "prove_time": 48.25947570800781,
+        "verify_time": 21.742891311645508,
+        "security_bits": 256
+      }
+    }
+  ]
+}
