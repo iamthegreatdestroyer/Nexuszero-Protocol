@@ -33,4 +33,3 @@ Use these snippets to add copyright and license headers to source files. These a
 ## Additional Notes
 
 - Avoid putting private or sensitive legal agreements in the public repo.
-

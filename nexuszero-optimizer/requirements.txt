@@ -35,3 +35,6 @@ black>=23.7.0
 isort>=5.12.0
 mypy>=1.5.0
 ruff>=0.0.285
+opentelemetry-api>=1.16.0
+opentelemetry-sdk>=1.16.0
+opentelemetry-exporter-otlp>=1.16.0

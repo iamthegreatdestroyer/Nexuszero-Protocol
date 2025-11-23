@@ -33,6 +33,6 @@
 
 - Renewal timelines & monitoring for infringement
 
-***
+---
 
 Keep sensitive evidence of use offline and consult counsel prior to public release.
