@@ -659,6 +659,97 @@ pub fn compute_challenge(statement: &Statement, commitments: &[Commitment]) -> C
     })
 }
 
+// ============================================================================
+// Parallel Proof Generation Functions
+// ============================================================================
+
+/// Generate multiple proofs in parallel using Rayon
+///
+/// # Arguments
+/// * `statements_and_witnesses` - Vector of (Statement, Witness) tuples
+///
+/// # Returns
+/// Vector of proofs, one for each input pair
+///
+/// # Performance
+/// This function uses Rayon to parallelize proof generation across multiple cores.
+/// Expected speedup: >3x on 4-core CPUs for batches of 4+ proofs.
+///
+/// # Example
+/// ```
+/// use nexuszero_crypto::proof::{Statement, Witness, proof::prove_batch};
+/// use nexuszero_crypto::proof::statement::StatementBuilder;
+/// 
+/// // Create multiple statements and witnesses
+/// let statements_and_witnesses = vec![
+///     // (statement1, witness1),
+///     // (statement2, witness2),
+///     // ...
+/// ];
+/// 
+/// // Generate proofs in parallel
+/// // let proofs = prove_batch(&statements_and_witnesses)?;
+/// ```
+pub fn prove_batch(
+    statements_and_witnesses: &[(Statement, Witness)],
+) -> CryptoResult<Vec<Proof>> {
+    use rayon::prelude::*;
+    
+    // Validate inputs
+    if statements_and_witnesses.is_empty() {
+        return Ok(Vec::new());
+    }
+    
+    // Generate proofs in parallel
+    let results: Vec<CryptoResult<Proof>> = statements_and_witnesses
+        .par_iter()
+        .map(|(statement, witness)| prove(statement, witness))
+        .collect();
+    
+    // Collect results, propagating any errors
+    let mut proofs = Vec::with_capacity(results.len());
+    for result in results {
+        proofs.push(result?);
+    }
+    
+    Ok(proofs)
+}
+
+/// Verify multiple proofs in parallel using Rayon
+///
+/// # Arguments
+/// * `statements_and_proofs` - Vector of (Statement, Proof) tuples
+///
+/// # Returns
+/// `Ok(())` if all proofs verify successfully, error otherwise
+///
+/// # Performance
+/// This function uses Rayon to parallelize proof verification across multiple cores.
+/// Expected speedup: >3x on 4-core CPUs for batches of 4+ proofs.
+pub fn verify_batch(
+    statements_and_proofs: &[(Statement, Proof)],
+) -> CryptoResult<()> {
+    use rayon::prelude::*;
+    
+    // Validate inputs
+    if statements_and_proofs.is_empty() {
+        return Ok(());
+    }
+    
+    // Verify proofs in parallel
+    let results: Vec<CryptoResult<()>> = statements_and_proofs
+        .par_iter()
+        .map(|(statement, proof)| verify(statement, proof))
+        .collect();
+    
+    // Check that all verifications succeeded
+    for result in results {
+        result?;
+    }
+    
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1389,5 +1480,233 @@ mod tests {
         // Discrete log witness should not satisfy preimage statement
         assert!(!dlog_witness.satisfies_statement(&preimage_statement),
                 "Witness of wrong type should not satisfy statement");
+    }
+
+    // ===================== Parallel Proof Generation Tests =====================
+
+    #[test]
+    fn test_prove_batch_empty() {
+        let batch: Vec<(Statement, Witness)> = vec![];
+        let proofs = prove_batch(&batch).unwrap();
+        assert_eq!(proofs.len(), 0);
+    }
+
+    #[test]
+    fn test_prove_batch_single() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let secret = vec![42u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        
+        let statement = StatementBuilder::new()
+            .discrete_log(generator, public_value)
+            .build()
+            .unwrap();
+        let witness = Witness::discrete_log(secret);
+        
+        let batch = vec![(statement.clone(), witness)];
+        let proofs = prove_batch(&batch).unwrap();
+        
+        assert_eq!(proofs.len(), 1);
+        assert!(verify(&statement, &proofs[0]).is_ok());
+    }
+
+    #[test]
+    fn test_prove_batch_multiple() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let gen_big = BigUint::from_bytes_be(&generator);
+        
+        // Create multiple statement-witness pairs
+        let mut batch = Vec::new();
+        for i in 1..=5 {
+            let secret = vec![i as u8; 32];
+            let secret_big = BigUint::from_bytes_be(&secret);
+            let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+            
+            let statement = StatementBuilder::new()
+                .discrete_log(generator.clone(), public_value)
+                .build()
+                .unwrap();
+            let witness = Witness::discrete_log(secret);
+            
+            batch.push((statement, witness));
+        }
+        
+        // Generate proofs in parallel
+        let proofs = prove_batch(&batch).unwrap();
+        
+        assert_eq!(proofs.len(), 5);
+        
+        // Verify all proofs
+        for (i, proof) in proofs.iter().enumerate() {
+            assert!(verify(&batch[i].0, proof).is_ok(), 
+                    "Proof {} should verify", i);
+        }
+    }
+
+    #[test]
+    fn test_verify_batch_empty() {
+        let batch: Vec<(Statement, Proof)> = vec![];
+        assert!(verify_batch(&batch).is_ok());
+    }
+
+    #[test]
+    fn test_verify_batch_single() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let secret = vec![42u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let gen_big = BigUint::from_bytes_be(&generator);
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        
+        let statement = StatementBuilder::new()
+            .discrete_log(generator, public_value)
+            .build()
+            .unwrap();
+        let witness = Witness::discrete_log(secret);
+        let proof = prove(&statement, &witness).unwrap();
+        
+        let batch = vec![(statement, proof)];
+        assert!(verify_batch(&batch).is_ok());
+    }
+
+    #[test]
+    fn test_verify_batch_multiple() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let gen_big = BigUint::from_bytes_be(&generator);
+        
+        // Create and prove multiple statements
+        let mut batch = Vec::new();
+        for i in 1..=5 {
+            let secret = vec![i as u8; 32];
+            let secret_big = BigUint::from_bytes_be(&secret);
+            let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+            
+            let statement = StatementBuilder::new()
+                .discrete_log(generator.clone(), public_value)
+                .build()
+                .unwrap();
+            let witness = Witness::discrete_log(secret);
+            let proof = prove(&statement, &witness).unwrap();
+            
+            batch.push((statement, proof));
+        }
+        
+        // Verify all proofs in parallel
+        assert!(verify_batch(&batch).is_ok());
+    }
+
+    #[test]
+    fn test_verify_batch_with_invalid_proof() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let gen_big = BigUint::from_bytes_be(&generator);
+        
+        // Create valid and invalid proofs
+        let mut batch = Vec::new();
+        
+        // Add 2 valid proofs
+        for i in 1..=2 {
+            let secret = vec![i as u8; 32];
+            let secret_big = BigUint::from_bytes_be(&secret);
+            let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+            
+            let statement = StatementBuilder::new()
+                .discrete_log(generator.clone(), public_value)
+                .build()
+                .unwrap();
+            let witness = Witness::discrete_log(secret);
+            let proof = prove(&statement, &witness).unwrap();
+            
+            batch.push((statement, proof));
+        }
+        
+        // Add 1 invalid proof (tampered)
+        let secret = vec![3u8; 32];
+        let secret_big = BigUint::from_bytes_be(&secret);
+        let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+        
+        let statement = StatementBuilder::new()
+            .discrete_log(generator.clone(), public_value)
+            .build()
+            .unwrap();
+        let witness = Witness::discrete_log(secret);
+        let mut proof = prove(&statement, &witness).unwrap();
+        
+        // Tamper with the proof
+        proof.challenge.value[0] ^= 0xFF;
+        
+        batch.push((statement, proof));
+        
+        // Batch verification should fail
+        assert!(verify_batch(&batch).is_err());
+    }
+
+    #[test]
+    fn test_batch_proof_consistency() {
+        use crate::proof::statement::StatementBuilder;
+        use num_bigint::BigUint;
+        
+        let generator = vec![2u8; 32];
+        let modulus_bytes = vec![0xFF; 32];
+        let mod_big = BigUint::from_bytes_be(&modulus_bytes);
+        let gen_big = BigUint::from_bytes_be(&generator);
+        
+        // Create batch of statement-witness pairs
+        let mut statements_and_witnesses = Vec::new();
+        for i in 1..=4 {
+            let secret = vec![i as u8; 32];
+            let secret_big = BigUint::from_bytes_be(&secret);
+            let public_value = gen_big.modpow(&secret_big, &mod_big).to_bytes_be();
+            
+            let statement = StatementBuilder::new()
+                .discrete_log(generator.clone(), public_value)
+                .build()
+                .unwrap();
+            let witness = Witness::discrete_log(secret);
+            
+            statements_and_witnesses.push((statement, witness));
+        }
+        
+        // Generate proofs in batch
+        let batch_proofs = prove_batch(&statements_and_witnesses).unwrap();
+        
+        // Generate proofs individually
+        let individual_proofs: Vec<Proof> = statements_and_witnesses
+            .iter()
+            .map(|(stmt, wit)| prove(stmt, wit).unwrap())
+            .collect();
+        
+        // Both methods should produce valid proofs
+        assert_eq!(batch_proofs.len(), individual_proofs.len());
+        
+        for i in 0..batch_proofs.len() {
+            assert!(verify(&statements_and_witnesses[i].0, &batch_proofs[i]).is_ok());
+            assert!(verify(&statements_and_witnesses[i].0, &individual_proofs[i]).is_ok());
+        }
     }
 }
