@@ -67,3 +67,17 @@ secrets/
 *.pem
 *.key
 
+# Legal - Confidential documents (do not commit)
+legal/confidential/
+legal/**/confidential/
+legal/**/*_CONFIDENTIAL.md
+legal/**/*_PRIVILEGED.md
+legal/contracts/
+legal/agreements/signed/
+legal/patents/filed/
+legal/patents/drafts/
+*.docx
+*.pdf
+!legal/templates/*.pdf
+!docs/**/*.pdf
+
