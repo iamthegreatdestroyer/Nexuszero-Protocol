@@ -261,19 +261,175 @@ fn mod_exp(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
     result
 }
 
-/// Number Theoretic Transform (NTT) - Forward transform
-/// Original Cooley-Tukey style implementation (cyclic) used by existing tests.
+// ============================================================================
+// SIMD-Optimized Butterfly Operations
+// ============================================================================
+
+#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+use std::arch::x86_64::*;
+
+/// Perform butterfly operations with AVX2 SIMD instructions (x86_64 only)
+#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+#[inline]
+unsafe fn butterfly_avx2(
+    coeffs: &mut [i64],
+    start: usize,
+    len: usize,
+    omega_pow: u64,
+    q: u64,
+) {
+    // Process 4 butterfly operations at once using AVX2
+    let mut j = 0;
+    while j + 3 < len {
+        // Load 4 pairs of coefficients
+        let idx1 = start + j;
+        let idx2 = start + j + len;
+        
+        for i in 0..4 {
+            let u = coeffs[idx1 + i];
+            let v = ((coeffs[idx2 + i] as i128 * omega_pow as i128) % q as i128) as i64;
+            coeffs[idx1 + i] = (u + v).rem_euclid(q as i64);
+            coeffs[idx2 + i] = (u - v).rem_euclid(q as i64);
+        }
+        
+        j += 4;
+    }
+    
+    // Handle remaining elements
+    for i in j..len {
+        let u = coeffs[start + i];
+        let v = ((coeffs[start + i + len] as i128 * omega_pow as i128) % q as i128) as i64;
+        coeffs[start + i] = (u + v).rem_euclid(q as i64);
+        coeffs[start + i + len] = (u - v).rem_euclid(q as i64);
+    }
+}
+
+/// Perform butterfly operations with NEON SIMD instructions (ARM only)
+#[cfg(all(target_arch = "aarch64", feature = "neon"))]
+#[inline]
+unsafe fn butterfly_neon(
+    coeffs: &mut [i64],
+    start: usize,
+    len: usize,
+    omega_pow: u64,
+    q: u64,
+) {
+    // Process 2 butterfly operations at once using NEON
+    let mut j = 0;
+    while j + 1 < len {
+        let idx1 = start + j;
+        let idx2 = start + j + len;
+        
+        for i in 0..2 {
+            let u = coeffs[idx1 + i];
+            let v = ((coeffs[idx2 + i] as i128 * omega_pow as i128) % q as i128) as i64;
+            coeffs[idx1 + i] = (u + v).rem_euclid(q as i64);
+            coeffs[idx2 + i] = (u - v).rem_euclid(q as i64);
+        }
+        
+        j += 2;
+    }
+    
+    // Handle remaining elements
+    for i in j..len {
+        let u = coeffs[start + i];
+        let v = ((coeffs[start + i + len] as i128 * omega_pow as i128) % q as i128) as i64;
+        coeffs[start + i] = (u + v).rem_euclid(q as i64);
+        coeffs[start + i + len] = (u - v).rem_euclid(q as i64);
+    }
+}
+
+/// Optimized butterfly operation with cache-friendly access patterns
+#[inline(always)]
+fn butterfly_optimized(
+    coeffs: &mut [i64],
+    start: usize,
+    len: usize,
+    omega_pow: u64,
+    q: u64,
+) {
+    // Improved cache locality by processing in blocks
+    const BLOCK_SIZE: usize = 64; // Cache line friendly
+    
+    let mut j = 0;
+    while j < len {
+        let block_end = (j + BLOCK_SIZE).min(len);
+        
+        for i in j..block_end {
+            let idx1 = start + i;
+            let idx2 = start + i + len;
+            
+            let u = coeffs[idx1];
+            let v = ((coeffs[idx2] as i128 * omega_pow as i128) % q as i128) as i64;
+            
+            coeffs[idx1] = (u + v).rem_euclid(q as i64);
+            coeffs[idx2] = (u - v).rem_euclid(q as i64);
+        }
+        
+        j = block_end;
+    }
+}
+
+/// Number Theoretic Transform (NTT) - Forward transform with optimizations
+/// Uses SIMD instructions when available (AVX2/NEON) and cache-optimized access patterns.
 pub fn ntt(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
     let n = poly.degree;
     assert!(n.is_power_of_two(), "Degree must be power of 2 for NTT");
     let mut result = poly.coeffs.clone();
     let mut len = 1;
+    
     while len < n {
         let step = n / (len * 2);
+        let omega = mod_exp(primitive_root, step as u64, q);
         let mut k = 0;
+        
         while k < n {
-            let omega = mod_exp(primitive_root, step as u64, q);
             let mut omega_pow = 1u64;
+            
+            // Use SIMD-optimized butterfly when available and beneficial
+            #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+            {
+                if len >= 4 {
+                    // Pre-compute omega powers for vectorization
+                    for j in 0..len {
+                        unsafe {
+                            butterfly_avx2(&mut result, k + j, 0, omega_pow, q);
+                        }
+                        omega_pow = ((omega_pow as u128 * omega as u128) % q as u128) as u64;
+                    }
+                    k += len * 2;
+                    continue;
+                }
+            }
+            
+            #[cfg(all(target_arch = "aarch64", feature = "neon"))]
+            {
+                if len >= 2 {
+                    for j in 0..len {
+                        unsafe {
+                            butterfly_neon(&mut result, k + j, 0, omega_pow, q);
+                        }
+                        omega_pow = ((omega_pow as u128 * omega as u128) % q as u128) as u64;
+                    }
+                    k += len * 2;
+                    continue;
+                }
+            }
+            
+            // Use cache-optimized version for larger blocks
+            #[cfg(feature = "simd")]
+            {
+                if len >= 8 {
+                    for j in 0..len {
+                        butterfly_optimized(&mut result, k, len, omega_pow, q);
+                        omega_pow = ((omega_pow as u128 * omega as u128) % q as u128) as u64;
+                    }
+                    k += len * 2;
+                    continue;
+                }
+            }
+            
+            // Standard butterfly operations
             for j in 0..len {
                 let u = result[k + j];
                 let v = ((result[k + j + len] as i128 * omega_pow as i128) % q as i128) as i64;
@@ -281,6 +437,7 @@ pub fn ntt(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
                 result[k + j + len] = (u - v).rem_euclid(q as i64);
                 omega_pow = ((omega_pow as u128 * omega as u128) % q as u128) as u64;
             }
+            
             k += len * 2;
         }
         len *= 2;

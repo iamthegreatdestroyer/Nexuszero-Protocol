@@ -33,6 +33,9 @@ pub mod params;
 pub mod proof;
 pub mod utils;
 
+// FFI bindings for Python integration
+pub mod ffi;
+
 // Re-export commonly used types
 pub use params::{CryptoParameters, SecurityLevel};
 

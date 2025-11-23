@@ -1,8 +1,29 @@
 use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use nexuszero_crypto::lattice::{ring_lwe::{Polynomial, poly_mult_schoolbook, poly_mult_ntt}};
+use nexuszero_crypto::lattice::ring_lwe::{Polynomial, poly_mult_schoolbook, poly_mult_ntt, ntt, find_primitive_root};
 use rand::Rng;
 
-fn random_poly(n: usize, q: u64) -> Polynomial { Polynomial::from_coeffs((0..n).map(|_| rand::thread_rng().gen_range(0..q as i64)).collect(), q) }
+fn random_poly(n: usize, q: u64) -> Polynomial { 
+    Polynomial::from_coeffs((0..n).map(|_| rand::thread_rng().gen_range(0..q as i64)).collect(), q) 
+}
+
+fn bench_ntt_operations(c: &mut Criterion) {
+    let mut group = c.benchmark_group("ntt_operations");
+    let sizes = [256usize, 512, 1024];
+    let q = 12289u64;
+    
+    for &n in &sizes {
+        let poly = random_poly(n, q);
+        if let Some(root) = find_primitive_root(n, q) {
+            group.throughput(Throughput::Elements(n as u64));
+            group.bench_with_input(BenchmarkId::new("forward_ntt", n), &n, |bencher, &_n| {
+                bencher.iter(|| {
+                    ntt(&poly, q, root)
+                });
+            });
+        }
+    }
+    group.finish();
+}
 
 fn bench_ntt_vs_schoolbook(c: &mut Criterion) {
     let mut group = c.benchmark_group("poly_mult");
@@ -24,5 +45,5 @@ fn bench_ntt_vs_schoolbook(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(name=ntt_benches; config=Criterion::default(); targets=bench_ntt_vs_schoolbook);
+criterion_group!(name=ntt_benches; config=Criterion::default(); targets=bench_ntt_operations, bench_ntt_vs_schoolbook);
 criterion_main!(ntt_benches);
