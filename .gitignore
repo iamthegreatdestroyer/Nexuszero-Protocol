@@ -46,3 +46,24 @@ build/
 coverage/
 **/coverage/
 
+# Docker
+*.log
+docker-compose.override.yml
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+k8s/secrets.yaml.local
+
+# Monitoring data (local)
+prometheus-data/
+grafana-data/
+loki-data/
+
+# Secrets and credentials
+.env.production
+.env.staging
+secrets/
+*.pem
+*.key
+

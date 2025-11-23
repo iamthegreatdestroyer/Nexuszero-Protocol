@@ -1,0 +1,84 @@
+---
+# PersistentVolumeClaim for Optimizer Data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: optimizer-data-pvc
+  namespace: nexuszero
+  labels:
+    app: nexuszero-optimizer
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard  # Adjust based on your cluster
+
+---
+# PersistentVolumeClaim for Optimizer Checkpoints
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: optimizer-checkpoints-pvc
+  namespace: nexuszero
+  labels:
+    app: nexuszero-optimizer
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard  # Adjust based on your cluster
+
+---
+# PersistentVolumeClaim for Prometheus Data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data-pvc
+  namespace: nexuszero
+  labels:
+    app: prometheus
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard  # Adjust based on your cluster
+
+---
+# PersistentVolumeClaim for Grafana Data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data-pvc
+  namespace: nexuszero
+  labels:
+    app: grafana
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard  # Adjust based on your cluster
+
+---
+# PersistentVolumeClaim for Loki Data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data-pvc
+  namespace: nexuszero
+  labels:
+    app: loki
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: standard  # Adjust based on your cluster
