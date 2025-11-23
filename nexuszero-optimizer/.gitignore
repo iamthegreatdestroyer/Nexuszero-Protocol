@@ -40,6 +40,8 @@ env/
 data/train/circuit_*.h5
 data/val/circuit_*.h5
 data/test/circuit_*.h5
+data/*.json
+data/**/*.json
 
 # Keep index files for structure reference
 !data/*/index.h5

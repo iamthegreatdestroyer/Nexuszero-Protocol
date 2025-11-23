@@ -188,6 +188,10 @@ class Trainer:
             )
             tracker.update("bit_security", batch_metrics["bit_security_mean"])
             tracker.update("hardness", batch_metrics["hardness_mean"])
+            
+            # Track proof size predictions (first element of metrics prediction)
+            # Metrics are [proof_size, prove_time, verify_time] normalized to [0, 1]
+            tracker.update("proof_size_norm", float(out["metrics_pred"][:, 0].mean().item()))
 
             if batch_idx % 10 == 0:
                 logger.info(
