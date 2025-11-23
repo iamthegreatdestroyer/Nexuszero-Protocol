@@ -56,6 +56,50 @@ jobs:
           Set-Location nexuszero-crypto
           cargo tarpaulin --out Html --output-dir ../docs/coverage/html --ignore-tests
 
+      - name: Set up Python (for optimizer coverage)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyTorch CPU and deps
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir `
+            torch==2.1.0+cpu `
+            torchvision==0.16.0+cpu `
+            torchaudio==2.1.0+cpu `
+            -f https://download.pytorch.org/whl/torch_stable.html
+
+      - name: Install PyG wheels and torch-geometric
+        shell: pwsh
+        run: |
+          pip install --no-cache-dir `
+            pyg_lib `
+            torch_scatter `
+            torch_sparse `
+            torch_cluster `
+            torch_spline_conv `
+            -f https://data.pyg.org/whl/torch-2.1.0+cpu.html
+          pip install --no-cache-dir torch-geometric>=2.4.0
+
+      - name: Install optimizer package (dev) and pytest-cov
+        shell: pwsh
+        run: |
+          pip install -e nexuszero-optimizer/[dev]
+          pip install pytest-cov
+
+      - name: Generate Python HTML coverage (optimizer)
+        shell: pwsh
+        run: |
+          Set-Location nexuszero-optimizer
+          $env:PYTHONPATH = "$PWD/src"
+          pytest tests -v `
+            --maxfail=1 `
+            --cov=nexuszero_optimizer `
+            --cov-report=term-missing `
+            --cov-report=html:../docs/coverage/python/html
+
       - name: Create index page
         shell: pwsh
         run: |
@@ -115,13 +159,18 @@ jobs:
                   <p class="subtitle">Post-Quantum Zero-Knowledge Proof System - Coverage Reports</p>
               </div>
               
-              <div class="card">
-                  <h2>📊 Latest Coverage Report</h2>
+                <div class="card">
+                  <h2>📊 Latest Rust Coverage Report</h2>
                   <div class="coverage-badge">
-                      <img src="badge.svg" alt="Coverage Badge">
+                    <img src="badge.svg" alt="Coverage Badge">
                   </div>
-                  <p><a href="html/index.html">View Detailed HTML Coverage Report →</a></p>
-              </div>
+                  <p><a href="html/index.html">View Rust HTML Coverage Report →</a></p>
+                </div>
+
+                <div class="card">
+                  <h2>🐍 Python Optimizer Coverage</h2>
+                  <p><a href="python/html/index.html">View Python HTML Coverage Report →</a></p>
+                </div>
               
               <div class="card">
                   <h2>📈 Coverage History</h2>
@@ -160,9 +209,6 @@ jobs:
   deploy:
     needs: generate-coverage
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Download coverage artifact
         uses: actions/download-artifact@v4
