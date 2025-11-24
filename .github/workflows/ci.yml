@@ -45,8 +45,7 @@ jobs:
       - name: Start python server
         working-directory: examples/python-app
         run: |
-          source .venv/bin/activate
-          python app.py &
+          source .venv/bin/activate && python app.py &
           sleep 5
       - name: Smoke test python server
         run: |
