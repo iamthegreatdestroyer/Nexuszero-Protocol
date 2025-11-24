@@ -1,7 +1,7 @@
-//! Parameter Selector
-//!
-//! Provides a flexible builder pattern for selecting cryptographic parameters
-//! with automatic security level estimation and constraint validation.
+/// Parameter Selector
+///
+/// Provides a flexible builder pattern for selecting cryptographic parameters
+/// with automatic security level estimation and constraint validation.
 
 use crate::params::security::SecurityLevel;
 use crate::lattice::{LWEParameters, RingLWEParameters};
