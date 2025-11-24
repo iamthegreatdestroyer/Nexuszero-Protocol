@@ -387,9 +387,15 @@ pub fn ct_modpow_blinded_with_order(
 
     // If group order is given, ensure r is invertible modulo the order
     if let Some(order) = group_order {
-        // Retry until r is co-prime with order (invertible)
+        // Retry until r is co-prime with order (invertible), but limit attempts
+        const MAX_INVERTIBLE_ATTEMPTS: usize = 1000;
+        let mut attempts = 0;
         while gcd_biguint(&r, order) != BigUint::one() {
+            if attempts >= MAX_INVERTIBLE_ATTEMPTS {
+                panic!("Failed to find invertible blinding factor r after {} attempts", MAX_INVERTIBLE_ATTEMPTS);
+            }
             r = BigUint::from(rng.gen::<u32>() % 65536 + 1);
+            attempts += 1;
         }
     }
 
