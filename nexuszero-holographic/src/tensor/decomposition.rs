@@ -34,7 +34,7 @@ impl TensorSVD {
         Self::compute_with_params(matrix, SVDParams::default())
     }
 
-    pub fn compute_with_params(matrix: &Array2<f64>, params: SVDParams) -> Result<Self, TensorError> {
+    pub fn compute_with_params(matrix: &Array2<f64>, _params: SVDParams) -> Result<Self, TensorError> {
         let (m, n) = (matrix.nrows(), matrix.ncols());
         if m == 0 || n == 0 { return Err(TensorError::DecompositionFailed); }
         let rank_bound = m.min(n);
@@ -84,7 +84,8 @@ impl TensorSVD {
 }
 
 // Modified Gram-Schmidt orthonormalization
-fn orthonormalize(mut a: Array2<f64>) -> Array2<f64> {
+#[allow(dead_code)]
+fn orthonormalize(a: Array2<f64>) -> Array2<f64> {
     let (m, n) = (a.nrows(), a.ncols());
     let mut q = Array2::<f64>::zeros((m, n));
     let eps = 1e-12;
@@ -171,6 +172,7 @@ fn column_iter(a: &Array2<f64>) -> Vec<Array1<f64>> {
 }
 
 // Compute relative Frobenius error of reconstruction using provided truncated SVD.
+#[allow(dead_code)]
 fn approximate_rel_frob_error(original: &Array2<f64>, svd: &TensorSVD) -> f64 {
     let u = &svd.u;
     let vt = &svd.vt;

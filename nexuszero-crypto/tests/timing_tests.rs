@@ -11,9 +11,11 @@ use std::time::{Duration, Instant};
 const SAMPLE_SIZE: usize = 10000;
 
 /// Statistical significance threshold (p-value)
+#[allow(dead_code)]
 const SIGNIFICANCE_LEVEL: f64 = 0.01;
 
 /// Maximum allowed timing variance (in nanoseconds)
+#[allow(dead_code)]
 const MAX_TIMING_VARIANCE_NS: u64 = 1000;
 
 /// Measure execution time of a function
@@ -114,7 +116,7 @@ mod tests {
         println!("\n=== Testing ct_modpow timing independence ===");
         
         let base = BigUint::from(12345u32);
-        let modulus = BigUint::from_bytes_be(&vec![0xFF; 32]);
+        let modulus = BigUint::from_bytes_be(&[0xFF; 32]);
         
             // Test with SAME BIT LENGTH but different bit patterns
             // Both are 32-bit exponents but with different patterns
@@ -298,7 +300,7 @@ mod tests {
         // Test ct_modpow with various exponent sizes
         for exp_bits in [8, 16, 32, 64, 128, 256] {
             let base = BigUint::from(123u32);
-            let modulus = BigUint::from_bytes_be(&vec![0xFF; 32]);
+            let modulus = BigUint::from_bytes_be(&[0xFF; 32]);
             let exp = BigUint::from(1u32) << exp_bits;
             
             let timings = collect_timings(|| ct_modpow(&base, &exp, &modulus), 1000);

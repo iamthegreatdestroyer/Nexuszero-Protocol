@@ -387,7 +387,7 @@ fn test_statistical_power_analysis_simulation() {
     let ratio = time2.as_nanos().max(1) as f64 / time1.as_nanos().max(1) as f64;
     
     // Allow some variance but flag if significantly different
-    if ratio > 2.0 || ratio < 0.5 {
+    if !(0.5..=2.0).contains(&ratio) {
         println!("WARNING: Significant timing difference detected (ratio: {:.2})", ratio);
         println!("This may indicate Hamming weight dependency");
     }

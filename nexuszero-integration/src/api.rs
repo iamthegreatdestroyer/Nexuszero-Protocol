@@ -1,6 +1,6 @@
 use crate::pipeline::{NexuszeroProtocol, OptimizedProof, ProtocolError};
 use crate::config::ProtocolConfig;
-use nexuszero_crypto::proof::{StatementBuilder, Statement, Witness};
+use nexuszero_crypto::proof::{StatementBuilder, Witness};
 use nexuszero_crypto::proof::statement::HashFunction;
 
 /// High-level API facade for protocol usage.
@@ -33,4 +33,8 @@ impl NexuszeroAPI {
 
     /// Retrieve metrics from proof.
     pub fn get_metrics(&self, proof: &OptimizedProof) -> crate::pipeline::ProofMetrics { proof.metrics.clone() }
+}
+
+impl Default for NexuszeroAPI {
+    fn default() -> Self { Self::new() }
 }

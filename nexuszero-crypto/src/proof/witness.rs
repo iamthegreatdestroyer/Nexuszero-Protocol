@@ -21,6 +21,7 @@ pub enum WitnessType {
 }
 
 /// Secret data for different witness types
+#[allow(dead_code)]
 #[derive(Zeroize, ZeroizeOnDrop)]
 enum SecretData {
     /// Discrete log witness: the exponent x where g^x = h
@@ -148,6 +149,7 @@ impl Witness {
     }
 
     /// Access randomness (used in proof generation)
+    #[allow(dead_code)]
     pub(crate) fn randomness(&self) -> &[u8] {
         &self.randomness
     }

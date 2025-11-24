@@ -154,6 +154,12 @@ impl SGXBackend {
     }
 }
 
+impl Default for SGXBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareBackend for SGXBackend {
     fn initialize(&mut self) -> CryptoResult<()> {
         if !Self::check_sgx_available() {
@@ -276,6 +282,12 @@ impl TrustZoneBackend {
     }
 }
 
+impl Default for TrustZoneBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareBackend for TrustZoneBackend {
     fn initialize(&mut self) -> CryptoResult<()> {
         // Check for TrustZone availability (ARM-specific)
@@ -370,6 +382,12 @@ impl HSMBackend {
     }
 }
 
+impl Default for HSMBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareBackend for HSMBackend {
     fn initialize(&mut self) -> CryptoResult<()> {
         // In real implementation: open PKCS#11 session
@@ -452,6 +470,12 @@ pub struct SoftwareBackend;
 impl SoftwareBackend {
     pub fn new() -> Self {
         Self
+    }
+}
+
+impl Default for SoftwareBackend {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
