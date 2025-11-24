@@ -1,4 +1,5 @@
 //! Zero-knowledge proof system components
+
 //!
 //! This module provides Statement, Witness, and Proof structures
 //! for constructing zero-knowledge proofs.

@@ -154,6 +154,18 @@ cargo test --test integration_tests
 cargo test -- --nocapture
 ```
 
+Note: Some tests (timing-sensitive or hardware-specific) are ignored by default to avoid flaky failures
+in non-isolated environments (e.g., Windows CI or developer machines). To run the timing/hardware tests,
+set the environment flag and run ignored tests explicitly:
+
+```bash
+# On Unix-like systems
+RUN_TIMING_TESTS=1 cargo test -p nexuszero-crypto -- --ignored --nocapture
+
+# On Windows PowerShell
+$env:RUN_TIMING_TESTS = '1'; cargo test -p nexuszero-crypto -- --ignored --nocapture
+```
+
 ### Benchmarks
 
 ```bash

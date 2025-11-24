@@ -98,6 +98,7 @@ default = []
 simd = []
 avx2 = ["simd"]
 neon = ["simd"]
+allow-insecure = []
 
 [lib]
 name = "nexuszero_crypto"

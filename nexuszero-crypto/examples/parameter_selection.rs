@@ -1,11 +1,10 @@
 /// Example: Advanced Parameter Selection
-/// 
+///
 /// Demonstrates the ParameterSelector with various configurations:
 /// - Basic parameter generation for different security levels
 /// - Custom constraints (dimension, modulus ranges)
 /// - Prime modulus selection using Miller-Rabin
 /// - Security level estimation
-
 use nexuszero_crypto::{
     params::{ParameterSelector, SecurityLevel, is_prime_miller_rabin, generate_prime},
     CryptoResult,

@@ -1,11 +1,10 @@
 /// Parameter Selector
-/// 
+///
 /// Provides a flexible builder pattern for selecting cryptographic parameters
 /// with automatic security level estimation and constraint validation.
 
 use crate::params::security::SecurityLevel;
 use crate::lattice::{LWEParameters, RingLWEParameters};
-use crate::utils::constant_time::ct_modpow;
 use crate::{CryptoError, CryptoResult, LatticeParameters};
 use num_bigint::BigUint;
 use num_traits::One;
@@ -123,7 +122,7 @@ impl ParameterSelector {
         let q = self.select_modulus(n, security)?;
         
         // Select sigma based on security level
-        let sigma = self.custom_sigma.unwrap_or_else(|| {
+        let sigma = self.custom_sigma.unwrap_or({
             match security {
                 SecurityLevel::Bit128 => 3.2,
                 SecurityLevel::Bit192 => 3.8,
@@ -150,7 +149,7 @@ impl ParameterSelector {
         let q = self.select_modulus(n, security)?;
         
         // Select sigma based on security level
-        let sigma = self.custom_sigma.unwrap_or_else(|| {
+        let sigma = self.custom_sigma.unwrap_or({
             match security {
                 SecurityLevel::Bit128 => 3.2,
                 SecurityLevel::Bit192 => 3.8,
@@ -306,7 +305,7 @@ impl ParameterSelector {
         let bit_security = dimension_security * modulus_factor * sigma_factor;
         
         // Clamp to reasonable range
-        bit_security.max(64.0).min(512.0) as u32
+        bit_security.clamp(64.0, 512.0) as u32
     }
 }
 
@@ -542,7 +541,7 @@ mod tests {
     fn test_generate_prime() {
         let prime = generate_prime(14).unwrap();
         assert!(is_prime_miller_rabin(prime, 20));
-        assert!(prime >= 8192 && prime < 16384); // 2^13 to 2^14
+        assert!((8192..16384).contains(&prime)); // 2^13 to 2^14
     }
 
     #[test]
@@ -650,12 +649,12 @@ mod tests {
         // Small bit size
         let prime = generate_prime(4).unwrap();
         assert!(is_prime_miller_rabin(prime, 20));
-        assert!(prime >= 8 && prime < 16);
+        assert!((8..16).contains(&prime));
         
         // Larger bit size
         let prime = generate_prime(20).unwrap();
         assert!(is_prime_miller_rabin(prime, 20));
-        assert!(prime >= (1 << 19) && prime < (1 << 20));
+        assert!(((1 << 19)..(1 << 20)).contains(&prime));
     }
 
     #[test]

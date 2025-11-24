@@ -5,7 +5,7 @@
 //! with the Rust cryptographic primitives.
 
 use std::ffi::c_char;
-use std::ptr;
+// intentionally not importing `ptr` to avoid clippy unused import in non-test builds
 use crate::params::security::SecurityLevel;
 use crate::params::selector::ParameterSelector;
 
@@ -58,7 +58,7 @@ pub const FFI_ERROR_NULL_POINTER: i32 = -3;
 /// This function is unsafe because it dereferences a raw pointer.
 /// The caller must ensure that `result` points to valid memory.
 #[no_mangle]
-pub extern "C" fn nexuszero_estimate_parameters(
+pub unsafe extern "C" fn nexuszero_estimate_parameters(
     security_level: u32,
     circuit_size: u32,
     result: *mut OptimizationResult,
@@ -131,10 +131,8 @@ pub extern "C" fn nexuszero_estimate_parameters(
 /// If the pointer is non-null, the caller must ensure it was allocated
 /// by this library and has not been freed already.
 #[no_mangle]
-pub extern "C" fn nexuszero_free_result(result: *mut OptimizationResult) {
-    if result.is_null() {
-        return;
-    }
+pub unsafe extern "C" fn nexuszero_free_result(_result: *mut OptimizationResult) {
+    // No-op: nothing to free for OptimizationResult's POD fields
     
     // Since OptimizationResult contains only POD types (no heap allocations),
     // we don't need to do anything here. In the future, if we add heap-allocated
@@ -171,7 +169,7 @@ pub extern "C" fn nexuszero_get_version() -> *const c_char {
 /// # Safety
 /// The caller must ensure params points to valid memory.
 #[no_mangle]
-pub extern "C" fn nexuszero_validate_params(params: *const CryptoParams) -> i32 {
+pub unsafe extern "C" fn nexuszero_validate_params(params: *const CryptoParams) -> i32 {
     if params.is_null() {
         return FFI_ERROR_NULL_POINTER;
     }
@@ -212,7 +210,7 @@ mod tests {
             estimated_prove_time_ms: 0,
         };
 
-        let status = nexuszero_estimate_parameters(128, 1000, &mut result as *mut _);
+        let status = unsafe { nexuszero_estimate_parameters(128, 1000, &mut result as *mut _) };
         
         assert_eq!(status, FFI_SUCCESS);
         assert!(result.optimal_n > 0);
@@ -231,7 +229,7 @@ mod tests {
             estimated_prove_time_ms: 0,
         };
 
-        let status = nexuszero_estimate_parameters(192, 5000, &mut result as *mut _);
+        let status = unsafe { nexuszero_estimate_parameters(192, 5000, &mut result as *mut _) };
         
         assert_eq!(status, FFI_SUCCESS);
         assert!(result.optimal_n >= 512); // Should be at least 512 for 192-bit security
@@ -248,7 +246,7 @@ mod tests {
             estimated_prove_time_ms: 0,
         };
 
-        let status = nexuszero_estimate_parameters(256, 10000, &mut result as *mut _);
+        let status = unsafe { nexuszero_estimate_parameters(256, 10000, &mut result as *mut _) };
         
         assert_eq!(status, FFI_SUCCESS);
         assert!(result.optimal_n >= 1024); // Should be at least 1024 for 256-bit security
@@ -264,13 +262,13 @@ mod tests {
             estimated_prove_time_ms: 0,
         };
 
-        let status = nexuszero_estimate_parameters(99, 1000, &mut result as *mut _);
+        let status = unsafe { nexuszero_estimate_parameters(99, 1000, &mut result as *mut _) };
         assert_eq!(status, FFI_ERROR_INVALID_PARAM);
     }
 
     #[test]
     fn test_estimate_parameters_null_pointer() {
-        let status = nexuszero_estimate_parameters(128, 1000, ptr::null_mut());
+        let status = unsafe { nexuszero_estimate_parameters(128, 1000, std::ptr::null_mut()) };
         assert_eq!(status, FFI_ERROR_NULL_POINTER);
     }
 
@@ -285,18 +283,18 @@ mod tests {
         };
 
         // Circuit size of 0 should fail
-        let status = nexuszero_estimate_parameters(128, 0, &mut result as *mut _);
+        let status = unsafe { nexuszero_estimate_parameters(128, 0, &mut result as *mut _) };
         assert_eq!(status, FFI_ERROR_INVALID_PARAM);
 
         // Very large circuit size should fail
-        let status = nexuszero_estimate_parameters(128, 10_000_000, &mut result as *mut _);
+        let status = unsafe { nexuszero_estimate_parameters(128, 10_000_000, &mut result as *mut _) };
         assert_eq!(status, FFI_ERROR_INVALID_PARAM);
     }
 
     #[test]
     fn test_free_result_null_pointer() {
         // Should not crash
-        nexuszero_free_result(ptr::null_mut());
+        unsafe { nexuszero_free_result(std::ptr::null_mut()); }
     }
 
     #[test]
@@ -310,7 +308,7 @@ mod tests {
         };
 
         // Should not crash
-        nexuszero_free_result(&mut result as *mut _);
+        unsafe { nexuszero_free_result(&mut result as *mut _); }
     }
 
     #[test]
@@ -336,7 +334,7 @@ mod tests {
             sigma: 3.2,
         };
 
-        let status = nexuszero_validate_params(&params as *const _);
+        let status = unsafe { nexuszero_validate_params(&params as *const _) };
         assert_eq!(status, FFI_SUCCESS);
     }
 
@@ -349,7 +347,7 @@ mod tests {
             sigma: 3.2,
         };
 
-        let status = nexuszero_validate_params(&params as *const _);
+        let status = unsafe { nexuszero_validate_params(&params as *const _) };
         assert_eq!(status, FFI_ERROR_INVALID_PARAM);
     }
 
@@ -361,7 +359,7 @@ mod tests {
             sigma: 3.2,
         };
 
-        let status = nexuszero_validate_params(&params as *const _);
+        let status = unsafe { nexuszero_validate_params(&params as *const _) };
         assert_eq!(status, FFI_ERROR_INVALID_PARAM);
     }
 
@@ -373,13 +371,13 @@ mod tests {
             sigma: -1.0, // Negative
         };
 
-        let status = nexuszero_validate_params(&params as *const _);
+        let status = unsafe { nexuszero_validate_params(&params as *const _) };
         assert_eq!(status, FFI_ERROR_INVALID_PARAM);
     }
 
     #[test]
     fn test_validate_params_null_pointer() {
-        let status = nexuszero_validate_params(ptr::null());
+        let status = unsafe { nexuszero_validate_params(std::ptr::null()) };
         assert_eq!(status, FFI_ERROR_NULL_POINTER);
     }
 }

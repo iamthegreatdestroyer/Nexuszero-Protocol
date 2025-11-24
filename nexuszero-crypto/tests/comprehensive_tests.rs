@@ -53,8 +53,8 @@ mod correctness_tests {
         assert_ne!(ct1.v, ct2.v, "Encryption should be randomized");
 
         // But both should decrypt to the same value
-        assert_eq!(lwe::decrypt(&sk, &ct1, &params).unwrap(), true);
-        assert_eq!(lwe::decrypt(&sk, &ct2, &params).unwrap(), true);
+        assert!(lwe::decrypt(&sk, &ct1, &params).unwrap());
+        assert!(lwe::decrypt(&sk, &ct2, &params).unwrap());
     }
 
     #[test]
@@ -110,7 +110,7 @@ mod correctness_tests {
                 let decrypted = ring_lwe::ring_decrypt(&sk, &ciphertext, params).unwrap();
 
                 // Ring-LWE decodes all n coefficients, check first one matches message
-                assert!(decrypted.len() >= 1, "Should decrypt at least one bit");
+                assert!(!decrypted.is_empty(), "Should decrypt at least one bit");
                 assert_eq!(decrypted[0], msg_bool,
                     "Failed to recover message {:?} at security level n={}", msg_bool, params.n);
             }
@@ -176,7 +176,7 @@ mod property_based_tests {
             let decrypted = ring_lwe::ring_decrypt(&sk, &ciphertext, &params).unwrap();
 
             // Ring-LWE decodes all n coefficients, check first one matches
-            prop_assert!(decrypted.len() >= 1);
+            prop_assert!(!decrypted.is_empty());
             prop_assert_eq!(decrypted[0], message[0]);
         }
     }
@@ -240,7 +240,7 @@ mod edge_case_tests {
         let (sk, pk) = result.unwrap();
         let ct = lwe::encrypt(&pk, true, &params, &mut rng).unwrap();
         let pt = lwe::decrypt(&sk, &ct, &params).unwrap();
-        assert_eq!(pt, true, "Should correctly encrypt/decrypt with larger dimensions");
+        assert!(pt, "Should correctly encrypt/decrypt with larger dimensions");
     }
 
     #[test]
@@ -254,6 +254,6 @@ mod edge_case_tests {
         let ciphertext = lwe::encrypt(&pk, false, &params, &mut rng).unwrap();
         let decrypted = lwe::decrypt(&sk, &ciphertext, &params).unwrap();
 
-        assert_eq!(decrypted, false);
+        assert!(!decrypted);
     }
 }

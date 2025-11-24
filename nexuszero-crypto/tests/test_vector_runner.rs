@@ -19,6 +19,7 @@ struct LWEParametersJson { dimension: usize, modulus: u64, sigma: f64 }
 #[derive(Debug, Deserialize)]
 struct LWETestCaseJson { plaintext_bit: u8, decryption_result: Option<u8> }
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct LWEVectorJson { name: String, security_level: u32, parameters: LWEParametersJson, test_cases: Vec<LWETestCaseJson> }
 
 // Ring-LWE schema
@@ -29,6 +30,7 @@ struct EncryptionTestJson { message: Vec<u8> }
 #[derive(Debug, Deserialize)]
 struct PolynomialTestJson { operation: Option<String>, poly_a: Option<Vec<i64>>, poly_b: Option<Vec<i64>>, expected: Option<Vec<i64>> }
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct RingLWEVectorJson { name: String, security_level: u32, parameters: RingLWEParametersJson, encryption_tests: Option<Vec<EncryptionTestJson>>, polynomial_tests: Option<Vec<PolynomialTestJson>> }
 
 // Proof schema

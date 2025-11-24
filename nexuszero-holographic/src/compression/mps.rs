@@ -49,6 +49,9 @@ impl MPS {
 
     pub fn len(&self) -> usize { self.tensors.len() }
 
+    /// Return true if MPS has no tensors
+    pub fn is_empty(&self) -> bool { self.tensors.is_empty() }
+
     pub fn compression_ratio(&self) -> f64 {
         if self.tensors.is_empty() { return 1.0; }
         // Approximate original as raw bytes per site (256 intensity levels)

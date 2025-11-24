@@ -216,20 +216,12 @@ pub fn find_primitive_root(n: usize, q: u64) -> Option<u64> {
     if q == 12289 {
         if n == 512 { return Some(49); }
         else if n == 256 { return Some(2401); }
-    } else if q == 40961 && n == 1024 {
-        return Some(3);
-    } else if q == 65537 && n == 2048 {
+    } else if (q == 40961 && n == 1024) || (q == 65537 && n == 2048) {
         return Some(3);
     }
     
     // General case: search for primitive root
-    for candidate in 2..std::cmp::min(1000, q) {
-        if is_primitive_root(candidate, n, q) {
-            return Some(candidate);
-        }
-    }
-    
-    None
+    (2..std::cmp::min(1000, q)).find(|&candidate| is_primitive_root(candidate, n, q))
 }
 
 /// Check if omega is a primitive 2n-th root of unity mod q
@@ -340,6 +332,7 @@ unsafe fn butterfly_neon(
 }
 
 /// Optimized butterfly operation with cache-friendly access patterns
+#[allow(dead_code)]
 #[inline(always)]
 fn butterfly_optimized(
     coeffs: &mut [i64],
@@ -481,17 +474,17 @@ pub fn poly_mult_schoolbook(a: &Polynomial, b: &Polynomial, q: u64) -> Polynomia
     
     // Reduce by X^n + 1: X^(n+k) = -X^k
     let mut reduced = vec![0i64; n];
-    for i in 0..n {
-        reduced[i] = (result[i] % q as i128) as i64;
+    for (i, r) in reduced.iter_mut().enumerate().take(n) {
+        *r = (result[i] % q as i128) as i64;
     }
-    for i in n..(2*n-1) {
+    for (i, val) in result.iter().enumerate().skip(n).take(n-1) {
         let k = i - n;
-        reduced[k] = ((reduced[k] as i128 - result[i]) % q as i128) as i64;
+        reduced[k] = ((reduced[k] as i128 - *val) % q as i128) as i64;
     }
     
     // Normalize to [0, q)
-    for i in 0..n {
-        reduced[i] = ((reduced[i] % q as i64) + q as i64) % q as i64;
+    for r in reduced.iter_mut().take(n) {
+        *r = ((*r % q as i64) + q as i64) % q as i64;
     }
     
     Polynomial::from_coeffs(reduced, q)
