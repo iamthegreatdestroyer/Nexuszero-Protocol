@@ -1,4 +1,5 @@
 /// Example: Advanced Parameter Selection
+///
 /// Demonstrates the ParameterSelector with various configurations:
 /// - Basic parameter generation for different security levels
 /// - Custom constraints (dimension, modulus ranges)
