@@ -10,6 +10,27 @@
 
 ---
 
+## 📊 Coverage Reports
+
+Unified coverage is published nightly for both Rust (cryptography core) and Python (optimizer):
+
+- **Rust HTML Report:** [Rust Coverage Report](https://iamthegreatdestroyer.github.io/Nexuszero-Protocol/html/index.html)
+- **Python HTML Report:** [Python Coverage Report](https://iamthegreatdestroyer.github.io/Nexuszero-Protocol/python/html/index.html)
+- **Combined Index:** [Coverage Index](https://iamthegreatdestroyer.github.io/Nexuszero-Protocol/)
+
+Badges at top auto-update (Rust `Coverage` and Python `PyCoverage`). History logs:
+
+- `docs/coverage/HISTORY.md` (Rust)
+- `docs/coverage/python/HISTORY.md` (Python)
+
+Regression gates:
+
+- Rust: Tarpaulin fails PRs <90% line coverage.
+- Python: Pytest coverage gate enforced at ≥90%.
+- Performance: Bench workflow compares against pinned baseline (10% slowdown threshold).
+
+---
+
 ## 📖 Overview
 
 Nexuszero Protocol is a production-ready developer environment automation system designed to eliminate manual setup friction. It provides:
@@ -97,6 +118,14 @@ Nexuszero-Protocol/
 │   └── (Ring-LWE, NTT, Schnorr signatures)
 │
 └── nexuszero-optimizer/                     # Neural optimizer (NEW!)
+
+---
+
+## ⚖️ Legal & IP
+
+Legal and Intellectual Property (IP) templates, filing notes, and licensing guidance live in the `legal/` directory. This includes patent templates, trademark application guidance, licensing strategy, copyright header templates, and related artifacts.
+
+See: `legal/README.md` for more details and templates.
     └── (PyTorch GNN for proof parameter optimization)
 ```
 
@@ -155,6 +184,7 @@ The project includes automated CI/CD with GitHub Actions:
 - ✅ Security scanning with Trivy
 
 **Documentation:**
+
 - [Complete Deployment Guide](docs/DEPLOYMENT.md)
 - [Kubernetes Setup](k8s/README.md)
 - [Metrics & Monitoring](docs/METRICS_ENDPOINTS.md)
