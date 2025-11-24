@@ -58,7 +58,8 @@
 //! - [Side-Channel Analysis](https://github.com/Daeinar/ctgrind)
 
 use num_bigint::BigUint;
-use num_traits::{One, Zero};
+use num_traits::{One, Zero}; 
+use rand::Rng;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// Constant-time modular exponentiation using Montgomery ladder
@@ -354,29 +355,122 @@ pub fn ct_array_access(array: &[i64], target_index: usize) -> i64 {
 /// ```
 pub fn ct_modpow_blinded(base: &BigUint, exponent: &BigUint, modulus: &BigUint) -> BigUint {
     use num_traits::Zero;
-    use rand::Rng;
 
     if modulus.is_zero() {
         panic!("Modulus cannot be zero");
     }
 
+    // For compatibility with existing callers, preserve the original
+    // behavior: this function returns the blinded result and does not
+    // perform an un-blind step. Use `ct_modpow_blinded_with_order` to
+    // optionally request un-blinding when the multiplicative group
+    // order of the modulus is known.
+    ct_modpow_blinded_with_order(base, exponent, modulus, None)
+}
+
+/// Blinded constant-time modular exponentiation with optional un-blinding
+///
+/// If `group_order` is provided the function will attempt to compute the
+/// modular inverse of the blinding factor `r` modulo `group_order` and use
+/// it to un-blind the result, returning the same value as `ct_modpow`.
+/// If `group_order` is `None` the function behaves like the original
+/// `ct_modpow_blinded` and returns a blinded result.
+pub fn ct_modpow_blinded_with_order(
+    base: &BigUint,
+    exponent: &BigUint,
+    modulus: &BigUint,
+    group_order: Option<&BigUint>,
+) -> BigUint {
     // Generate random blinding factor r (small for efficiency)
     let mut rng = rand::thread_rng();
-    let r = BigUint::from(rng.gen::<u32>() % 65536 + 1); // Random in [1, 65536]
+    let mut r = BigUint::from(rng.gen::<u32>() % 65536 + 1); // Random in [1, 65536]
 
-    // Compute base^r mod modulus
-    let base_blinded = ct_modpow(base, &r, modulus);
+    // If group order is given, ensure r is invertible modulo the order
+    if let Some(order) = group_order {
+        // Retry until r is co-prime with order (invertible)
+        while gcd_biguint(&r, order) != BigUint::one() {
+            r = BigUint::from(rng.gen::<u32>() % 65536 + 1);
+        }
+    }
+
+    ct_modpow_blinded_with_r(base, exponent, modulus, &r, group_order)
+}
+
+/// Core blinded computation accepting explicit blinding factor `r`.
+/// This helper keeps tests deterministic and supports the un-blind
+/// option by computing modular inverse of `r` modulo `group_order`.
+pub fn ct_modpow_blinded_with_r(
+    base: &BigUint,
+    exponent: &BigUint,
+    modulus: &BigUint,
+    r: &BigUint,
+    group_order: Option<&BigUint>,
+) -> BigUint {
 
     // Blind the exponent: exp_blinded = exp * r
-    let exp_blinded = exponent * &r;
+    let exp_blinded = exponent * r;
 
-    // Compute (base^r)^(exp) mod modulus = base^(r*exp) mod modulus
-    let _result_blinded = ct_modpow(&base_blinded, exponent, modulus);
+    // Compute blinded result (base^(exp * r))
+    let result_blinded = ct_modpow(base, &exp_blinded, modulus);
 
-    // Un-blind by computing result^(r^-1) mod modulus
-    // For simplicity, we compute base^(exp*r) mod modulus directly
-    // which is equivalent to (base^r)^exp
-    ct_modpow(base, &exp_blinded, modulus)
+    // If group_order provided, compute modular inverse of r and un-blind
+    if let Some(order) = group_order {
+        if let Some(r_inv) = modinv_biguint(r, order) {
+            return ct_modpow(&result_blinded, &r_inv, modulus);
+        }
+        // If inverse not found, fall through to return blinded result
+    }
+
+    result_blinded
+}
+
+/// Compute gcd for BigUint
+fn gcd_biguint(a: &BigUint, b: &BigUint) -> BigUint {
+    let mut a = a.clone();
+    let mut b = b.clone();
+    while !b.is_zero() {
+        let r = &a % &b;
+        a = b;
+        b = r;
+    }
+    a
+}
+
+/// Compute modular inverse for BigUint: a^-1 mod m
+/// Returns `Some(inv)` if invertible, otherwise `None`.
+fn modinv_biguint(a: &BigUint, m: &BigUint) -> Option<BigUint> {
+    use num_bigint::BigInt;
+    use num_traits::{Zero, One, Signed};
+
+    let zero = BigInt::zero();
+    let one = BigInt::one();
+
+    let mut r0 = BigInt::from(m.clone());
+    let mut r1 = BigInt::from(a.clone());
+    let mut t0 = BigInt::zero();
+    let mut t1 = BigInt::one();
+
+    while r1 != zero {
+        let q = &r0 / &r1;
+        let tmp_r = r0 - &q * &r1;
+        r0 = r1;
+        r1 = tmp_r;
+
+        let tmp_t = t0 - &q * &t1;
+        t0 = t1;
+        t1 = tmp_t;
+    }
+
+    if r0 != one {
+        // Not invertible
+        return None;
+    }
+
+    if t0.is_negative() {
+        t0 += BigInt::from(m.clone());
+    }
+
+    t0.to_biguint()
 }
 
 /// Blinded constant-time dot product
@@ -643,6 +737,46 @@ mod tests {
 
             // 5^13 mod 17 = 3
             assert_eq!(result_normal, BigUint::from(3u32));
+    }
+
+    #[test]
+    fn test_ct_modpow_blinded_unblinds_with_r() {
+        let base = BigUint::from(5u32);
+        let exp = BigUint::from(13u32);
+        let modulus = BigUint::from(23u32);
+        let order = BigUint::from(22u32); // multiplicative group order for prime 23
+        let r = BigUint::from(3u32);
+
+        let expected = ct_modpow(&base, &exp, &modulus);
+        let unblinded = ct_modpow_blinded_with_r(&base, &exp, &modulus, &r, Some(&order));
+        assert_eq!(expected, unblinded);
+    }
+
+    #[test]
+    fn test_ct_modpow_blinded_none_returns_blinded() {
+        let base = BigUint::from(5u32);
+        let exp = BigUint::from(13u32);
+        let modulus = BigUint::from(23u32);
+        let r = BigUint::from(3u32);
+
+        let expected = ct_modpow(&base, &exp, &modulus);
+        let blinded = ct_modpow_blinded_with_r(&base, &exp, &modulus, &r, None);
+        // Deterministic check: using r=3 should produce a different value than unblinded
+        assert_ne!(expected, blinded);
+    }
+
+    #[test]
+    fn test_ct_modpow_blinded_with_order_random_unblinds() {
+        let base = BigUint::from(5u32);
+        let exp = BigUint::from(13u32);
+        let modulus = BigUint::from(23u32);
+        let order = BigUint::from(22u32);
+
+        // If group order is known, the function will generate an invertible r
+        // and should un-blind to the same value as the standard modpow
+        let unblinded = ct_modpow_blinded_with_order(&base, &exp, &modulus, Some(&order));
+        let expected = ct_modpow(&base, &exp, &modulus);
+        assert_eq!(expected, unblinded);
     }
 
     #[test]
