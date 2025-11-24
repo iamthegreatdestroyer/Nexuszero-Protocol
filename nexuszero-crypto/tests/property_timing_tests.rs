@@ -47,22 +47,22 @@ proptest! {
     #[test]
     #[ignore]
     fn prop_ct_bytes_eq_timing_independent(a in proptest::collection::vec(any::<u8>(), 1..64)) {
-            // Create matching and differing vectors of same length
-            let b_match = a.clone();
-            let mut b_diff = a.clone();
-            // Flip last byte (if length >=1) to force mismatch
-            let last = b_diff.len()-1;
-            b_diff[last] = b_diff[last].wrapping_add(1);
+        // Create matching and differing vectors of same length
+        let b_match = a.clone();
+        let mut b_diff = a.clone();
+        // Flip last byte (if length >=1) to force mismatch
+        let last = b_diff.len()-1;
+        b_diff[last] = b_diff[last].wrapping_add(1);
 
-            let t_match = avg_duration(|| ct_bytes_eq(&a, &b_match));
-            let t_diff  = avg_duration(|| ct_bytes_eq(&a, &b_diff));
+        let t_match = avg_duration(|| ct_bytes_eq(&a, &b_match));
+        let t_diff  = avg_duration(|| ct_bytes_eq(&a, &b_diff));
 
-            let rd = rel_diff(t_match, t_diff);
-            let thr = base_threshold();
-            prop_assert!(rd <= thr,
-                "ct_bytes_eq timing differs too much: rel_diff={:.2}% len={} t_match={:?} t_diff={:?}",
-                rd*100.0, a.len(), t_match, t_diff);
-        }
+        let rd = rel_diff(t_match, t_diff);
+        let thr = base_threshold();
+        prop_assert!(rd <= thr,
+            "ct_bytes_eq timing differs too much: rel_diff={:.2}% len={} t_match={:?} t_diff={:?}",
+            rd*100.0, a.len(), t_match, t_diff);
+    }
 
         #[test]
         #[ignore]
