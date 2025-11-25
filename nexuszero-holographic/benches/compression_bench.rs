@@ -29,7 +29,8 @@ fn calculate_optimal_bond_dim(size: usize) -> usize {
 // ===== CORE BENCHMARKS =====
 fn bench_compression_by_size(c: &mut Criterion) {
     let mut group = c.benchmark_group("compression_speed");
-    let sizes = vec![1024, 10 * 1024, 100 * 1024, 1024 * 1024];
+    // Reduced sizes for practical bench times (1KB, 4KB, 16KB)
+    let sizes = vec![1024, 4 * 1024, 16 * 1024];
 
     for size in sizes {
         group.throughput(Throughput::Bytes(size as u64));
@@ -66,7 +67,8 @@ fn bench_compression_by_size(c: &mut Criterion) {
 
 fn bench_decompression_by_size(c: &mut Criterion) {
     let mut group = c.benchmark_group("decompression_speed");
-    let sizes = vec![1024, 10 * 1024, 100 * 1024, 1024 * 1024];
+    // Reduced sizes for practical bench times (1KB, 4KB, 16KB)
+    let sizes = vec![1024, 4 * 1024, 16 * 1024];
 
     for size in sizes {
         group.throughput(Throughput::Bytes(size as u64));
@@ -93,7 +95,8 @@ fn bench_decompression_by_size(c: &mut Criterion) {
 fn bench_compression_ratio_by_size(_: &mut Criterion) {
     // This is not executed as a benchmark by Criterion, but useful for printed diagnostics
     println!("\n=== COMPRESSION RATIO MEASUREMENTS ===");
-    let sizes = vec![1024, 10 * 1024, 100 * 1024, 1024 * 1024];
+    // Reduced sizes for practical bench times (1KB, 4KB, 16KB)
+    let sizes = vec![1024, 4 * 1024, 16 * 1024];
     for size in sizes {
         let data = generate_compressible_data(size);
         let bond_dim = calculate_optimal_bond_dim(size);
@@ -106,7 +109,7 @@ fn bench_compression_ratio_by_size(_: &mut Criterion) {
 
 fn bench_vs_zstd(c: &mut Criterion) {
     let mut group = c.benchmark_group("holographic_vs_zstd");
-    let size = 100 * 1024;
+    let size = 16 * 1024; // reduced for practical timing
     let data = generate_compressible_data(size);
 
     // Holographic compress (encode + serialize)
@@ -134,7 +137,7 @@ fn bench_vs_zstd(c: &mut Criterion) {
     let zstd_compressed = zstd::stream::encode_all(&data[..], 3).unwrap();
     let zstd_ratio = data.len() as f64 / zstd_compressed.len() as f64;
 
-    println!("\n=== 100KB COMPARISON ===");
+    println!("\n=== 16KB ZSTD COMPARISON ===");
     println!("Holographic: {:.2}x", holo_ratio);
     println!("Zstd: {:.2}x", zstd_ratio);
     println!("Advantage: {:.2}x better\n", holo_ratio / zstd_ratio);
@@ -144,7 +147,7 @@ fn bench_vs_zstd(c: &mut Criterion) {
 
 fn bench_vs_brotli(c: &mut Criterion) {
     let mut group = c.benchmark_group("holographic_vs_brotli");
-    let size = 100 * 1024;
+    let size = 16 * 1024; // reduced for practical timing
     let data = generate_compressible_data(size);
 
     // holographic
@@ -160,8 +163,10 @@ fn bench_vs_brotli(c: &mut Criterion) {
     group.bench_function("brotli_compress", |b| {
         b.iter(|| {
             let mut dst: Vec<u8> = Vec::new();
-            let mut compressor = brotli::CompressorWriter::new(&mut dst, 4096, 5, 22);
-            compressor.write_all(&data).unwrap();
+            {
+                let mut compressor = brotli::CompressorWriter::new(&mut dst, 4096, 5, 22);
+                compressor.write_all(&data).unwrap();
+            } // compressor dropped here
             black_box(dst)
         })
     });
@@ -173,8 +178,10 @@ fn bench_vs_brotli(c: &mut Criterion) {
 
     // brotli compress for ratio computation
     let mut dst: Vec<u8> = Vec::new();
-    let mut compressor = brotli::CompressorWriter::new(&mut dst, 4096, 5, 22);
-    compressor.write_all(&data).unwrap();
+    {
+        let mut compressor = brotli::CompressorWriter::new(&mut dst, 4096, 5, 22);
+        compressor.write_all(&data).unwrap();
+    }
     let brotli_ratio = data.len() as f64 / dst.len() as f64;
 
     println!("\n=== BROTLI COMPARISON ===");
@@ -187,7 +194,7 @@ fn bench_vs_brotli(c: &mut Criterion) {
 
 fn bench_vs_lz4(c: &mut Criterion) {
     let mut group = c.benchmark_group("holographic_vs_lz4");
-    let size = 100 * 1024;
+    let size = 16 * 1024; // reduced for practical timing
     let data = generate_compressible_data(size);
 
     // holographic
@@ -225,9 +232,9 @@ fn bench_vs_lz4(c: &mut Criterion) {
 
 fn bench_bond_dimension_sweep(c: &mut Criterion) {
     let mut group = c.benchmark_group("bond_dimension_sweep");
-    let size = 100 * 1024;
+    let size = 4 * 1024; // reduced for practical timing
     let data = generate_compressible_data(size);
-    let bond_dims = vec![2usize, 4, 8, 16, 32, 64];
+    let bond_dims = vec![2usize, 4, 8, 16];
 
     for &bd in &bond_dims {
         group.bench_with_input(BenchmarkId::new("create_mps", bd), &bd, |b, &bd| {
@@ -248,7 +255,8 @@ fn bench_bond_dimension_sweep(c: &mut Criterion) {
 
 fn bench_memory_usage(_: &mut Criterion) {
     println!("\n=== APPROXIMATE MEMORY USAGE (bytes) ===");
-    let sizes = vec![1024, 10 * 1024, 100 * 1024, 1024 * 1024];
+    // Reduced sizes for practical bench times
+    let sizes = vec![1024, 4 * 1024, 16 * 1024];
     for size in sizes {
         let data = generate_compressible_data(size);
         let mps = MPS::from_proof_data(&data, calculate_optimal_bond_dim(size)).unwrap();
