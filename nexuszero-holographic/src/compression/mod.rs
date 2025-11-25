@@ -6,3 +6,7 @@ pub mod boundary;
 pub mod peps;
 pub mod encoder;
 pub mod decoder;
+pub mod neural;          // Neural-enhanced compression with learned quantization
+
+// Re-export neural types for convenience
+pub use neural::{NeuralCompressor, NeuralConfig, NeuralCompressedData, NeuralError, QuantizationParams};

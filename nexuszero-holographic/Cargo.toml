@@ -3,6 +3,13 @@ name = "nexuszero-holographic"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+# Neural enhancement requires LibTorch to be installed
+# Install: https://pytorch.org/get-started/locally/
+# Set LIBTORCH env var to installation path
+neural = ["tch"]
+
 [dependencies]
 ndarray = { version = "0.15", features = ["rayon", "serde"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -14,6 +21,9 @@ nexuszero-crypto = { path = "../nexuszero-crypto" }
 rand = "0.8"
 lz4 = "1.24"
 zstd = "0.13"
+
+# Optional: PyTorch bindings for neural enhancement
+tch = { version = "0.17", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

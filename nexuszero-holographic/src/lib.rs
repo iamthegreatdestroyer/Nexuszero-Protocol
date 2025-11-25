@@ -19,3 +19,10 @@ pub use compression::mps_v2::{
     CompressionAnalysis, CompressionRecommendation,
     analyze_compression_potential, compress_proof_data, decompress_proof_data,
 };
+
+// Re-export neural-enhanced compression
+pub use compression::neural::{
+    NeuralCompressor, NeuralConfig, NeuralCompressedData, NeuralError,
+    QuantizationParams, NeuralAnalysis, Device as NeuralDevice,
+    neural_compress, neural_decompress,
+};

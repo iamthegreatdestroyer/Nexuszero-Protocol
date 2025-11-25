@@ -1,6 +1,3 @@
-========================================
-PROMPT A3: NEURAL ENHANCEMENT INTEGRATION
-========================================
 Agent: Dr. Asha Neural + Morgan Rustico
 File: nexuszero-holographic/src/compression/neural.rs
 Time Estimate: 2 hours
