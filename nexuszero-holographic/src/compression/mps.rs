@@ -78,4 +78,27 @@ impl MPS {
         let overhead = self.tensors.len() * 3 * std::mem::size_of::<usize>();
         tensor_bytes + overhead
     }
+
+    /// Expose physical dimension for decode logic
+    pub fn physical_dim(&self) -> usize { self.physical_dim }
+
+    /// Return a reference to the raw site tensor for a given index
+    pub fn site_tensor(&self, idx: usize) -> Option<&Array3<f64>> {
+        self.tensors.get(idx)
+    }
+
+    /// Set a site to one-hot encoding for the given physical index. This is a
+    /// helper to support lossless encoder/decoder tests.
+    pub fn set_site_onehot(&mut self, idx: usize, p_index: usize) {
+        if let Some(tensor) = self.tensors.get_mut(idx) {
+            let left = tensor.shape()[0];
+            let right = tensor.shape()[2];
+            for l in 0..left {
+                for r in 0..right {
+                    for p in 0..self.physical_dim { tensor[[l,p,r]] = 0.0; }
+                    if p_index < self.physical_dim { tensor[[l, p_index, r]] = 1.0; }
+                }
+            }
+        }
+    }
 }

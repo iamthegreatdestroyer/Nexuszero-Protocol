@@ -38,3 +38,19 @@ impl NexuszeroAPI {
 impl Default for NexuszeroAPI {
     fn default() -> Self { Self::new() }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::ProtocolConfig;
+
+    #[test]
+    fn test_api_new_and_with_config() {
+        let mut api = NexuszeroAPI::new();
+        assert_eq!(api.protocol.config.use_compression, ProtocolConfig::default().use_compression);
+
+        let cfg = ProtocolConfig { use_compression: true, ..ProtocolConfig::default() };
+        let api2 = NexuszeroAPI::with_config(cfg);
+        assert_eq!(api2.protocol.config.use_compression, true);
+    }
+}

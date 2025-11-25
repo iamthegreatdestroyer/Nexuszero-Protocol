@@ -11,3 +11,16 @@ pub fn encode_proof(data: &[u8], max_bond_dim: usize) -> Result<MPS, TensorError
     }
     MPS::from_proof_data(&remapped, max_bond_dim)
 }
+
+/// Encode proof bytes losslessly using per-site one-hot encoding (physical_dim=256).
+pub fn encode_proof_lossless(data: &[u8], max_bond_dim: usize) -> Result<MPS, TensorError> {
+    let length = data.len();
+    if length == 0 { return Err(TensorError::InvalidContraction); }
+    let physical_dim = 256;
+    let mut mps = MPS::new(length, physical_dim, max_bond_dim);
+    for (i, &b) in data.iter().enumerate() {
+        // Use public API to set site one-hot to avoid accessing private fields
+        mps.set_site_onehot(i, b as usize);
+    }
+    Ok(mps)
+}

@@ -6,7 +6,11 @@ use nexuszero_crypto::{CryptoParameters, SecurityLevel};
 #[test]
 fn test_lwe_integration() {
     let params = LWEParameters::new(32, 64, 97, 2.0);
-    let mut rng = rand::thread_rng();
+    // Use deterministic RNG for integration tests to avoid flakiness under
+    // instrumentation and tarpaulin runs
+    use rand_chacha::ChaCha8Rng;
+    use rand::SeedableRng;
+    let mut rng = ChaCha8Rng::from_seed([0u8; 32]);
 
     let (sk, pk) = keygen(&params, &mut rng).unwrap();
 

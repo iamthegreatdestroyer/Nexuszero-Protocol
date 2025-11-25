@@ -64,6 +64,18 @@ impl Proof {
         if self.responses.is_empty() {
             return Err(CryptoError::ProofError("No responses".to_string()));
         }
+        // Basic structural validation: ensure sizes are within reasonable limits
+        // to guard against malformed or malicious proofs.
+        for c in &self.commitments {
+            if c.value.is_empty() || c.value.len() > 1024 {
+                return Err(CryptoError::ProofError("Invalid commitment size".to_string()));
+            }
+        }
+        for r in &self.responses {
+            if r.value.is_empty() || r.value.len() > 512 {
+                return Err(CryptoError::ProofError("Invalid response size".to_string()));
+            }
+        }
         Ok(())
     }
 

@@ -15,6 +15,10 @@ rand = "0.8"
 
 [dev-dependencies]
 criterion = "0.5"
+tomlcriterion = { version = "0.5", features = ["html_reports"] }
+zstd = "0.13"
+brotli = "3.4"
+lz4 = "1.24"
 approx = "0.5"
 proptest = "1.0"
 rand = "0.8"

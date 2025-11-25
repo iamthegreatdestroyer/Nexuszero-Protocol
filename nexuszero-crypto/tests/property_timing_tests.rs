@@ -38,6 +38,21 @@ fn rel_diff(a: Duration, b: Duration) -> f64 {
     (x.as_nanos() - y.as_nanos()) as f64 / y.as_nanos() as f64
 }
 
+#[test]
+fn test_timing_helpers() {
+    // base threshold default
+    let thr = base_threshold();
+    assert!(thr >= 0.05 && thr <= 1.0);
+
+    // rel_diff simple cases
+    let a = Duration::from_millis(10);
+    let b = Duration::from_millis(10);
+    assert_eq!(rel_diff(a, b), 0.0);
+    let c = Duration::from_millis(20);
+    let rd = rel_diff(a, c);
+    assert!(rd > 0.0);
+}
+
 // Timing-sensitive property tests are ignored by default; set RUN_TIMING_TESTS=1 to run them.
 
 // Wrap timing-sensitive tests behind an opt-in environment flag so

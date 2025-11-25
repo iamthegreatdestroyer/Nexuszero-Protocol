@@ -58,6 +58,7 @@ proptest = "1.4"
 
 # Test utilities
 hex = "0.4"
+rand_chacha = "0.3"
 
 [profile.dev]
 opt-level = 0

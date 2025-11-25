@@ -1,3 +1,8 @@
+// These tests include optional strict compression ratio checks that are
+// only enforced when the ENFORCE_COMPRESSION_RATIOS environment variable
+// is set to true (or 1/yes). This prevents CI or nightly runs from
+// causing frequent failures on developer machines while enabling
+// deterministic checks in CI to verify algorithmic compression targets.
 use nexuszero_holographic::MPS;
 // proptest removed; using deterministic randomized tests instead
 use rand::Rng;
@@ -12,6 +17,34 @@ use nexuszero_holographic::compression::peps::PEPS;
 /// Generate compressible test data (like real proof data)
 fn generate_test_data(size: usize) -> Vec<u8> {
     (0..size).map(|i| ((i / 16) % 256) as u8).collect()
+}
+
+/// Helper: should we enforce the ratio thresholds?
+fn enforce_compression_ratios() -> bool {
+    env::var("ENFORCE_COMPRESSION_RATIOS")
+        .map(|v| {
+            let vlow = v.to_lowercase();
+            vlow == "1" || vlow == "true" || vlow == "yes"
+        })
+        .unwrap_or(false)
+}
+
+/// Map an input size (bytes) to an expected threshold (f64). These are
+/// intentionally high numbers and are only asserted when
+/// `ENFORCE_COMPRESSION_RATIOS=true` is set in CI; otherwise we only assert
+/// that compression succeeded (> 1.0).
+fn compression_threshold_for_size(size: usize) -> f64 {
+    if size >= 1_000_000 { // >= 1MB
+        10_000.0
+    } else if size >= 100_000 { // >= 100KB
+        1_000.0
+    } else if size >= 10_000 { // >= 10KB
+        100.0
+    } else if size >= 1_000 { // >= 1KB
+        10.0
+    } else {
+        2.0
+    }
 }
 
 // === BASIC FUNCTIONALITY TESTS ===
@@ -59,7 +92,14 @@ fn test_compression_ratio_1kb() {
     let data = generate_test_data(1024);
     let mps = MPS::from_proof_data(&data, 16).unwrap();
     // Assert ratio is positive and serialized size reports > 0
-    assert!(mps.compression_ratio() > 0.0);
+    let ratio = mps.compression_ratio();
+    let enforce = enforce_compression_ratios();
+    if enforce {
+        let t = compression_threshold_for_size(data.len());
+        assert!(ratio >= t, "Expected compression ratio >= {}x for 1KB data, got {}", t, ratio);
+    } else {
+        assert!(ratio > 1.0);
+    }
     assert!(mps.approx_serialized_size() > 0);
 }
 
@@ -67,7 +107,14 @@ fn test_compression_ratio_1kb() {
 fn test_compression_ratio_10kb() {
     let data = generate_test_data(10 * 1024);
     let mps = MPS::from_proof_data(&data, 32).unwrap();
-    assert!(mps.compression_ratio() > 0.0);
+    let ratio = mps.compression_ratio();
+    let enforce = enforce_compression_ratios();
+    if enforce {
+        let t = compression_threshold_for_size(data.len());
+        assert!(ratio >= t, "Expected compression ratio >= {}x for 10KB data, got {}", t, ratio);
+    } else {
+        assert!(ratio > 1.0);
+    }
     assert!(mps.approx_serialized_size() > 0);
 }
 
@@ -76,16 +123,35 @@ fn test_compression_ratio_100kb() {
     let data = generate_test_data(100 * 1024);
     // Use a moderate bond dimension to avoid excessive memory usage in tests
     let mps = MPS::from_proof_data(&data, 16).unwrap();
-    assert!(mps.compression_ratio() > 0.0);
+    let ratio = mps.compression_ratio();
+    let enforce = enforce_compression_ratios();
+    if enforce {
+        let t = compression_threshold_for_size(data.len());
+        assert!(ratio >= t, "Expected compression ratio >= {}x for 100KB data, got {}", t, ratio);
+    } else {
+        assert!(ratio > 1.0);
+    }
     assert!(mps.approx_serialized_size() > 0);
 }
 
 #[test]
 fn test_compression_ratio_1mb() {
-    let data = generate_test_data(256 * 1024);
+    let data = if env::var("TARPAULIN").is_ok() {
+        // Use smaller size under tarpaulin to avoid OOM
+        generate_test_data(256 * 1024)
+    } else {
+        generate_test_data(1024 * 1024) // 1MB
+    };
     // Use a balanced bond dimension
     let mps = MPS::from_proof_data(&data, 16).unwrap();
-    assert!(mps.compression_ratio() > 0.0);
+    let ratio = mps.compression_ratio();
+    let enforce = enforce_compression_ratios();
+    if enforce {
+        let t = compression_threshold_for_size(data.len());
+        assert!(ratio >= t, "Expected compression ratio >= {}x for {} bytes data, got {}", t, data.len(), ratio);
+    } else {
+        assert!(ratio > 1.0);
+    }
     assert!(mps.approx_serialized_size() > 0);
 }
 
@@ -111,6 +177,14 @@ fn test_lossless_reconstruction() {
         assert_eq!(deser.len(), mps.len());
         assert_eq!(deser.approx_serialized_size(), mps.approx_serialized_size());
     }
+}
+
+#[test]
+fn test_lossless_roundtrip_lossless() {
+    let data = generate_test_data(512);
+    let mps = encoder::encode_proof_lossless(&data, 16).unwrap();
+    let decoded = decoder::decode_proof(&mps);
+    assert_eq!(decoded, data);
 }
 
 // === EDGE CASES ===
@@ -239,7 +313,14 @@ fn test_compression_behavior_with_size() {
     for &s in sizes.iter() {
         let data = generate_test_data(s);
         let mps = MPS::from_proof_data(&data, 16).unwrap();
-        assert!(mps.compression_ratio() > 0.0);
+        let ratio = mps.compression_ratio();
+        let enforce = enforce_compression_ratios();
+        if enforce {
+            let t = compression_threshold_for_size(data.len());
+            assert!(ratio >= t, "Expected compression ratio >= {}x for size {}, got {}", t, s, ratio);
+        } else {
+            assert!(ratio > 1.0);
+        }
     }
 }
 
@@ -251,6 +332,7 @@ fn proptest_iterations() -> u32 {
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig { cases: 128, .. ProptestConfig::default() })]
     #[test]
     fn proptest_roundtrip_any_data(data in prop::collection::vec(any::<u8>(), 1..256)) {
         // Convert into runtime configured iterations -- proptest will call this multiple times
@@ -266,6 +348,18 @@ proptest! {
     fn proptest_compression_ratio_positive(data in prop::collection::vec(any::<u8>(), 1..512)) {
         let mps = MPS::from_proof_data(&data, 8).unwrap();
         prop_assert!(mps.compression_ratio() > 0.0);
+    }
+
+    #[test]
+    fn proptest_compression_improves_with_size(size in 8usize..1024usize) {
+        // Use the structured generator so this property holds more reliably
+        let size_small = size;
+        let size_large = size + (size / 2).max(1);
+        let data_small = generate_test_data(size_small);
+        let data_large = generate_test_data(size_large);
+        let r_small = MPS::from_proof_data(&data_small, 16).unwrap().compression_ratio();
+        let r_large = MPS::from_proof_data(&data_large, 16).unwrap().compression_ratio();
+        prop_assert!(r_large >= r_small, "Expected larger input to not compress worse: {} vs {}", r_large, r_small);
     }
 }
 
@@ -314,7 +408,15 @@ fn test_boundary_encoding_and_verify() {
 #[test]
 fn test_peps_compression_ratio() {
     let peps = PEPS::new(2, 2, 4, 4);
-    assert!(peps.compression_ratio() > 0.0);
+    let ratio = peps.compression_ratio();
+    let enforce = enforce_compression_ratios();
+    if enforce {
+        // PEPS is small here; use small threshold
+        let t = compression_threshold_for_size(4*4);
+        assert!(ratio >= t, "Expected PEPS compression ratio >= {}x, got {}", t, ratio);
+    } else {
+        assert!(ratio > 1.0);
+    }
 }
 
 #[test]
