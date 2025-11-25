@@ -1,0 +1,212 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   C:\Users\sgbil\Nexuszero-Protocol\nexuszero-crypto\Cargo.toml
+workspace: C:\Users\sgbil\Nexuszero-Protocol\Cargo.toml
+warning: virtual workspace defaulting to `resolver = "1"` despite one or more workspace members being on edition 2021 which implies `resolver = "2"`
+note: to keep the current resolver, specify `workspace.resolver = "1"` in the workspace root's manifest
+note: to use the edition 2021 resolver, specify `workspace.resolver = "2"` in the workspace root's manifest
+note: for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+warning: unused import: `Axis`
+  --> nexuszero-holographic\src\compression\mps_compressed.rs:13:31
+   |
+13 | use ndarray::{Array2, Array3, Axis};
+   |                               ^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:21:6
+   |
+21 | impl MPS {
+   |      ^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:41:23
+   |
+41 |         let mut mps = MPS::new(length, physical_dim, max_bond_dim);
+   |                       ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\compression\boundary.rs:3:30
+  |
+3 | use crate::compression::mps::MPS;
+  |                              ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\boundary.rs:29:30
+   |
+29 | pub fn encode_boundary(mps: &MPS) -> Result<BoundaryEncoding, TensorError> {
+   |                              ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\boundary.rs:14:22
+   |
+14 |     pub fn new(mps: &MPS) -> Self {
+   |                      ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\compression\encoder.rs:1:30
+  |
+1 | use crate::compression::mps::MPS;
+  |                              ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\compression\encoder.rs:5:65
+  |
+5 | pub fn encode_proof(data: &[u8], max_bond_dim: usize) -> Result<MPS, TensorError> {
+  |                                                                 ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\encoder.rs:12:5
+   |
+12 |     MPS::from_proof_data(&remapped, max_bond_dim)
+   |     ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\encoder.rs:16:74
+   |
+16 | pub fn encode_proof_lossless(data: &[u8], max_bond_dim: usize) -> Result<MPS, TensorError> {
+   |                                                                          ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\encoder.rs:20:19
+   |
+20 |     let mut mps = MPS::new(length, physical_dim, max_bond_dim);
+   |                   ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\compression\decoder.rs:1:30
+  |
+1 | use crate::compression::mps::MPS;
+  |                              ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\compression\decoder.rs:6:28
+  |
+6 | pub fn decode_proof(_mps: &MPS) -> Vec<u8> {
+  |                            ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\verification\direct_verify.rs:1:30
+  |
+1 | use crate::compression::mps::MPS;
+  |                              ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\verification\direct_verify.rs:3:33
+  |
+3 | pub fn verify_compressed(_mps: &MPS) -> bool {
+  |                                 ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+ --> nexuszero-holographic\src\cli.rs:6:12
+  |
+6 | use crate::MPS;
+  |            ^^^
+
+warning: use of deprecated struct `compression::mps::MPS`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\cli.rs:41:14
+   |
+41 |     let mps: MPS = bincode::deserialize(&buf)?;
+   |              ^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:34:16
+   |
+34 |         Self { tensors, bond_dims, physical_dim }
+   |                ^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::bond_dims`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:34:25
+   |
+34 |         Self { tensors, bond_dims, physical_dim }
+   |                         ^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::physical_dim`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:34:36
+   |
+34 |         Self { tensors, bond_dims, physical_dim }
+   |                                    ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:47:31
+   |
+47 |             let tensor = &mut mps.tensors[i];
+   |                               ^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:58:34
+   |
+58 |     pub fn len(&self) -> usize { self.tensors.len() }
+   |                                  ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:61:38
+   |
+61 |     pub fn is_empty(&self) -> bool { self.tensors.is_empty() }
+   |                                      ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:64:12
+   |
+64 |         if self.tensors.is_empty() { return 1.0; }
+   |            ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:67:33
+   |
+67 |         let compressed: usize = self.tensors.iter().map(|t| t.len()).sum();
+   |                                 ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:77:12
+   |
+77 |         if self.tensors.is_empty() { return ArrayD::zeros(IxDyn(&[])); }
+   |            ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:85:35
+   |
+85 |         let tensor_bytes: usize = self.tensors.iter().map(|t| t.len() * std::mem::size_of::<f64>()).sum();
+   |                                   ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:86:24
+   |
+86 |         let overhead = self.tensors.len() * 3 * std::mem::size_of::<usize>();
+   |                        ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::physical_dim`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:91:43
+   |
+91 |     pub fn physical_dim(&self) -> usize { self.physical_dim }
+   |                                           ^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+  --> nexuszero-holographic\src\compression\mps.rs:95:9
+   |
+95 |         self.tensors.get(idx)
+   |         ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::tensors`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+   --> nexuszero-holographic\src\compression\mps.rs:101:31
+    |
+101 |         if let Some(tensor) = self.tensors.get_mut(idx) {
+    |                               ^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::physical_dim`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+   --> nexuszero-holographic\src\compression\mps.rs:106:33
+    |
+106 |                     for p in 0..self.physical_dim { tensor[[l,p,r]] = 0.0; }
+    |                                 ^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `compression::mps::MPS::physical_dim`: This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead.
+   --> nexuszero-holographic\src\compression\mps.rs:107:34
+    |
+107 |                     if p_index < self.physical_dim { tensor[[l, p_index, r]] = 1.0; }
+    |                                  ^^^^^^^^^^^^^^^^^
+
+warning: `nexuszero-holographic` (lib test) generated 33 warnings (run `cargo fix --lib -p nexuszero-holographic --tests` to apply 1 suggestion)
+    Finished `release` profile [optimized] target(s) in 0.87s
+     Running unittests src\lib.rs (C:\Users\sgbil\Nexuszero-Protocol\target\release\deps\nexuszero_holographic-7bc5a2cd3ca70e71.exe)

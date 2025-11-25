@@ -154,6 +154,12 @@ impl SGXBackend {
     }
 }
 
+impl Default for SGXBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareBackend for SGXBackend {
     fn initialize(&mut self) -> CryptoResult<()> {
         if !Self::check_sgx_available() {
@@ -276,6 +282,12 @@ impl TrustZoneBackend {
     }
 }
 
+impl Default for TrustZoneBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareBackend for TrustZoneBackend {
     fn initialize(&mut self) -> CryptoResult<()> {
         // Check for TrustZone availability (ARM-specific)
@@ -370,6 +382,12 @@ impl HSMBackend {
     }
 }
 
+impl Default for HSMBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareBackend for HSMBackend {
     fn initialize(&mut self) -> CryptoResult<()> {
         // In real implementation: open PKCS#11 session
@@ -452,6 +470,12 @@ pub struct SoftwareBackend;
 impl SoftwareBackend {
     pub fn new() -> Self {
         Self
+    }
+}
+
+impl Default for SoftwareBackend {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -576,5 +600,91 @@ mod tests {
         let backend = SoftwareBackend::new();
         let report = backend.attest().unwrap();
         assert_eq!(report.backend, BackendType::Software);
+    }
+
+    #[test]
+    fn test_hsm_backend_with_device() {
+        let mut hsm = HSMBackend::with_device("/dev/mockhsm".to_string());
+        assert!(hsm.initialize().is_ok());
+        assert!(hsm.is_available());
+        assert_eq!(hsm.backend_type(), BackendType::HSM);
+        // small numbers: 2^3 mod 5 = 3
+        let base = vec![0x02];
+        let exp = vec![0x03];
+        let modulus = vec![0x05];
+        let res = hsm.secure_modpow(&base, &exp, &modulus).unwrap();
+        assert_eq!(res, vec![0x03]);
+        assert!(hsm.attest().is_ok());
+        // unseal should fail by default
+        assert!(hsm.unseal_key("absent").is_err());
+    }
+
+    #[test]
+    fn test_trustzone_backend_basic() {
+        let mut tz = TrustZoneBackend::new();
+        assert!(tz.initialize().is_ok());
+        // is_available depends on target arch; at least backend can be initialized auto
+        let _ = tz.attest().unwrap();
+        let res = tz.secure_modpow(&[0x02], &[0x03], &[0x05]).unwrap();
+        assert_eq!(res, vec![0x03]);
+    }
+
+    #[test]
+    fn test_backend_type_display_and_seal_unseal_random() {
+        assert_eq!(format!("{}", BackendType::IntelSGX), "Intel SGX");
+        assert_eq!(format!("{}", BackendType::ARMTrustZone), "ARM TrustZone");
+        assert_eq!(format!("{}", BackendType::HSM), "HSM");
+        assert_eq!(format!("{}", BackendType::Software), "Software");
+
+        let mut hsm = HSMBackend::with_device("/dev/mockhsm".to_string());
+        assert!(hsm.initialize().is_ok());
+        assert!(hsm.seal_key("k1", &[1u8,2,3]).is_ok());
+        let r = hsm.unseal_key("k1");
+        assert!(r.is_err());
+
+        let mut sw = SoftwareBackend::new();
+        assert!(sw.initialize().is_ok());
+        assert!(sw.is_available());
+        assert!(sw.unseal_key("x").is_err());
+    }
+
+    #[test]
+    fn test_secure_random_and_attestation_variants() {
+        // Software backend secure_random
+        let sw = SoftwareBackend::new();
+        let rand_bytes = sw.secure_random(16).unwrap();
+        assert_eq!(rand_bytes.len(), 16);
+        let att = sw.attest().unwrap();
+        assert_eq!(att.backend, BackendType::Software);
+        assert!(att.signature.is_none());
+
+        // HSM backend secure_random
+        let mut hsm = HSMBackend::with_device("/dev/mockhsm".to_string());
+        assert!(hsm.initialize().is_ok());
+        let rand2 = hsm.secure_random(8).unwrap();
+        assert_eq!(rand2.len(), 8);
+        let att2 = hsm.attest().unwrap();
+        assert_eq!(att2.backend, BackendType::HSM);
+        assert!(att2.signature.is_some());
+
+        // TrustZone secure_random
+        let tz = TrustZoneBackend::new();
+        let rnd = tz.secure_random(4).unwrap();
+        assert_eq!(rnd.len(), 4);
+        let att_tz = tz.attest().unwrap();
+        assert_eq!(att_tz.backend, BackendType::ARMTrustZone);
+    }
+
+    #[test]
+    fn test_sgx_backend_uninitialized_errors() {
+        let mut sgx = SGXBackend::new();
+        // On non-SGX platforms, initialize returns Err; if available the test will fail gracefully
+        if SGXBackend::check_sgx_available() {
+            let _ = sgx.initialize().unwrap();
+        } else {
+            assert!(sgx.initialize().is_err());
+            // calling secure_modpow without initialization should error
+            assert!(sgx.secure_modpow(&[0x02], &[0x03], &[0x05]).is_err());
+        }
     }
 }

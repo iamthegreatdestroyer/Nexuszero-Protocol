@@ -114,3 +114,52 @@ fn parse_estimates(group: &str, file: &Path) -> Option<BenchRecord> {
     let variance_pct = (std / mean) * 100.0;
     Some(BenchRecord { group: group.to_string(), name, mean_ns: mean, ops_sec, variance_pct })
 }
+
+// Unit tests for binary helper functions to increase coverage in CI
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn test_parse_estimates_from_temp_file() {
+        let mut tmp = std::env::temp_dir();
+        tmp.push(format!("parse_benchmarks_test_{}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let dir = tmp;
+        let group = "sample-group";
+        let nested = dir.join("subgroup/new");
+        std::fs::create_dir_all(&nested).unwrap();
+        let estimates_path = nested.join("estimates.json");
+        let json = r#"{ "mean": { "point_estimate": 2000.0 }, "std_dev": { "point_estimate": 100.0 } }"#;
+        fs::write(&estimates_path, json).unwrap();
+
+        let rec = parse_estimates(group, &estimates_path).unwrap();
+        assert_eq!(rec.group, group);
+        assert_eq!(rec.name, "subgroup");
+        assert_eq!(rec.mean_ns, 2000.0);
+        assert!(rec.ops_sec > 0.0);
+        assert!(rec.variance_pct > 0.0);
+    }
+
+    #[test]
+    fn test_walk_groups_collects_records() {
+        let mut tmp = std::env::temp_dir();
+        tmp.push(format!("parse_benchmarks_test_{}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()));
+        let root = tmp.join("criterion");
+        std::fs::create_dir_all(&root).unwrap();
+        let subgroup = root.join("bench-a/sub1/new");
+        std::fs::create_dir_all(&subgroup).unwrap();
+        let estimates_path = subgroup.join("estimates.json");
+        let json = r#"{ "mean": { "point_estimate": 1500.0 }, "std_dev": { "point_estimate": 50.0 } }"#;
+        fs::write(&estimates_path, json).unwrap();
+
+        let mut out = Vec::new();
+        walk_groups(&root, &mut out).unwrap();
+        assert!(out.len() >= 1);
+        let rec = &out[0];
+        assert_eq!(rec.group, "bench-a");
+        assert_eq!(rec.name, "sub1");
+    }
+}
