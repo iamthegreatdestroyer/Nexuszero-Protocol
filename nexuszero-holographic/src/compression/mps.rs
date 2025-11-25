@@ -3,6 +3,14 @@ use rand::Rng;
 use crate::tensor::network::TensorError;
 use serde::{Serialize, Deserialize};
 
+/// Original MPS implementation - DEPRECATED
+///
+/// This implementation expands data by ~8000x instead of compressing it.
+/// Use `mps_compressed::CompressedMPS` for actual compression.
+#[deprecated(
+    since = "0.2.0",
+    note = "This implementation expands data instead of compressing. Use mps_compressed::CompressedMPS instead."
+)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MPS {
     tensors: Vec<Array3<f64>>, // rank-3: [left_bond, physical, right_bond]

@@ -4,7 +4,12 @@ use criterion::{
 };
 use std::io::Write;
 
+// Allow deprecated usage for comparison benchmarks
+#[allow(deprecated)]
 use nexuszero_holographic::MPS;
+
+// NEW: Import the fixed implementation
+use nexuszero_holographic::{CompressedMPS, MPSConfig};
 
 // External compressors for comparison
 use bincode;
@@ -26,20 +31,60 @@ fn calculate_optimal_bond_dim(size: usize) -> usize {
     }
 }
 
-// ===== CORE BENCHMARKS =====
+// ===== NEW IMPLEMENTATION BENCHMARKS =====
+fn bench_new_mps_compression(c: &mut Criterion) {
+    let mut group = c.benchmark_group("new_mps_compression");
+    let sizes = vec![256, 1024, 4096];
+
+    for size in sizes {
+        group.throughput(Throughput::Bytes(size as u64));
+        let data = generate_compressible_data(size);
+        let config = MPSConfig::default();
+
+        group.bench_with_input(
+            BenchmarkId::new("compress", size),
+            &data,
+            |b, data| {
+                b.iter(|| {
+                    let mps = CompressedMPS::compress(black_box(data), config.clone()).unwrap();
+                    black_box(mps.compression_factor());
+                })
+            },
+        );
+    }
+
+    // Print comparison stats
+    println!("\n=== NEW MPS COMPRESSION STATS ===");
+    for size in [256, 1024, 4096] {
+        let data = generate_compressible_data(size);
+        let mps = CompressedMPS::compress(&data, MPSConfig::default()).unwrap();
+        println!(
+            "{}B: ratio={:.4}x, factor={:.2}x, compressed={}B",
+            size,
+            mps.compression_ratio(),
+            mps.compression_factor(),
+            mps.compressed_size_bytes()
+        );
+    }
+
+    group.finish();
+}
+
+// ===== OLD IMPLEMENTATION BENCHMARKS (for comparison) =====
+#[allow(deprecated)]
 fn bench_compression_by_size(c: &mut Criterion) {
-    let mut group = c.benchmark_group("compression_speed");
-    // Reduced sizes for practical bench times (1KB, 4KB, 16KB)
-    let sizes = vec![1024, 4 * 1024, 16 * 1024];
+    let mut group = c.benchmark_group("old_compression_speed");
+    // Reduced sizes for practical bench times (1KB, 4KB)
+    let sizes = vec![1024, 4 * 1024];
 
     for size in sizes {
         group.throughput(Throughput::Bytes(size as u64));
         let data = generate_compressible_data(size);
         let bond_dim = calculate_optimal_bond_dim(size);
 
-        // Measure MPS construction (roughly "encoding" time)
+        // Measure OLD MPS construction
         group.bench_with_input(
-            BenchmarkId::new("holographic_encode", size),
+            BenchmarkId::new("old_holographic_encode", size),
             &data,
             |b, data| {
                 b.iter(|| {
@@ -273,6 +318,7 @@ fn format_size(bytes: usize) -> String {
 
 criterion_group!(
     benches,
+    bench_new_mps_compression,  // NEW: Test fixed implementation first
     bench_compression_by_size,
     bench_decompression_by_size,
     bench_compression_ratio_by_size,

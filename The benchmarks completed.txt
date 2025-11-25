@@ -1,0 +1,70 @@
+The benchmarks completed. I can see the compression ratio is showing 0.00x — this is because MPS::compression_ratio() returns a very small number (the current implementation seems inverted or semantically different). Let me check and fix the calculation:
+
+Read mps.rs, lines 55 to 75
+
+The issue is that the benchmark is using data.len() as f64 / serialized.len() as f64 which produces a ratio below 1 (actually it's the inverse of a compression ratio when the "compressed" output is larger than the input). The holographic MPS is actually expanding the data rather than compressing it for these small sizes.
+
+Let me commit the current benchmark, then push the changes so you have this baseline and can iterate on the implementation:
+
+
+cd c:\Users\sgbil\Nexuszero-Protocol; git add -A; git commit -m "bench(holographic): add compression benchmark suite with reduced sizes for practical timing"; git push origin HEAD
+Benchmark Results Summary
+The benchmark suite ran successfully. Here are the key findings:
+
+Encoding Speed (MPS creation from raw bytes)
+Size	Time	Throughput
+1KB	~935 µs	~1.04 MiB/s
+4KB	~14.5 ms	~276 KiB/s
+16KB	~272 ms	~58.8 KiB/s
+Serialization Speed (bincode serialize of MPS)
+Size	Time	Throughput
+1KB	~255 µs	~3.84 MiB/s
+4KB	~7.9 ms	~508 KiB/s
+16KB	~110 ms	~146 KiB/s
+Deserialization Speed
+Size	Time	Throughput
+1KB	~335 µs	~2.9 MiB/s
+4KB	~6 ms	~668 KiB/s
+16KB	~88 ms	~183 KiB/s
+Comparison vs Standard Compression (16KB)
+Algorithm	Time	Ratio
+Holographic	~323 ms	0.00x (expansion, not compression)
+Zstd	~486 µs	15.53x
+Brotli	~952 µs	43.81x
+LZ4	~9.7 µs	7.84x
+Bond Dimension Sweep (4KB data)
+Bond Dim	Time	Ratio
+2	1.45 ms	0.01x
+4	4.73 ms	0.00x
+8	14.3 ms	0.00x
+16	51 ms	0.00x
+Approximate Memory Usage
+Size	MPS Memory
+1KB	~548 KB
+4KB	~8.5 MB
+16KB	~135 MB
+Key Observations
+The MPS representation is currently expanding data, not compressing it. The serialized MPS is much larger than the input data, resulting in compression ratios near 0 instead of >1.
+
+Standard algorithms win decisively — LZ4 is ~33,000x faster and achieves 7.84x compression; Zstd is ~665x faster with 15.5x compression.
+
+Memory usage grows quadratically with bond dimension and data size — 16KB input produces 135MB MPS.
+
+Performance is O(n²) or worse — encoding time scales super-linearly with input size.
+
+Next Steps to Achieve Claimed Ratios
+To achieve the 1000x-100000x compression claims mentioned in the prompt, the MPS implementation needs fundamental changes:
+
+Compression strategy: The current from_proof_data creates one tensor per input byte with bond_dim² floats each — this expands data. A true holographic compression would need to find low-rank tensor decompositions that reduce total storage.
+
+Quantization: Store tensors as lower-precision types (f32, f16, or even i8) instead of f64.
+
+Sparse representation: Use sparse tensors for the one-hot encoding.
+
+Truncated SVD: Implement actual tensor train decomposition with truncation to achieve compression.
+
+Would you like me to:
+
+Implement a proof-of-concept compressed MPS using SVD/QR truncation?
+Add sparse tensor storage?
+Create a separate "lite" benchmark that tests theoretical compression limits?
