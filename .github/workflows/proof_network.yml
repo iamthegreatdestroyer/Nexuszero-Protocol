@@ -1,0 +1,108 @@
+name: Proof Network CI
+
+on:
+  push:
+    branches: [main, develop, "feature/*"]
+    paths:
+      - "proof_network/**"
+      - ".github/workflows/proof_network.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "proof_network/**"
+      - ".github/workflows/proof_network.yml"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  check:
+    name: Check (fmt + clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "proof-network"
+          shared-key: "check"
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (proof_network-prover-node)
+        run: cargo clippy -p proof_network-prover-node -- -D warnings
+
+      - name: Clippy (proof_network-marketplace)
+        run: cargo clippy -p proof_network-marketplace -- -D warnings
+
+      - name: Clippy (proof_network-coordinator)
+        run: cargo clippy -p proof_network-coordinator -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "proof-network"
+          shared-key: "test"
+
+      - name: Run tests (proof_network-prover-node)
+        run: cargo test -p proof_network-prover-node --verbose
+
+      - name: Run tests (proof_network-marketplace)
+        run: cargo test -p proof_network-marketplace --verbose
+
+      - name: Run tests (proof_network-coordinator)
+        run: cargo test -p proof_network-coordinator --verbose
+
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "proof-network"
+          shared-key: "build-release"
+
+      - name: Build release (proof_network-prover-node)
+        run: cargo build -p proof_network-prover-node --release
+
+      - name: Build release (proof_network-marketplace)
+        run: cargo build -p proof_network-marketplace --release
+
+      - name: Build release (proof_network-coordinator)
+        run: cargo build -p proof_network-coordinator --release
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-network-binaries
+          path: |
+            target/release/prover_node*
+            target/release/marketplace*
+            target/release/coordinator*
+          if-no-files-found: ignore
+          retention-days: 7

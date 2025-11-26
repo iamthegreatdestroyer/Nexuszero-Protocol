@@ -73,7 +73,7 @@ mod tests {
 
         // All values should be in range [0, 100)
         for &val in values.iter() {
-            assert!(val >= 0 && val < 100);
+            assert!((0..100).contains(&val));
         }
     }
 }

@@ -232,12 +232,12 @@ mod tests {
         // Test encrypting false
         let ct_false = encrypt(&pk, false, &params, &mut rng).unwrap();
         let decrypted_false = decrypt(&sk, &ct_false, &params).unwrap();
-        assert_eq!(decrypted_false, false);
+        assert!(!decrypted_false);
 
         // Test encrypting true
         let ct_true = encrypt(&pk, true, &params, &mut rng).unwrap();
         let decrypted_true = decrypt(&sk, &ct_true, &params).unwrap();
-        assert_eq!(decrypted_true, true);
+        assert!(decrypted_true);
     }
     
     #[test]
@@ -267,8 +267,8 @@ mod tests {
             let ct_false = encrypt(&pk, false, &params, &mut rng).unwrap();
             let ct_true = encrypt(&pk, true, &params, &mut rng).unwrap();
             
-            assert_eq!(decrypt(&sk, &ct_false, &params).unwrap(), false);
-            assert_eq!(decrypt(&sk, &ct_true, &params).unwrap(), true);
+            assert!(!decrypt(&sk, &ct_false, &params).unwrap());
+            assert!(decrypt(&sk, &ct_true, &params).unwrap());
         }
     }
 
@@ -281,12 +281,12 @@ mod tests {
         let (sk, pk) = keygen(&params, &mut rng).unwrap();
         let ct = encrypt(&pk, true, &params, &mut rng).unwrap();
         let decrypted = decrypt(&sk, &ct, &params).unwrap();
-        assert_eq!(decrypted, true);
+        assert!(decrypted);
         
         // Test false as well
         let ct_false = encrypt(&pk, false, &params, &mut rng).unwrap();
         let decrypted_false = decrypt(&sk, &ct_false, &params).unwrap();
-        assert_eq!(decrypted_false, false);
+        assert!(!decrypted_false);
     }
 
     #[test]
@@ -370,7 +370,7 @@ mod tests {
         assert!(!(same_u && same_v), "Ciphertexts should differ due to randomness");
         
         // But both decrypt to the same plaintext
-        assert_eq!(decrypt(&sk, &ct1, &params).unwrap(), true);
-        assert_eq!(decrypt(&sk, &ct2, &params).unwrap(), true);
+        assert!(decrypt(&sk, &ct1, &params).unwrap());
+        assert!(decrypt(&sk, &ct2, &params).unwrap());
     }
 }

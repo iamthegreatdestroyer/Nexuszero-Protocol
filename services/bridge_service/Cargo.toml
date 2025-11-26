@@ -1,0 +1,79 @@
+[package]
+name = "bridge_service"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Protocol Team"]
+description = "Cross-chain bridge service with atomic swap support for NexusZero Protocol"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nexuszero/nexuszero-protocol"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["ws", "multipart", "macros"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "compression-gzip"] }
+hyper = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { workspace = true }
+
+# Redis
+redis = { workspace = true }
+
+# Cryptography
+sha2 = "0.10"
+sha3 = "0.10"
+hmac = "0.12"
+rand = "0.8"
+hex = "0.4"
+
+# Blockchain clients
+ethers = { version = "2.0", features = ["ws", "rustls"] }
+bitcoin = "0.31"
+# Note: Solana support requires separate compilation due to zeroize version conflicts
+# solana-client = "1.17"
+# solana-sdk = "1.17"
+
+# Time and identifiers
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["serde", "v4"] }
+
+# Async utilities
+async-trait = "0.1"
+futures = "0.3"
+
+# Configuration
+config = "0.13"
+dotenvy = "0.15"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Metrics
+prometheus = { version = "0.13", features = ["process"] }
+lazy_static = "1.4"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Validation
+validator = { version = "0.16", features = ["derive"] }
+
+# Decimal for precise amounts
+rust_decimal = { version = "1.32", features = ["serde"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tower = { version = "0.4", features = ["util"] }
+http-body-util = "0.1"
+
+[[bin]]
+name = "bridge_service"
+path = "src/main.rs"

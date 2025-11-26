@@ -1,0 +1,42 @@
+[package]
+name = "chain-connectors-ethereum"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Ethereum blockchain connector for NexusZero Protocol"
+
+[dependencies]
+# Common interface
+chain-connectors-common = { path = "../common" }
+
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Ethereum
+alloy = { version = "0.3", features = ["full", "rpc-types", "signers", "providers", "contract", "sol-types"] }
+alloy-primitives = "0.8"
+alloy-sol-types = "0.8"
+alloy-contract = "0.3"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+hex = "0.4"
+bytes = "1.5"
+sha2 = "0.10"
+
+[dev-dependencies]
+tokio-test = "0.4"
