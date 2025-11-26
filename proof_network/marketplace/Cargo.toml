@@ -1,0 +1,23 @@
+[package]
+name = "proof_network-marketplace"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+tracing = "0.1"
+thiserror = "1.0"
+
+nexuszero-crypto = { path = "../../nexuszero-crypto" }
+
+[lib]
+name = "marketplace"
+path = "src/lib.rs"
+
+[dev-dependencies]
+# For tests
+tokio = { version = "1.35", features = ["rt-multi-thread", "macros"] }
+

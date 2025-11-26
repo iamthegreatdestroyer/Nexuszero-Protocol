@@ -25,6 +25,11 @@ members = [
     "chain_connectors/solana",
     "chain_connectors/polygon",
     "chain_connectors/cosmos",
+    
+    # Proof Network - Phase 3
+    "proof_network/prover_node",
+    "proof_network/marketplace",
+    "proof_network/coordinator",
 ]
 
 [workspace.package]
