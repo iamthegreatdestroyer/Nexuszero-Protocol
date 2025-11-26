@@ -1,0 +1,35 @@
+[package]
+name = "nexuszero-sdk"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Protocol Team"]
+description = "Rust SDK and WASM bindings for NexusZero Protocol"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nexuszero/protocol"
+keywords = ["privacy", "blockchain", "zkp", "wasm", "cryptography"]
+categories = ["cryptography", "wasm"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+wasm = ["wasm-bindgen", "js-sys", "web-sys", "console_error_panic_hook"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", features = ["console"], optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+hex = "0.4"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "s"
+lto = true

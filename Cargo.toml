@@ -30,6 +30,9 @@ members = [
     "proof_network/prover_node",
     "proof_network/marketplace",
     "proof_network/coordinator",
+    
+    # SDKs - Phase 4
+    "sdks/rust",
 ]
 
 [workspace.package]
