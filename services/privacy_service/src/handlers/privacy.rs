@@ -11,17 +11,17 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 /// List all privacy levels
-pub async fn list_levels() -> Json<Vec<PrivacyLevel>> {
+pub async fn list_levels() -> Json<Vec<PrivacyLevelInfo>> {
     Json(get_all_privacy_levels())
 }
 
 /// Get details for a specific privacy level
-pub async fn get_level_details(Path(level): Path<i16>) -> Result<Json<PrivacyLevel>> {
+pub async fn get_level_details(Path(level): Path<i16>) -> Result<Json<PrivacyLevelInfo>> {
     let levels = get_all_privacy_levels();
 
     levels
         .into_iter()
-        .find(|l| l.level == level)
+        .find(|l| l.level.value() as i16 == level)
         .map(Json)
         .ok_or_else(|| PrivacyError::InvalidLevel(level))
 }
@@ -54,7 +54,7 @@ pub async fn recommend_level(
     let amount_score = calculate_amount_score(req.amount);
     factors.push(RecommendationFactor {
         name: "transaction_amount".to_string(),
-        impact: if amount_score > 4.0 { "high" } else { "medium" },
+        impact: if amount_score > 4.0 { "high".to_string() } else { "medium".to_string() },
         weight: 0.35,
         reason: format!(
             "Amount {} suggests privacy level {}",

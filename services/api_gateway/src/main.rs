@@ -26,7 +26,7 @@
 use axum::{
     extract::Extension,
     http::StatusCode,
-    middleware,
+    middleware as axum_middleware,
     routing::{get, post, put},
     Router,
 };
@@ -193,7 +193,7 @@ fn build_router(state: Arc<AppState>) -> Router {
             get(handlers::bridge::get_supported_chains),
         )
         // Apply JWT auth middleware to protected routes
-        .layer(middleware::from_fn_with_state(
+        .layer(axum_middleware::from_fn_with_state(
             state.clone(),
             middleware::auth::jwt_auth,
         ));
@@ -217,6 +217,6 @@ fn build_router(state: Arc<AppState>) -> Router {
                 .set_x_request_id(MakeRequestUuid)
                 .propagate_x_request_id(),
         )
-        .layer(axum::middleware::from_fn(middleware::rate_limit::rate_limiter))
-        .layer(axum::middleware::from_fn(middleware::logging::request_logger))
+        .layer(axum_middleware::from_fn(middleware::rate_limit::rate_limiter))
+        .layer(axum_middleware::from_fn(middleware::logging::request_logger))
 }

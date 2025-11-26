@@ -1,0 +1,38 @@
+[package]
+name = "chain-connectors-cosmos"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Team"]
+description = "Cosmos SDK blockchain connector for NexusZero Protocol with IBC support"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nexuszero/nexuszero-protocol"
+keywords = ["cosmos", "ibc", "tendermint", "blockchain", "zero-knowledge"]
+categories = ["cryptography", "blockchain"]
+
+[dependencies]
+# Core connector interface
+chain-connectors-common = { path = "../common" }
+
+# HTTP client (for Tendermint RPC)
+reqwest = { version = "0.11", features = ["json"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full", "sync"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Address encoding
+bech32 = "0.11"
+
+# Logging
+tracing = "0.1"
+
+# Utilities
+hex = "0.4"
+base64 = "0.22"
+
+[dev-dependencies]
+tokio-test = "0.4"

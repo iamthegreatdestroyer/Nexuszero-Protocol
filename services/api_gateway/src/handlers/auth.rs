@@ -8,6 +8,7 @@ use crate::middleware::auth::{blacklist_token, AuthenticatedUser};
 use crate::state::AppState;
 use axum::{extract::Extension, Json};
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
@@ -74,6 +75,17 @@ pub struct CurrentUserResponse {
     pub user: UserInfo,
 }
 
+/// User database record
+#[derive(Debug, FromRow)]
+struct UserRecord {
+    id: Uuid,
+    username: String,
+    password_hash: String,
+    roles: Vec<String>,
+    default_privacy_level: i32,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
 /// User login handler
 pub async fn login(
     Extension(state): Extension<Arc<AppState>>,
@@ -82,16 +94,15 @@ pub async fn login(
     // Validate input
     payload.validate().map_err(|e| ApiError::ValidationError(e.to_string()))?;
 
-    // Query user from database
-    let user = sqlx::query_as!(
-        UserRecord,
+    // Query user from database using runtime query
+    let user: UserRecord = sqlx::query_as(
         r#"
         SELECT id, username, password_hash, roles, default_privacy_level, created_at
         FROM users
         WHERE username = $1
         "#,
-        payload.username
     )
+    .bind(&payload.username)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::InvalidCredentials)?;
@@ -113,15 +124,13 @@ pub async fn login(
 
     let tokens = jwt_manager
         .generate_token_pair(&user.id.to_string(), user.roles.clone(), custom_claims)
-        .map_err(|e| ApiError::InternalError)?;
+        .map_err(|_e| ApiError::InternalError)?;
 
     // Update last login timestamp
-    sqlx::query!(
-        "UPDATE users SET last_login = NOW() WHERE id = $1",
-        user.id
-    )
-    .execute(&state.db)
-    .await?;
+    sqlx::query("UPDATE users SET last_login = NOW() WHERE id = $1")
+        .bind(user.id)
+        .execute(&state.db)
+        .await?;
 
     tracing::info!(user_id = %user.id, "User logged in successfully");
 
@@ -146,28 +155,26 @@ pub async fn register(
     payload.validate().map_err(|e| ApiError::ValidationError(e.to_string()))?;
 
     // Check if username already exists
-    let exists = sqlx::query_scalar!(
+    let exists: Option<bool> = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)",
-        payload.username
     )
+    .bind(&payload.username)
     .fetch_one(&state.db)
-    .await?
-    .unwrap_or(false);
+    .await?;
 
-    if exists {
+    if exists.unwrap_or(false) {
         return Err(ApiError::BadRequest("Username already taken".to_string()));
     }
 
     // Check if email already exists
-    let email_exists = sqlx::query_scalar!(
+    let email_exists: Option<bool> = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)",
-        payload.email
     )
+    .bind(&payload.email)
     .fetch_one(&state.db)
-    .await?
-    .unwrap_or(false);
+    .await?;
 
-    if email_exists {
+    if email_exists.unwrap_or(false) {
         return Err(ApiError::BadRequest("Email already registered".to_string()));
     }
 
@@ -178,19 +185,19 @@ pub async fn register(
     let user_id = Uuid::new_v4();
     let default_roles = vec!["user".to_string()];
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO users (id, username, email, password_hash, roles, default_privacy_level, public_key, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
         "#,
-        user_id,
-        payload.username,
-        payload.email,
-        password_hash,
-        &default_roles,
-        3i32, // Default privacy level: Private
-        payload.public_key
     )
+    .bind(user_id)
+    .bind(&payload.username)
+    .bind(&payload.email)
+    .bind(&password_hash)
+    .bind(&default_roles)
+    .bind(3i32) // Default privacy level: Private
+    .bind(&payload.public_key)
     .execute(&state.db)
     .await?;
 
@@ -219,15 +226,14 @@ pub async fn refresh_token(
     let claims = jwt_manager.validate_refresh_token(&payload.refresh_token)?;
 
     // Get user from database to ensure they still exist and are active
-    let user = sqlx::query_as!(
-        UserRecord,
+    let user: UserRecord = sqlx::query_as(
         r#"
         SELECT id, username, password_hash, roles, default_privacy_level, created_at
         FROM users
         WHERE id = $1
         "#,
-        Uuid::parse_str(&claims.sub).map_err(|_| ApiError::InvalidToken)?
     )
+    .bind(Uuid::parse_str(&claims.sub).map_err(|_| ApiError::InvalidToken)?)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::InvalidToken)?;
@@ -273,15 +279,14 @@ pub async fn get_current_user(
     Extension(state): Extension<Arc<AppState>>,
     Extension(user): Extension<AuthenticatedUser>,
 ) -> ApiResult<Json<CurrentUserResponse>> {
-    let user_record = sqlx::query_as!(
-        UserRecord,
+    let user_record: UserRecord = sqlx::query_as(
         r#"
         SELECT id, username, password_hash, roles, default_privacy_level, created_at
         FROM users
         WHERE id = $1
         "#,
-        Uuid::parse_str(&user.user_id).map_err(|_| ApiError::InvalidToken)?
     )
+    .bind(Uuid::parse_str(&user.user_id).map_err(|_| ApiError::InvalidToken)?)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("User not found".to_string()))?;
@@ -295,18 +300,6 @@ pub async fn get_current_user(
             created_at: user_record.created_at,
         },
     }))
-}
-
-// Helper types and functions
-
-#[derive(Debug)]
-struct UserRecord {
-    id: Uuid,
-    username: String,
-    password_hash: String,
-    roles: Vec<String>,
-    default_privacy_level: i32,
-    created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Hash a password using bcrypt
@@ -361,3 +354,4 @@ mod tests {
         assert!(invalid_email.validate().is_err());
     }
 }
+

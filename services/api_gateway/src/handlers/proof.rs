@@ -16,7 +16,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 /// Generate proof request
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct GenerateProofRequest {
     /// Transaction ID to generate proof for
     pub transaction_id: Option<Uuid>,
@@ -147,6 +147,28 @@ pub struct ProofStatusQuery {
     pub include_proof_data: Option<bool>,
 }
 
+/// Database record for proof queries
+#[derive(Debug, sqlx::FromRow)]
+struct ProofRecord {
+    id: Uuid,
+    transaction_id: Option<Uuid>,
+    proof_type: String,
+    privacy_level: i32,
+    verified: bool,
+    generation_time_ms: Option<i32>,
+    prover_node_id: Option<Uuid>,
+    created_at: chrono::DateTime<chrono::Utc>,
+    proof_data: Option<Vec<u8>>,
+}
+
+/// Database record for proof status queries
+#[derive(Debug, sqlx::FromRow)]
+struct ProofStatusRecord {
+    id: Uuid,
+    verified: bool,
+    has_data: Option<bool>,
+}
+
 /// Generate proof handler
 pub async fn generate_proof(
     Extension(state): Extension<Arc<AppState>>,
@@ -175,17 +197,17 @@ pub async fn generate_proof(
     let estimated_time_ms = estimate_proof_time(payload.privacy_level, circuit_data.len());
 
     // Store proof request in database
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO proofs (id, transaction_id, proof_type, privacy_level, verified, created_at)
         VALUES ($1, $2, $3, $4, false, $5)
-        "#,
-        proof_id,
-        payload.transaction_id,
-        format!("level_{}", payload.privacy_level),
-        payload.privacy_level as i32,
-        now
+        "#
     )
+    .bind(proof_id)
+    .bind(payload.transaction_id)
+    .bind(format!("level_{}", payload.privacy_level))
+    .bind(payload.privacy_level as i32)
+    .bind(now)
     .execute(&state.db)
     .await?;
 
@@ -337,11 +359,11 @@ pub async fn batch_generate(
 /// Get proof by ID handler
 pub async fn get_proof(
     Extension(state): Extension<Arc<AppState>>,
-    Extension(user): Extension<AuthenticatedUser>,
+    Extension(_user): Extension<AuthenticatedUser>,
     Path(id): Path<Uuid>,
     Query(params): Query<ProofStatusQuery>,
 ) -> ApiResult<Json<GetProofResponse>> {
-    let proof = sqlx::query!(
+    let proof = sqlx::query_as::<_, ProofRecord>(
         r#"
         SELECT 
             p.id, p.transaction_id, p.proof_type, p.privacy_level, 
@@ -350,9 +372,9 @@ pub async fn get_proof(
         FROM proofs p
         LEFT JOIN transactions t ON p.transaction_id = t.id
         WHERE p.id = $1
-        "#,
-        id
+        "#
     )
+    .bind(id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Proof not found".to_string()))?;
@@ -390,10 +412,10 @@ pub async fn get_proof_status(
     Extension(_user): Extension<AuthenticatedUser>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let proof = sqlx::query!(
-        "SELECT id, verified, proof_data IS NOT NULL as has_data FROM proofs WHERE id = $1",
-        id
+    let proof = sqlx::query_as::<_, ProofStatusRecord>(
+        "SELECT id, verified, proof_data IS NOT NULL as has_data FROM proofs WHERE id = $1"
     )
+    .bind(id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Proof not found".to_string()))?;
@@ -536,3 +558,4 @@ mod tests {
         assert!(matches!(priority, ProofPriority::Normal));
     }
 }
+

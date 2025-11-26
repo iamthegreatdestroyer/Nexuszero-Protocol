@@ -47,8 +47,8 @@ impl RuleEngine {
         
         let mut rules_checked = Vec::new();
         let mut rules_triggered = Vec::new();
-        let mut risk_score = 0.0;
-        let mut total_weight = 0.0;
+        let mut risk_score: f64 = 0.0;
+        let mut total_weight: f64 = 0.0;
 
         // Evaluate each rule
         for rule in &rules {
@@ -76,7 +76,7 @@ impl RuleEngine {
         }
 
         // Normalize risk score
-        let final_risk_score = if total_weight > 0.0 {
+        let final_risk_score: f64 = if total_weight > 0.0 {
             (risk_score / total_weight).min(1.0)
         } else {
             0.0

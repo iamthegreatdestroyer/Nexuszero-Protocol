@@ -91,7 +91,7 @@ pub async fn get_route(
         .get_route(&source, &destination, &asset)
         .await?
         .ok_or(BridgeError::RouteNotFound {
-            source: source.clone(),
+            source_chain: source.clone(),
             destination: destination.clone(),
             asset: asset.clone(),
         })?;

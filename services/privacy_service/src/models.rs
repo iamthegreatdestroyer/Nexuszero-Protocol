@@ -19,6 +19,8 @@ pub enum PrivacyLevel {
     Enhanced = 3,
     /// Maximum privacy - full ZK protection
     Maximum = 4,
+    /// Quantum-resistant privacy
+    Quantum = 5,
 }
 
 impl Default for PrivacyLevel {
@@ -41,6 +43,7 @@ impl PrivacyLevel {
             2 => Self::Standard,
             3 => Self::Enhanced,
             4 => Self::Maximum,
+            5 => Self::Quantum,
             _ => Self::Standard,
         }
     }
@@ -53,6 +56,7 @@ impl PrivacyLevel {
             Self::Standard => "Standard",
             Self::Enhanced => "Enhanced",
             Self::Maximum => "Maximum",
+            Self::Quantum => "Quantum",
         }
     }
 
@@ -64,6 +68,7 @@ impl PrivacyLevel {
             Self::Standard => "Standard privacy with partial shielding",
             Self::Enhanced => "Enhanced privacy with strong protection",
             Self::Maximum => "Maximum privacy with full ZK protection",
+            Self::Quantum => "Quantum-resistant privacy with post-quantum cryptography",
         }
     }
 
@@ -75,6 +80,7 @@ impl PrivacyLevel {
             Self::Standard => ProofType::RangeProof,
             Self::Enhanced => ProofType::Groth16,
             Self::Maximum => ProofType::Groth16Plus,
+            Self::Quantum => ProofType::Stark,
         }
     }
 }
@@ -415,6 +421,8 @@ pub struct ProofGenerationResponse {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ProofStatus {
+    Pending,
+    Processing,
     Queued,
     Generating,
     Completed,

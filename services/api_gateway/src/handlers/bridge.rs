@@ -10,6 +10,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
@@ -158,6 +159,31 @@ pub struct TransferSummary {
     pub amount: u64,
     pub status: TransferStatus,
     pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Database record for bridge transfer
+#[derive(Debug, FromRow)]
+struct BridgeTransferRecord {
+    id: Uuid,
+    quote_id: Uuid,
+    source_chain: String,
+    target_chain: String,
+    status: String,
+    source_tx_hash: Option<Vec<u8>>,
+    target_tx_hash: Option<Vec<u8>>,
+    privacy_level: i32,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Database record for transfer summary
+#[derive(Debug, FromRow)]
+struct TransferSummaryRecord {
+    id: Uuid,
+    source_chain: String,
+    target_chain: String,
+    input_amount: i64,
+    status: String,
+    created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Supported chains response
@@ -315,7 +341,7 @@ pub async fn initiate_transfer(
     let now = chrono::Utc::now();
 
     // Create bridge transfer record
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO bridge_transfers (
             id, user_id, quote_id, source_chain, target_chain,
@@ -323,18 +349,18 @@ pub async fn initiate_transfer(
             metadata, created_at, updated_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'initiated', $9, $10, $10)
-        "#,
-        transfer_id,
-        user_id,
-        payload.quote_id,
-        source_chain.to_string(),
-        target_chain.to_string(),
-        input_amount as i64,
-        payload.recipient_address,
-        privacy_level as i32,
-        payload.metadata.unwrap_or(serde_json::json!({})),
-        now
+        "#
     )
+    .bind(transfer_id)
+    .bind(user_id)
+    .bind(payload.quote_id)
+    .bind(source_chain.to_string())
+    .bind(target_chain.to_string())
+    .bind(input_amount as i64)
+    .bind(&payload.recipient_address)
+    .bind(privacy_level as i32)
+    .bind(payload.metadata.clone().unwrap_or(serde_json::json!({})))
+    .bind(now)
     .execute(&state.db)
     .await?;
 
@@ -384,17 +410,17 @@ pub async fn get_status(
     let user_id = Uuid::parse_str(&user.user_id)
         .map_err(|_| ApiError::BadRequest("Invalid user ID".to_string()))?;
 
-    let transfer = sqlx::query!(
+    let transfer: BridgeTransferRecord = sqlx::query_as(
         r#"
         SELECT 
             id, quote_id, source_chain, target_chain, status,
             source_tx_hash, target_tx_hash, privacy_level, created_at
         FROM bridge_transfers
         WHERE id = $1 AND user_id = $2
-        "#,
-        id,
-        user_id
+        "#
     )
+    .bind(id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Transfer not found".to_string()))?;
@@ -425,28 +451,27 @@ pub async fn get_history(
     let limit = params.limit.unwrap_or(20).min(100);
     let offset = ((page - 1) * limit) as i64;
 
-    let transfers = sqlx::query!(
+    let transfers: Vec<TransferSummaryRecord> = sqlx::query_as(
         r#"
         SELECT id, source_chain, target_chain, input_amount, status, created_at
         FROM bridge_transfers
         WHERE user_id = $1
         ORDER BY created_at DESC
         LIMIT $2 OFFSET $3
-        "#,
-        user_id,
-        limit as i64,
-        offset
+        "#
     )
+    .bind(user_id)
+    .bind(limit as i64)
+    .bind(offset)
     .fetch_all(&state.db)
     .await?;
 
-    let total = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM bridge_transfers WHERE user_id = $1",
-        user_id
+    let total: Option<i64> = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM bridge_transfers WHERE user_id = $1"
     )
+    .bind(user_id)
     .fetch_one(&state.db)
-    .await?
-    .unwrap_or(0);
+    .await?;
 
     let transfer_summaries: Vec<TransferSummary> = transfers
         .into_iter()
@@ -462,7 +487,7 @@ pub async fn get_history(
 
     Ok(Json(TransferHistoryResponse {
         transfers: transfer_summaries,
-        total,
+        total: total.unwrap_or(0),
         page,
         limit,
     }))
@@ -540,32 +565,32 @@ pub async fn get_supported_chains() -> Json<SupportedChainsResponse> {
             ChainPair {
                 source: Chain::Ethereum,
                 target: Chain::Polygon,
-                min_amount: 1000000, // 0.001 ETH in wei
-                max_amount: 1000000000000000000000, // 1000 ETH
+                min_amount: 1_000_000, // 0.001 ETH in wei (10^6)
+                max_amount: 10_000_000_000_000_000_000, // 10 ETH in wei (10^19, fits in u64)
                 fee_percentage: 0.1,
                 estimated_time_seconds: 900,
             },
             ChainPair {
                 source: Chain::Polygon,
                 target: Chain::Ethereum,
-                min_amount: 1000000000000000000, // 1 MATIC
-                max_amount: 1000000000000000000000000, // 1M MATIC
+                min_amount: 1_000_000_000_000_000_000, // 1 MATIC
+                max_amount: 10_000_000_000_000_000_000, // 10 MATIC in wei
                 fee_percentage: 0.1,
                 estimated_time_seconds: 1800,
             },
             ChainPair {
                 source: Chain::Ethereum,
                 target: Chain::Arbitrum,
-                min_amount: 1000000,
-                max_amount: 1000000000000000000000,
+                min_amount: 1_000_000,
+                max_amount: 10_000_000_000_000_000_000, // 10 ETH in wei
                 fee_percentage: 0.05,
                 estimated_time_seconds: 600,
             },
             ChainPair {
                 source: Chain::Ethereum,
                 target: Chain::Solana,
-                min_amount: 10000000,
-                max_amount: 100000000000000000000,
+                min_amount: 10_000_000,
+                max_amount: 10_000_000_000_000_000_000, // 10 ETH in wei
                 fee_percentage: 0.2,
                 estimated_time_seconds: 1200,
             },
@@ -732,3 +757,4 @@ mod tests {
         ));
     }
 }
+

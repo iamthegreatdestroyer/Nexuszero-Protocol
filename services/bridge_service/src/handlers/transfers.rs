@@ -32,7 +32,7 @@ pub async fn initiate_transfer(
     // Validate chains
     if !state.config.is_route_supported(&request.source_chain, &request.destination_chain) {
         return Err(BridgeError::RouteNotFound {
-            source: request.source_chain.clone(),
+            source_chain: request.source_chain.clone(),
             destination: request.destination_chain.clone(),
             asset: request.asset_symbol.clone(),
         });
@@ -44,7 +44,7 @@ pub async fn initiate_transfer(
         .get_route(&request.source_chain, &request.destination_chain, &request.asset_symbol)
         .await?
         .ok_or(BridgeError::RouteNotFound {
-            source: request.source_chain.clone(),
+            source_chain: request.source_chain.clone(),
             destination: request.destination_chain.clone(),
             asset: request.asset_symbol.clone(),
         })?;

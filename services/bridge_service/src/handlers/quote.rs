@@ -30,7 +30,7 @@ pub async fn get_quote(
     // Validate chains
     if !state.config.is_route_supported(&request.source_chain, &request.destination_chain) {
         return Err(BridgeError::RouteNotFound {
-            source: request.source_chain.clone(),
+            source_chain: request.source_chain.clone(),
             destination: request.destination_chain.clone(),
             asset: request.asset_symbol.clone(),
         });
@@ -46,7 +46,7 @@ pub async fn get_quote(
         Some(r) => {
             if !r.is_enabled {
                 return Err(BridgeError::RouteDisabled {
-                    source: request.source_chain.clone(),
+                    source_chain: request.source_chain.clone(),
                     destination: request.destination_chain.clone(),
                 });
             }

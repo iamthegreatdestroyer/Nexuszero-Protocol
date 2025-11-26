@@ -119,7 +119,7 @@ async fn perform_kyc_verification(request: &KycVerificationRequest) -> KycVerifi
     
     KycVerificationResult {
         entity_id: request.entity_id,
-        status,
+        status: status.clone(),
         verification_level,
         checks_passed,
         checks_failed,

@@ -51,6 +51,26 @@ pub enum PrivacyError {
     #[error("Proof generation queue is full")]
     QueueFull,
 
+    /// Rate limited
+    #[error("Rate limited")]
+    RateLimited,
+
+    /// Job not found
+    #[error("Job not found: {0}")]
+    JobNotFound(String),
+
+    /// Verification key not found
+    #[error("Verification key not found: {0}")]
+    VerificationKeyNotFound(String),
+
+    /// Proof too large
+    #[error("Proof size {0} exceeds maximum allowed")]
+    ProofTooLarge(usize),
+
+    /// Invalid input
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
     /// Timeout
     #[error("Operation timed out")]
     Timeout,
@@ -124,6 +144,31 @@ impl IntoResponse for PrivacyError {
                 StatusCode::SERVICE_UNAVAILABLE,
                 "QUEUE_FULL",
                 "Proof generation queue is at capacity".to_string(),
+            ),
+            PrivacyError::RateLimited => (
+                StatusCode::TOO_MANY_REQUESTS,
+                "RATE_LIMITED",
+                "Too many requests, please try again later".to_string(),
+            ),
+            PrivacyError::JobNotFound(id) => (
+                StatusCode::NOT_FOUND,
+                "JOB_NOT_FOUND",
+                format!("Job {} not found", id),
+            ),
+            PrivacyError::VerificationKeyNotFound(id) => (
+                StatusCode::NOT_FOUND,
+                "VERIFICATION_KEY_NOT_FOUND",
+                format!("Verification key {} not found", id),
+            ),
+            PrivacyError::ProofTooLarge(size) => (
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "PROOF_TOO_LARGE",
+                format!("Proof size {} exceeds maximum allowed", size),
+            ),
+            PrivacyError::InvalidInput(msg) => (
+                StatusCode::BAD_REQUEST,
+                "INVALID_INPUT",
+                msg.clone(),
             ),
             PrivacyError::Timeout => (
                 StatusCode::GATEWAY_TIMEOUT,

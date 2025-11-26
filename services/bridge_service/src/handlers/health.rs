@@ -29,10 +29,10 @@ pub async fn readiness(State(state): State<AppState>) -> (StatusCode, Json<Value
     
     // Check Redis
     let mut redis = state.redis.clone();
-    let redis_healthy = redis::cmd("PING")
-        .query_async::<_, String>(&mut redis)
-        .await
-        .is_ok();
+    let redis_healthy: Result<String, _> = redis::cmd("PING")
+        .query_async(&mut redis)
+        .await;
+    let redis_healthy = redis_healthy.is_ok();
     checks.push(json!({
         "name": "redis",
         "healthy": redis_healthy

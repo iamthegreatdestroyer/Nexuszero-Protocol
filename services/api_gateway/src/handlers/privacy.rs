@@ -110,6 +110,14 @@ pub struct EstimateCostResponse {
     pub proof_size_bytes: u64,
 }
 
+/// Database record for transaction privacy queries
+#[derive(Debug, sqlx::FromRow)]
+struct TransactionPrivacyRecord {
+    id: Uuid,
+    privacy_level: i32,
+    status: String,
+}
+
 /// List all privacy levels handler
 pub async fn list_privacy_levels() -> Json<Vec<PrivacyLevelInfo>> {
     Json(get_all_privacy_levels())
@@ -216,15 +224,15 @@ pub async fn morph_privacy(
         .map_err(|_| ApiError::BadRequest("Invalid user ID".to_string()))?;
 
     // Get current transaction
-    let transaction = sqlx::query!(
+    let transaction = sqlx::query_as::<_, TransactionPrivacyRecord>(
         r#"
         SELECT id, privacy_level, status
         FROM transactions
         WHERE id = $1 AND user_id = $2
-        "#,
-        payload.transaction_id,
-        user_id
+        "#
     )
+    .bind(payload.transaction_id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Transaction not found".to_string()))?;
@@ -248,15 +256,15 @@ pub async fn morph_privacy(
     };
 
     // Update transaction privacy level
-    sqlx::query!(
+    sqlx::query(
         r#"
         UPDATE transactions
         SET privacy_level = $1, status = 'privacy_selected', updated_at = NOW()
         WHERE id = $2
-        "#,
-        payload.target_level as i32,
-        payload.transaction_id
+        "#
     )
+    .bind(payload.target_level as i32)
+    .bind(payload.transaction_id)
     .execute(&state.db)
     .await?;
 
@@ -547,3 +555,4 @@ mod tests {
         assert_eq!(level_invalid.level, 3); // Default to Private
     }
 }
+

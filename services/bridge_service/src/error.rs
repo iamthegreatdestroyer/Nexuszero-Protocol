@@ -98,16 +98,16 @@ pub enum BridgeError {
     // ========================================================================
     
     /// Route not found
-    #[error("No route found from {source} to {destination} for {asset}")]
+    #[error("No route found from {source_chain} to {destination} for {asset}")]
     RouteNotFound {
-        source: String,
+        source_chain: String,
         destination: String,
         asset: String,
     },
     
     /// Route disabled
-    #[error("Route disabled: {source} -> {destination}")]
-    RouteDisabled { source: String, destination: String },
+    #[error("Route disabled: {source_chain} -> {destination}")]
+    RouteDisabled { source_chain: String, destination: String },
     
     /// Insufficient liquidity
     #[error("Insufficient liquidity: available {available}, required {required}")]

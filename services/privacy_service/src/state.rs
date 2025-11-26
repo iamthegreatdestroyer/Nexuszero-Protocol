@@ -171,8 +171,8 @@ impl AppState {
 
         // Test Redis connection
         let mut conn = redis.get_multiplexed_async_connection().await?;
-        redis::cmd("PING")
-            .query_async::<_, String>(&mut conn)
+        let _: String = redis::cmd("PING")
+            .query_async(&mut conn)
             .await?;
         tracing::info!("Redis connection established");
 
@@ -348,10 +348,10 @@ impl AppState {
     /// Check Redis health
     pub async fn check_redis_health(&self) -> bool {
         if let Ok(mut conn) = self.redis.get_multiplexed_async_connection().await {
-            redis::cmd("PING")
-                .query_async::<_, String>(&mut conn)
-                .await
-                .is_ok()
+            let result: Result<String, _> = redis::cmd("PING")
+                .query_async(&mut conn)
+                .await;
+            result.is_ok()
         } else {
             false
         }

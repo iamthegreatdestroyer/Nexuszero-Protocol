@@ -152,3 +152,4 @@ mod tests {
         assert!(!response.version.is_empty());
     }
 }
+

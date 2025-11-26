@@ -222,7 +222,7 @@ pub async fn get_positions(
             chain: "ethereum".to_string(),
             asset_symbol: "USDC".to_string(),
             amount: Decimal::from(10000),
-            share_percentage: Decimal::from_str_exact("0.05").unwrap(),
+            share_percentage: decimal_from_str_exact("0.05").unwrap(),
             rewards_earned: Decimal::from(50),
             rewards_claimed: Decimal::from(25),
             deposited_at: chrono::Utc::now() - chrono::Duration::days(30),
@@ -296,8 +296,7 @@ pub struct ClaimResponse {
 
 use rust_decimal::prelude::FromStr;
 
-impl Decimal {
-    fn from_str_exact(s: &str) -> Result<Self, rust_decimal::Error> {
-        Decimal::from_str(s)
-    }
+// Helper function for parsing Decimal (can't impl for foreign type)
+fn decimal_from_str_exact(s: &str) -> Result<Decimal, rust_decimal::Error> {
+    Decimal::from_str(s)
 }

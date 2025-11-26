@@ -153,8 +153,7 @@ pub async fn list_transactions(
     let user_id = Uuid::parse_str(&user.user_id)
         .map_err(|_| ApiError::BadRequest("Invalid user ID".to_string()))?;
 
-    let transactions = sqlx::query_as!(
-        TransactionRecord,
+    let transactions = sqlx::query_as::<_, TransactionRecord>(
         r#"
         SELECT 
             id, user_id, sender_commitment, recipient_commitment,
@@ -164,21 +163,21 @@ pub async fn list_transactions(
         WHERE user_id = $1
         ORDER BY created_at DESC
         LIMIT $2 OFFSET $3
-        "#,
-        user_id,
-        limit as i64,
-        offset
+        "#
     )
+    .bind(user_id)
+    .bind(limit as i64)
+    .bind(offset)
     .fetch_all(&state.db)
     .await?;
 
-    let total = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM transactions WHERE user_id = $1",
-        user_id
+    let total: Option<i64> = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM transactions WHERE user_id = $1"
     )
+    .bind(user_id)
     .fetch_one(&state.db)
-    .await?
-    .unwrap_or(0);
+    .await?;
+    let total = total.unwrap_or(0);
 
     let transaction_responses: Vec<TransactionResponse> = transactions
         .into_iter()
@@ -236,7 +235,7 @@ pub async fn create_transaction(
     let now = chrono::Utc::now();
 
     // Insert transaction
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO transactions (
             id, user_id, sender_commitment, recipient_commitment,
@@ -244,18 +243,18 @@ pub async fn create_transaction(
             created_at, updated_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-        "#,
-        tx_id,
-        user_id,
-        &sender_commitment,
-        &recipient_commitment,
-        &payload.amount.to_le_bytes().to_vec(),
-        privacy_level as i32,
-        "created",
-        payload.chain,
-        payload.metadata.unwrap_or(serde_json::json!({})),
-        now
+        "#
     )
+    .bind(tx_id)
+    .bind(user_id)
+    .bind(&sender_commitment)
+    .bind(&recipient_commitment)
+    .bind(&payload.amount.to_le_bytes().to_vec())
+    .bind(privacy_level as i32)
+    .bind("created")
+    .bind(&payload.chain)
+    .bind(payload.metadata.clone().unwrap_or(serde_json::json!({})))
+    .bind(now)
     .execute(&state.db)
     .await?;
 
@@ -299,8 +298,7 @@ pub async fn get_transaction(
     let user_id = Uuid::parse_str(&user.user_id)
         .map_err(|_| ApiError::BadRequest("Invalid user ID".to_string()))?;
 
-    let transaction = sqlx::query_as!(
-        TransactionRecord,
+    let transaction = sqlx::query_as::<_, TransactionRecord>(
         r#"
         SELECT 
             id, user_id, sender_commitment, recipient_commitment,
@@ -308,10 +306,10 @@ pub async fn get_transaction(
             created_at, updated_at
         FROM transactions
         WHERE id = $1 AND user_id = $2
-        "#,
-        id,
-        user_id
+        "#
     )
+    .bind(id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Transaction not found".to_string()))?;
@@ -341,11 +339,11 @@ pub async fn get_proof(
         .map_err(|_| ApiError::BadRequest("Invalid user ID".to_string()))?;
 
     // Verify transaction belongs to user
-    let transaction = sqlx::query_scalar!(
-        "SELECT proof_id FROM transactions WHERE id = $1 AND user_id = $2",
-        id,
-        user_id
+    let transaction: Option<Option<Uuid>> = sqlx::query_scalar(
+        "SELECT proof_id FROM transactions WHERE id = $1 AND user_id = $2"
     )
+    .bind(id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Transaction not found".to_string()))?;
@@ -353,15 +351,14 @@ pub async fn get_proof(
     let proof_id = transaction
         .ok_or(ApiError::NotFound("Proof not generated yet".to_string()))?;
 
-    let proof = sqlx::query_as!(
-        ProofRecord,
+    let proof = sqlx::query_as::<_, ProofRecord>(
         r#"
         SELECT id, transaction_id, proof_type, privacy_level, verified, generation_time_ms, created_at
         FROM proofs
         WHERE id = $1
-        "#,
-        proof_id
+        "#
     )
+    .bind(proof_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Proof not found".to_string()))?;
@@ -386,15 +383,15 @@ pub async fn get_status(
     let user_id = Uuid::parse_str(&user.user_id)
         .map_err(|_| ApiError::BadRequest("Invalid user ID".to_string()))?;
 
-    let transaction = sqlx::query!(
+    let transaction = sqlx::query_as::<_, TransactionStatusRecord>(
         r#"
         SELECT id, status, chain_tx_hash, updated_at
         FROM transactions
         WHERE id = $1 AND user_id = $2
-        "#,
-        id,
-        user_id
+        "#
     )
+    .bind(id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(ApiError::NotFound("Transaction not found".to_string()))?;
@@ -419,7 +416,7 @@ pub async fn get_status(
 
 // Helper types and functions
 
-#[derive(Debug)]
+#[derive(Debug, sqlx::FromRow)]
 struct TransactionRecord {
     id: Uuid,
     user_id: Uuid,
@@ -434,7 +431,7 @@ struct TransactionRecord {
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, sqlx::FromRow)]
 struct ProofRecord {
     id: Uuid,
     transaction_id: Uuid,
@@ -443,6 +440,14 @@ struct ProofRecord {
     verified: bool,
     generation_time_ms: Option<i32>,
     created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct TransactionStatusRecord {
+    id: Uuid,
+    status: String,
+    chain_tx_hash: Option<Vec<u8>>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 fn parse_status(status: &str) -> TransactionStatus {
@@ -540,3 +545,4 @@ mod tests {
         assert!(matches!(parse_status("unknown"), TransactionStatus::Created));
     }
 }
+

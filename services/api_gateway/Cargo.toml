@@ -12,7 +12,7 @@ repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
 axum = { version = "0.7", features = ["macros", "ws"] }
 tokio = { version = "1.35", features = ["full"] }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "request-id"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "request-id", "util"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -25,12 +25,18 @@ jsonwebtoken = "9.2"
 sqlx = { workspace = true }
 redis = { workspace = true }
 
+# Cryptography
+sha2.workspace = true
+base64 = "0.22"
+hex.workspace = true
+
 # Utilities
 uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 validator = { version = "0.16", features = ["derive"] }
 config = "0.14"
 dotenvy = "0.15"
+lazy_static = "1.5"
 
 # Observability
 tracing = "0.1"

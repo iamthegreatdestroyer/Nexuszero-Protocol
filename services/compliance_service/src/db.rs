@@ -2,9 +2,77 @@
 
 use crate::error::{ComplianceError, Result};
 use crate::models::*;
-use chrono::Utc;
-use sqlx::PgPool;
+use chrono::{DateTime, Utc};
+use sqlx::{FromRow, PgPool, Row};
 use uuid::Uuid;
+
+/// Row type for compliance checks
+#[derive(Debug, FromRow)]
+struct ComplianceCheckRow {
+    pub id: Uuid,
+    pub transaction_id: Uuid,
+    pub status: ComplianceStatus,
+    pub risk_level: RiskLevel,
+    pub risk_score: f64,
+    pub rules_checked: Vec<String>,
+    pub rules_triggered: serde_json::Value,
+    pub requires_sar: bool,
+    pub checked_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub metadata: serde_json::Value,
+}
+
+/// Row type for SAR records
+#[derive(Debug, FromRow)]
+struct SarRow {
+    pub id: Uuid,
+    pub reference_number: String,
+    pub status: SarStatus,
+    pub subject_id: Uuid,
+    pub subject_type: String,
+    pub activity_type: String,
+    pub amount_involved: i64,
+    pub currency: String,
+    pub jurisdiction: String,
+    pub description: String,
+    pub transaction_ids: Vec<Uuid>,
+    pub evidence: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub submitted_at: Option<DateTime<Utc>>,
+    pub created_by: Uuid,
+    pub reviewed_by: Option<Uuid>,
+}
+
+/// Row type for compliance rules
+#[derive(Debug, FromRow)]
+struct ComplianceRuleRow {
+    pub id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub rule_type: RuleType,
+    pub jurisdiction: String,
+    pub severity: RiskLevel,
+    pub conditions: serde_json::Value,
+    pub actions: Vec<String>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Row type for audit logs
+#[derive(Debug, FromRow)]
+struct AuditLogRow {
+    pub id: Uuid,
+    pub timestamp: DateTime<Utc>,
+    pub action: String,
+    pub entity_type: String,
+    pub entity_id: Uuid,
+    pub actor_id: Option<Uuid>,
+    pub actor_type: String,
+    pub details: serde_json::Value,
+    pub ip_address: Option<String>,
+}
 
 /// Repository for compliance-related database operations
 pub struct ComplianceRepository;
@@ -15,25 +83,25 @@ impl ComplianceRepository {
         pool: &PgPool,
         result: &ComplianceCheckResult,
     ) -> Result<()> {
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO compliance_checks 
                 (id, transaction_id, status, risk_level, risk_score, 
                  rules_checked, rules_triggered, requires_sar, checked_at, expires_at, metadata)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             "#,
-            result.id,
-            result.transaction_id,
-            result.status.clone() as ComplianceStatus,
-            result.risk_level.clone() as RiskLevel,
-            result.risk_score,
-            &result.rules_checked,
-            serde_json::to_value(&result.rules_triggered)?,
-            result.requires_sar,
-            result.checked_at,
-            result.expires_at,
-            serde_json::to_value(&result.metadata)?
         )
+        .bind(result.id)
+        .bind(result.transaction_id)
+        .bind(&result.status)
+        .bind(&result.risk_level)
+        .bind(result.risk_score)
+        .bind(&result.rules_checked)
+        .bind(serde_json::to_value(&result.rules_triggered)?)
+        .bind(result.requires_sar)
+        .bind(result.checked_at)
+        .bind(result.expires_at)
+        .bind(serde_json::to_value(&result.metadata)?)
         .execute(pool)
         .await?;
 
@@ -45,10 +113,9 @@ impl ComplianceRepository {
         pool: &PgPool,
         tx_id: Uuid,
     ) -> Result<ComplianceCheckResult> {
-        let record = sqlx::query!(
+        let record = sqlx::query_as::<_, ComplianceCheckRow>(
             r#"
-            SELECT id, transaction_id, status as "status: ComplianceStatus", 
-                   risk_level as "risk_level: RiskLevel", risk_score,
+            SELECT id, transaction_id, status, risk_level, risk_score,
                    rules_checked, rules_triggered, requires_sar, 
                    checked_at, expires_at, metadata
             FROM compliance_checks
@@ -56,8 +123,8 @@ impl ComplianceRepository {
             ORDER BY checked_at DESC
             LIMIT 1
             "#,
-            tx_id
         )
+        .bind(tx_id)
         .fetch_optional(pool)
         .await?
         .ok_or_else(|| ComplianceError::TransactionNotFound(tx_id.to_string()))?;
@@ -85,10 +152,9 @@ impl ComplianceRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<ComplianceCheckResult>> {
-        let records = sqlx::query!(
+        let records = sqlx::query_as::<_, ComplianceCheckRow>(
             r#"
-            SELECT cc.id, cc.transaction_id, cc.status as "status: ComplianceStatus",
-                   cc.risk_level as "risk_level: RiskLevel", cc.risk_score,
+            SELECT cc.id, cc.transaction_id, cc.status, cc.risk_level, cc.risk_score,
                    cc.rules_checked, cc.rules_triggered, cc.requires_sar,
                    cc.checked_at, cc.expires_at, cc.metadata
             FROM compliance_checks cc
@@ -97,10 +163,10 @@ impl ComplianceRepository {
             ORDER BY cc.checked_at DESC
             LIMIT $2 OFFSET $3
             "#,
-            entity_id,
-            limit,
-            offset
         )
+        .bind(entity_id)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(pool)
         .await?;
 
@@ -132,7 +198,7 @@ pub struct SarRepository;
 impl SarRepository {
     /// Create new SAR
     pub async fn create(pool: &PgPool, sar: &SuspiciousActivityReport) -> Result<Uuid> {
-        let id = sqlx::query_scalar!(
+        let row = sqlx::query(
             r#"
             INSERT INTO suspicious_activity_reports
                 (id, reference_number, status, subject_id, subject_type,
@@ -141,32 +207,32 @@ impl SarRepository {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING id
             "#,
-            sar.id,
-            sar.reference_number,
-            sar.status.clone() as SarStatus,
-            sar.subject_id,
-            sar.subject_type,
-            sar.activity_type,
-            sar.amount_involved as i64,
-            sar.currency,
-            sar.jurisdiction,
-            sar.description,
-            &sar.transaction_ids,
-            serde_json::to_value(&sar.evidence)?,
-            sar.created_at,
-            sar.created_by
         )
+        .bind(sar.id)
+        .bind(&sar.reference_number)
+        .bind(&sar.status)
+        .bind(sar.subject_id)
+        .bind(&sar.subject_type)
+        .bind(&sar.activity_type)
+        .bind(sar.amount_involved as i64)
+        .bind(&sar.currency)
+        .bind(&sar.jurisdiction)
+        .bind(&sar.description)
+        .bind(&sar.transaction_ids)
+        .bind(serde_json::to_value(&sar.evidence)?)
+        .bind(sar.created_at)
+        .bind(sar.created_by)
         .fetch_one(pool)
         .await?;
 
-        Ok(id)
+        Ok(row.get("id"))
     }
 
     /// Get SAR by ID
     pub async fn get_by_id(pool: &PgPool, id: Uuid) -> Result<SuspiciousActivityReport> {
-        let record = sqlx::query!(
+        let record = sqlx::query_as::<_, SarRow>(
             r#"
-            SELECT id, reference_number, status as "status: SarStatus",
+            SELECT id, reference_number, status,
                    subject_id, subject_type, activity_type, 
                    amount_involved, currency, jurisdiction, description,
                    transaction_ids, evidence, created_at, updated_at,
@@ -174,8 +240,8 @@ impl SarRepository {
             FROM suspicious_activity_reports
             WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(pool)
         .await?
         .ok_or_else(|| ComplianceError::SarNotFound(id.to_string()))?;
@@ -209,9 +275,9 @@ impl SarRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<SuspiciousActivityReport>> {
-        let records = sqlx::query!(
+        let records = sqlx::query_as::<_, SarRow>(
             r#"
-            SELECT id, reference_number, status as "status: SarStatus",
+            SELECT id, reference_number, status,
                    subject_id, subject_type, activity_type,
                    amount_involved, currency, jurisdiction, description,
                    transaction_ids, evidence, created_at, updated_at,
@@ -222,11 +288,11 @@ impl SarRepository {
             ORDER BY created_at DESC
             LIMIT $3 OFFSET $4
             "#,
-            status.map(|s| format!("{:?}", s).to_lowercase()),
-            jurisdiction,
-            limit,
-            offset
         )
+        .bind(status.map(|s| format!("{:?}", s).to_lowercase()))
+        .bind(jurisdiction)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(pool)
         .await?;
 
@@ -269,18 +335,18 @@ impl SarRepository {
             None
         };
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE suspicious_activity_reports
             SET status = $2, reviewed_by = $3, submitted_at = COALESCE($4, submitted_at),
                 updated_at = NOW()
             WHERE id = $1
             "#,
-            id,
-            status as SarStatus,
-            reviewed_by,
-            submitted_at
         )
+        .bind(id)
+        .bind(&status)
+        .bind(reviewed_by)
+        .bind(submitted_at)
         .execute(pool)
         .await?;
 
@@ -294,7 +360,7 @@ pub struct RuleRepository;
 impl RuleRepository {
     /// Create new rule
     pub async fn create(pool: &PgPool, rule: &ComplianceRule) -> Result<Uuid> {
-        let id = sqlx::query_scalar!(
+        let row = sqlx::query(
             r#"
             INSERT INTO compliance_rules
                 (id, name, description, rule_type, jurisdiction, severity,
@@ -302,35 +368,35 @@ impl RuleRepository {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
             RETURNING id
             "#,
-            rule.id,
-            rule.name,
-            rule.description,
-            rule.rule_type.clone() as RuleType,
-            rule.jurisdiction,
-            rule.severity.clone() as RiskLevel,
-            rule.conditions,
-            &rule.actions,
-            rule.is_active,
-            rule.created_at
         )
+        .bind(rule.id)
+        .bind(&rule.name)
+        .bind(&rule.description)
+        .bind(&rule.rule_type)
+        .bind(&rule.jurisdiction)
+        .bind(&rule.severity)
+        .bind(&rule.conditions)
+        .bind(&rule.actions)
+        .bind(rule.is_active)
+        .bind(rule.created_at)
         .fetch_one(pool)
         .await?;
 
-        Ok(id)
+        Ok(row.get("id"))
     }
 
     /// Get rule by ID
     pub async fn get_by_id(pool: &PgPool, id: Uuid) -> Result<ComplianceRule> {
-        let record = sqlx::query!(
+        let record = sqlx::query_as::<_, ComplianceRuleRow>(
             r#"
-            SELECT id, name, description, rule_type as "rule_type: RuleType",
-                   jurisdiction, severity as "severity: RiskLevel",
+            SELECT id, name, description, rule_type,
+                   jurisdiction, severity,
                    conditions, actions, is_active, created_at, updated_at
             FROM compliance_rules
             WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(pool)
         .await?
         .ok_or_else(|| ComplianceError::RuleNotFound(id.to_string()))?;
@@ -356,18 +422,18 @@ impl RuleRepository {
         jurisdiction: &str,
         active_only: bool,
     ) -> Result<Vec<ComplianceRule>> {
-        let records = sqlx::query!(
+        let records = sqlx::query_as::<_, ComplianceRuleRow>(
             r#"
-            SELECT id, name, description, rule_type as "rule_type: RuleType",
-                   jurisdiction, severity as "severity: RiskLevel",
+            SELECT id, name, description, rule_type,
+                   jurisdiction, severity,
                    conditions, actions, is_active, created_at, updated_at
             FROM compliance_rules
             WHERE jurisdiction = $1 AND ($2 = false OR is_active = true)
             ORDER BY severity DESC, name ASC
             "#,
-            jurisdiction,
-            active_only
         )
+        .bind(jurisdiction)
+        .bind(active_only)
         .fetch_all(pool)
         .await?;
 
@@ -391,22 +457,22 @@ impl RuleRepository {
 
     /// Update rule
     pub async fn update(pool: &PgPool, rule: &ComplianceRule) -> Result<()> {
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE compliance_rules
             SET name = $2, description = $3, rule_type = $4, severity = $5,
                 conditions = $6, actions = $7, is_active = $8, updated_at = NOW()
             WHERE id = $1
             "#,
-            rule.id,
-            rule.name,
-            rule.description,
-            rule.rule_type.clone() as RuleType,
-            rule.severity.clone() as RiskLevel,
-            rule.conditions,
-            &rule.actions,
-            rule.is_active
         )
+        .bind(rule.id)
+        .bind(&rule.name)
+        .bind(&rule.description)
+        .bind(&rule.rule_type)
+        .bind(&rule.severity)
+        .bind(&rule.conditions)
+        .bind(&rule.actions)
+        .bind(rule.is_active)
         .execute(pool)
         .await?;
 
@@ -415,7 +481,8 @@ impl RuleRepository {
 
     /// Delete rule
     pub async fn delete(pool: &PgPool, id: Uuid) -> Result<()> {
-        sqlx::query!("DELETE FROM compliance_rules WHERE id = $1", id)
+        sqlx::query("DELETE FROM compliance_rules WHERE id = $1")
+            .bind(id)
             .execute(pool)
             .await?;
         Ok(())
@@ -428,23 +495,23 @@ pub struct AuditRepository;
 impl AuditRepository {
     /// Insert audit log entry
     pub async fn log(pool: &PgPool, entry: &AuditLogEntry) -> Result<()> {
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO audit_logs
                 (id, timestamp, action, entity_type, entity_id,
                  actor_id, actor_type, details, ip_address)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             "#,
-            entry.id,
-            entry.timestamp,
-            entry.action,
-            entry.entity_type,
-            entry.entity_id,
-            entry.actor_id,
-            entry.actor_type,
-            entry.details,
-            entry.ip_address
         )
+        .bind(entry.id)
+        .bind(entry.timestamp)
+        .bind(&entry.action)
+        .bind(&entry.entity_type)
+        .bind(entry.entity_id)
+        .bind(entry.actor_id)
+        .bind(&entry.actor_type)
+        .bind(&entry.details)
+        .bind(&entry.ip_address)
         .execute(pool)
         .await?;
 
@@ -453,7 +520,7 @@ impl AuditRepository {
 
     /// Query audit logs
     pub async fn query(pool: &PgPool, query: &AuditLogQuery) -> Result<Vec<AuditLogEntry>> {
-        let records = sqlx::query!(
+        let records = sqlx::query_as::<_, AuditLogRow>(
             r#"
             SELECT id, timestamp, action, entity_type, entity_id,
                    actor_id, actor_type, details, ip_address
@@ -467,15 +534,15 @@ impl AuditRepository {
             ORDER BY timestamp DESC
             LIMIT $7 OFFSET $8
             "#,
-            query.entity_type,
-            query.entity_id,
-            query.actor_id,
-            query.action,
-            query.from_date,
-            query.to_date,
-            query.limit.unwrap_or(100),
-            query.offset.unwrap_or(0)
         )
+        .bind(&query.entity_type)
+        .bind(query.entity_id)
+        .bind(query.actor_id)
+        .bind(&query.action)
+        .bind(query.from_date)
+        .bind(query.to_date)
+        .bind(query.limit.unwrap_or(100))
+        .bind(query.offset.unwrap_or(0))
         .fetch_all(pool)
         .await?;
 

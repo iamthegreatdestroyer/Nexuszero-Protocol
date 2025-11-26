@@ -2,13 +2,48 @@
 //! Implements the 6-level privacy spectrum with dynamic morphing capabilities
 
 use crate::error::{PrivacyError, Result};
-use crate::models::{MorphEstimate, MorphRequest, MorphResponse, MorphStatus, PrivacyLevel};
+use crate::models::PrivacyLevel;
 use blake2::{Blake2b512, Digest};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
+
+/// Morph status enum (internal to engine)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MorphStatus {
+    Pending,
+    Processing,
+    Completed,
+    Failed,
+}
+
+/// Internal morph request
+#[derive(Debug, Clone)]
+pub struct MorphRequest {
+    pub data: Vec<u8>,
+    pub source_level: PrivacyLevel,
+    pub target_level: PrivacyLevel,
+}
+
+/// Internal morph response
+#[derive(Debug, Clone)]
+pub struct MorphResponse {
+    pub morphed_data: Vec<u8>,
+    pub target_level: PrivacyLevel,
+    pub proof: Option<Vec<u8>>,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Morph estimate
+#[derive(Debug, Clone)]
+pub struct MorphEstimate {
+    pub estimated_time_ms: u64,
+    pub gas_cost: u64,
+    pub target_level: PrivacyLevel,
+    pub data_size: usize,
+}
 
 /// Morphing job tracking
 #[derive(Debug, Clone)]

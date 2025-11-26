@@ -2,13 +2,32 @@
 //! Implements zero-knowledge proof generation for privacy-preserving transactions
 
 use crate::error::{PrivacyError, Result};
-use crate::models::{ProofRequest, ProofResponse, ProofStatus, ProofType, PrivacyLevel};
+use crate::models::{ProofStatus, ProofType};
 use blake2::{Blake2b512, Digest};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
+
+/// Internal proof request for generator
+#[derive(Debug, Clone)]
+pub struct ProofRequest {
+    pub proof_type: ProofType,
+    pub public_inputs: Vec<u8>,
+}
+
+/// Internal proof response from generator
+#[derive(Debug, Clone)]
+pub struct ProofResponse {
+    pub proof_id: String,
+    pub proof: Vec<u8>,
+    pub proof_type: ProofType,
+    pub public_inputs: Vec<u8>,
+    pub verification_key_hash: Vec<u8>,
+    pub created_at: DateTime<Utc>,
+    pub metadata: HashMap<String, String>,
+}
 
 /// Proof generation job
 #[derive(Debug, Clone)]
@@ -128,11 +147,23 @@ impl ProofGenerator {
         
         // Generate proof based on type
         let proof_result = match job.proof_type {
-            ProofType::Groth16 => self.generate_groth16(witness, &job.public_inputs).await,
+            ProofType::Groth16 | ProofType::Groth16Plus => self.generate_groth16(witness, &job.public_inputs).await,
             ProofType::Plonk => self.generate_plonk(witness, &job.public_inputs).await,
-            ProofType::Bulletproofs => self.generate_bulletproof(witness, &job.public_inputs).await,
+            ProofType::Bulletproofs | ProofType::RangeProof => self.generate_bulletproof(witness, &job.public_inputs).await,
             ProofType::Stark => self.generate_stark(witness, &job.public_inputs).await,
             ProofType::Custom(ref name) => self.generate_custom(name, witness, &job.public_inputs).await,
+            ProofType::None | ProofType::PartialZk => {
+                // No proof or partial proof - return empty proof response
+                Ok(ProofResponse {
+                    proof_id: job_id.to_string(),
+                    proof: vec![],
+                    proof_type: job.proof_type.clone(),
+                    public_inputs: job.public_inputs.clone(),
+                    verification_key_hash: vec![],
+                    created_at: Utc::now(),
+                    metadata: self.build_metadata("none"),
+                })
+            }
         };
 
         // Update job with result
@@ -141,7 +172,7 @@ impl ProofGenerator {
             if let Some(job) = jobs.get_mut(&job_id) {
                 match &proof_result {
                     Ok(response) => {
-                        job.status = ProofStatus::Verified;
+                        job.status = ProofStatus::Completed;
                         job.proof_data = Some(response.proof.clone());
                         job.completed_at = Some(Utc::now());
                     }
