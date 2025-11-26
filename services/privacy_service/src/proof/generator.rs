@@ -15,6 +15,8 @@ use uuid::Uuid;
 pub struct ProofRequest {
     pub proof_type: ProofType,
     pub public_inputs: Vec<u8>,
+    pub circuit_id: Option<String>,
+    pub privacy_level: crate::models::PrivacyLevel,
 }
 
 /// Internal proof response from generator

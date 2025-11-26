@@ -472,7 +472,11 @@ mod tests {
 
     fn create_test_proof(proof_type: ProofType) -> ProofResponse {
         let proof = match proof_type {
+            ProofType::None => vec![0u8; 0],
+            ProofType::PartialZk => vec![0u8; 100],
+            ProofType::RangeProof => vec![0u8; 150],
             ProofType::Groth16 => vec![0u8; 200],
+            ProofType::Groth16Plus => vec![0u8; 220],
             ProofType::Plonk => vec![0u8; 250],
             ProofType::Bulletproofs => vec![0u8; 200],
             ProofType::Stark => vec![0u8; 500],
