@@ -1,0 +1,33 @@
+[package]
+name = "nexuszero-e2e"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Protocol Team"]
+publish = false
+
+[lib]
+name = "nexuszero_e2e"
+path = "src/lib.rs"
+
+[[test]]
+name = "e2e_suite"
+path = "tests/e2e_suite.rs"
+harness = true
+
+[dependencies]
+# Core dependencies for testing
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Test utilities
+rand = { workspace = true }
+
+[dev-dependencies]
+# Additional test dependencies can go here
+
+[features]
+default = []
+expensive-tests = []  # Enable with --features expensive-tests
