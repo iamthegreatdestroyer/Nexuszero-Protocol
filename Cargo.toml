@@ -33,6 +33,9 @@ members = [
     
     # SDKs - Phase 4
     "sdks/rust",
+    
+    # End-to-End Testing
+    "tests/nexuszero-e2e",
 ]
 
 [workspace.package]
@@ -112,3 +115,10 @@ reqwest = { version = "0.12", features = ["json"] }
 
 # Time (fix version conflicts - 0.3.36+ fixes Rust 1.80+ compatibility)
 time = { version = "0.3.36", features = ["formatting", "parsing", "macros"] }
+
+# Test running configuration  
+[profile.test]
+opt-level = 0
+debug = true
+codegen-units = 16
+overflow-checks = true
