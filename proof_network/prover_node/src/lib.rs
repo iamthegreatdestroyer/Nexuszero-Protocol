@@ -1,10 +1,75 @@
-//! Prover Node - DPGN
+//! # Prover Node - DPGN
 //!
-//! Provides:
-//! - ProverNode struct
-//! - CPU/GPU prover stubs
-//! - Task queue
-//! - Submission API (stub)
+//! A high-performance prover node implementation for the NexusZero Distributed
+//! Proof Generation Network (DPGN).
+//!
+//! ## Overview
+//!
+//! The prover node is responsible for:
+//! - Registering with the coordinator and advertising capabilities
+//! - Receiving proof generation tasks from the network
+//! - Generating zero-knowledge proofs using CPU or GPU acceleration
+//! - Submitting completed proofs back to the coordinator
+//!
+//! ## Architecture
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────┐
+//! │                    ProverNode                        │
+//! ├─────────────────────────────────────────────────────┤
+//! │  ┌─────────────┐    ┌─────────────┐                 │
+//! │  │ TaskQueue   │───▶│ CpuProver   │                 │
+//! │  │ (mpsc)      │    └─────────────┘                 │
+//! │  └─────────────┘    ┌─────────────┐                 │
+//! │                     │ GpuProver   │ (optional)      │
+//! │  ┌─────────────┐    └─────────────┘                 │
+//! │  │ Coordinator │                                    │
+//! │  │ Client      │ HTTP ──▶ Coordinator API           │
+//! │  └─────────────┘                                    │
+//! └─────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Quick Start
+//!
+//! ```rust,no_run
+//! use prover_node::{ProverConfig, ProverNode};
+//! use uuid::Uuid;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let config = ProverConfig {
+//!         node_id: Uuid::new_v4(),
+//!         gpu_enabled: false,
+//!         max_concurrent_proofs: 4,
+//!         supported_privacy_levels: vec![1, 2, 3],
+//!         coordinator_url: "http://localhost:8080".to_string(),
+//!         reward_address: "0x1234...".to_string(),
+//!     };
+//!
+//!     let node = ProverNode::new(config).await?;
+//!     node.start().await?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Components
+//!
+//! - [`ProverNode`] - Main prover node struct managing the proof generation lifecycle
+//! - [`ProverConfig`] - Configuration for prover node initialization
+//! - [`TaskQueue`] - Async task queue for managing incoming proof tasks
+//! - [`ProofTask`] - Represents a proof generation task from the network
+//! - [`ProofResult`] - Result of proof generation including timing and quality metrics
+//! - [`cpu::CpuProver`] - CPU-based proof generation implementation
+//! - [`gpu::GpuProver`] - GPU-accelerated proof generation (feature-gated)
+//! - [`client::CoordinatorClient`] - HTTP client for coordinator communication
+//!
+//! ## Error Handling
+//!
+//! All operations return [`ProverError`] variants for comprehensive error handling:
+//! - `GpuInitFailed` - GPU initialization errors
+//! - `ProofGenerationFailed` - Proof generation failures
+//! - `CoordinatorConnectionFailed` - Network connectivity issues
+//! - `TaskQueueError` - Task queue management errors
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -13,6 +78,11 @@ use std::sync::Arc;
 use tracing::info;
 
 pub mod cpu;
+pub mod gpu;
+pub mod client;
+
+pub use client::{CoordinatorClient, RegisterRequest, RegisterResponse, SubmitResultResponse};
+pub use gpu::{GpuProver, GpuDevice, GpuStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProverConfig {
@@ -91,7 +161,7 @@ impl ProverNode {
         Ok(Self { config, task_queue, cpu_prover })
     }
 
-    pub async fn start(mut self) -> Result<(), ProverError> {
+    pub async fn start(self) -> Result<(), ProverError> {
         let node_id = self.config.node_id;
         info!("Starting ProverNode {}", node_id);
 

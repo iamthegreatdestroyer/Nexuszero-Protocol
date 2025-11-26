@@ -5,13 +5,15 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.7", features = ["macros"] }
-tokio = { version = "1.35", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.35", features = ["rt-multi-thread", "macros", "sync"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tracing = "0.1"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 anyhow = "1.0"
 thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+async-trait = "0.1"
 
 [lib]
 name = "coordinator"
@@ -21,4 +23,7 @@ path = "src/lib.rs"
 # For integration tests
 reqwest = { version = "0.11", features = ["json"] }
 tower = "0.5"
+http-body-util = "0.1"
+proof_network-prover-node = { path = "../prover_node" }
+proof_network-marketplace = { path = "../marketplace" }
 
