@@ -1,0 +1,3 @@
+-- This file intentionally left as a placeholder
+-- Migrations will be added as services are deployed
+-- Each service should use its own migrations in services/<service>/migrations/

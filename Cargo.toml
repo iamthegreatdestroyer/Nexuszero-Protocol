@@ -1,13 +1,67 @@
 [workspace]
+resolver = "2"
 members = [
+    # Core cryptographic libraries
     "nexuszero-crypto",
     "nexuszero-holographic",
-    "nexuszero-integration"
+    "nexuszero-integration",
+    
+    # Shared libraries
+    "shared/nexuszero-common",
+    "shared/nexuszero-crypto-lib",
+    "shared/nexuszero-db",
+    
+    # Microservices - Phase 1
+    "services/api_gateway",
+    "services/transaction_service",
+    "services/privacy_service",
+    "services/compliance_service",
+    "services/bridge_service",
 ]
 
 [workspace.package]
+version = "0.1.0"
 edition = "2021"
+authors = ["NexusZero Protocol Team"]
+license = "MIT"
+repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
 
 [workspace.dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full", "tracing"] }
+
+# Web framework
+axum = { version = "0.7", features = ["tracing"] }
+tower = { version = "0.5", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip", "timeout"] }
+
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
+serde_json = "1.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "rust_decimal"] }
+
+# Redis
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Cryptography
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"
+
+# Utilities
+uuid = { version = "1.11", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2.0"
+anyhow = "1.0"
+validator = { version = "0.18", features = ["derive"] }
+rust_decimal = { version = "1.36", features = ["serde"] }
+
+# Metrics
+prometheus = "0.13"
+lazy_static = "1.5"

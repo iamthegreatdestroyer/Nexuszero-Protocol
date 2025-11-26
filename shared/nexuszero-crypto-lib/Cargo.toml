@@ -1,0 +1,41 @@
+[package]
+name = "nexuszero-crypto-lib"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Cryptography
+sha2 = "0.10"
+sha3 = "0.10"
+blake3 = "1.5"
+hmac = "0.12"
+aes-gcm = "0.10"
+chacha20poly1305 = "0.10"
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+k256 = { version = "0.13", features = ["ecdsa", "ecdh"] }
+rand = "0.8"
+rand_core = "0.6"
+
+# Encoding
+hex = "0.4"
+base64 = "0.22"
+
+# Serialization
+serde = { workspace = true }
+
+# Errors
+thiserror = "1.0"
+
+# ZK primitives
+ff = "0.13"
+group = "0.13"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "crypto_bench"
+harness = false

@@ -1,0 +1,282 @@
+# ============================================================================
+# NexusZero Protocol - Phase 1 Microservices Docker Compose
+# ============================================================================
+#
+# Services:
+# - PostgreSQL (shared database)
+# - Redis (caching, rate limiting, mempool)
+# - API Gateway (port 8080)
+# - Transaction Service (port 8081)
+# - Privacy Service (port 8082)
+# - Compliance Service (port 8083)
+# - Bridge Service (port 8084)
+# - Prometheus (port 9090)
+# - Grafana (port 3000)
+#
+# Usage:
+#   docker-compose -f services/docker-compose.services.yml up -d
+#
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # INFRASTRUCTURE
+  # ==========================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexuszero-postgres
+    environment:
+      POSTGRES_USER: nexuszero
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexuszero_dev_2024}
+      POSTGRES_DB: nexuszero
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./api_gateway/migrations:/docker-entrypoint-initdb.d/api_gateway:ro
+      - ./transaction_service/migrations:/docker-entrypoint-initdb.d/transaction_service:ro
+      - ./privacy_service/migrations:/docker-entrypoint-initdb.d/privacy_service:ro
+      - ./compliance_service/migrations:/docker-entrypoint-initdb.d/compliance_service:ro
+      - ./bridge_service/migrations:/docker-entrypoint-initdb.d/bridge_service:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexuszero"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexuszero-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+
+  # ==========================================================================
+  # NEXUSZERO MICROSERVICES
+  # ==========================================================================
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: api-gateway
+    container_name: nexuszero-api-gateway
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgres://nexuszero:${POSTGRES_PASSWORD:-nexuszero_dev_2024}@postgres:5432/nexuszero
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_for_development_only}
+      # Service URLs
+      TRANSACTION_SERVICE_URL: http://transaction-service:8081
+      PRIVACY_SERVICE_URL: http://privacy-service:8082
+      COMPLIANCE_SERVICE_URL: http://compliance-service:8083
+      BRIDGE_SERVICE_URL: http://bridge-service:8084
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  transaction-service:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: transaction-service
+    container_name: nexuszero-transaction-service
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgres://nexuszero:${POSTGRES_PASSWORD:-nexuszero_dev_2024}@postgres:5432/nexuszero
+      REDIS_URL: redis://redis:6379
+      PRIVACY_SERVICE_URL: http://privacy-service:8082
+      COMPLIANCE_SERVICE_URL: http://compliance-service:8083
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  privacy-service:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: privacy-service
+    container_name: nexuszero-privacy-service
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgres://nexuszero:${POSTGRES_PASSWORD:-nexuszero_dev_2024}@postgres:5432/nexuszero
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  compliance-service:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: compliance-service
+    container_name: nexuszero-compliance-service
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgres://nexuszero:${POSTGRES_PASSWORD:-nexuszero_dev_2024}@postgres:5432/nexuszero
+      REDIS_URL: redis://redis:6379
+      # External compliance API credentials
+      CHAINALYSIS_API_KEY: ${CHAINALYSIS_API_KEY:-}
+      ELLIPTIC_API_KEY: ${ELLIPTIC_API_KEY:-}
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  bridge-service:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: bridge-service
+    container_name: nexuszero-bridge-service
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgres://nexuszero:${POSTGRES_PASSWORD:-nexuszero_dev_2024}@postgres:5432/nexuszero
+      REDIS_URL: redis://redis:6379
+      # Chain RPC endpoints
+      ETHEREUM_RPC_URL: ${ETHEREUM_RPC_URL:-https://eth-mainnet.g.alchemy.com/v2/demo}
+      POLYGON_RPC_URL: ${POLYGON_RPC_URL:-https://polygon-mainnet.g.alchemy.com/v2/demo}
+      ARBITRUM_RPC_URL: ${ARBITRUM_RPC_URL:-https://arb-mainnet.g.alchemy.com/v2/demo}
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================================================
+  # MONITORING
+  # ==========================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: nexuszero-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: nexuszero-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-nexuszero_admin}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - nexuszero-net
+    restart: unless-stopped
+
+# ==========================================================================
+# NETWORKS
+# ==========================================================================
+
+networks:
+  nexuszero-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ==========================================================================
+# VOLUMES
+# ==========================================================================
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

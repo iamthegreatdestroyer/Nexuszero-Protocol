@@ -1,0 +1,80 @@
+[package]
+name = "compliance_service"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Team"]
+description = "RCL (Regulatory Compliance Layer) - Multi-jurisdiction regulatory compliance service"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nexuszero/nexuszero-protocol"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full", "macros", "rt-multi-thread"] }
+
+# Web framework
+axum = { version = "0.7", features = ["macros", "ws", "multipart"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "limit"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { workspace = true }
+redis = { workspace = true }
+
+# UUID and time
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Configuration
+config = "0.14"
+dotenvy = "0.15"
+
+# Metrics
+prometheus = "0.13"
+lazy_static = "1.4"
+
+# HTTP client for external APIs
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Validation
+validator = { version = "0.16", features = ["derive"] }
+
+# Cryptography for signatures
+ed25519-dalek = { version = "2.1", features = ["serde"] }
+blake2 = "0.10"
+hex = "0.4"
+
+# Pattern matching and rules
+regex = "1.10"
+
+# Cron scheduling for reports
+cron = "0.12"
+
+# NexusZero internal crates
+# nexuszero-crypto = { path = "../../nexuszero-crypto" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"
+wiremock = "0.5"
+fake = { version = "2.9", features = ["derive"] }
+
+[features]
+default = []
+test-utils = []
+
+[[bin]]
+name = "compliance_service"
+path = "src/main.rs"
