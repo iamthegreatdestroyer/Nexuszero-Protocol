@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use nexuszero_crypto::lattice::lwe::*;
 use nexuszero_crypto::lattice::ring_lwe::*;
-use nexuszero_crypto::params::security::SecurityLevel;
+// SecurityLevel not used in this bench file; remove import
 use nexuszero_crypto::proof::statement::*;
 use nexuszero_crypto::proof::witness::*;
 use nexuszero_crypto::proof::proof::*;
@@ -33,7 +33,7 @@ fn benchmark_lwe_operations(c: &mut Criterion) {
         );
         
         // Encrypt
-        let (sk, pk) = keygen(&params, &mut rng).unwrap();
+        let (_sk, pk) = keygen(&params, &mut rng).unwrap();
         group.bench_function(
             BenchmarkId::new("Encrypt", name),
             |b| b.iter(|| {
@@ -73,7 +73,7 @@ fn benchmark_ring_lwe_operations(c: &mut Criterion) {
         );
         
         // Encrypt
-        let (sk, pk) = ring_keygen(params).unwrap();
+        let (_sk, pk) = ring_keygen(params).unwrap();
         let message = vec![true, false, true, false, true];  // 5 bits
         group.bench_function(
             BenchmarkId::new("Encrypt", name),

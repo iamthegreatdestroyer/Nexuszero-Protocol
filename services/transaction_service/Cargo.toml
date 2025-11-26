@@ -1,0 +1,67 @@
+[package]
+name = "nexuszero-transaction-service"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Protocol Team"]
+description = "Transaction handling service with Adaptive Privacy Morphing support"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Web framework
+axum = { version = "0.7", features = ["macros", "ws"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { workspace = true }
+
+# Redis
+redis = { workspace = true }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# JWT & Auth
+jsonwebtoken = "9.2"
+
+# Metrics
+prometheus = "0.13"
+lazy_static = "1.4"
+
+# Logging & Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+config = "0.14"
+dotenvy = "0.15"
+hex = "0.4"
+
+# Cryptographic primitives
+sha2 = "0.10"
+sha3 = "0.10"
+rand = "0.8"
+
+# NexusZero core dependencies
+nexuszero-crypto = { path = "../../nexuszero-crypto" }
+nexuszero-integration = { path = "../../nexuszero-integration" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[[bin]]
+name = "transaction-service"
+path = "src/main.rs"

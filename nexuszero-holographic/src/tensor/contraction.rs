@@ -15,3 +15,17 @@ pub fn contract_general(_a: &ArrayD<f64>, _b: &ArrayD<f64>) -> ArrayD<f64> {
     // Placeholder for Einstein summation implementation
     todo!("General tensor contraction not yet implemented");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::arr0;
+
+    #[test]
+    #[should_panic(expected = "not yet implemented")]
+    fn test_contract_general_todo_panics() {
+        let a = arr0(1.0).into_dyn();
+        let b = arr0(2.0).into_dyn();
+        let _ = contract_general(&a, &b);
+    }
+}

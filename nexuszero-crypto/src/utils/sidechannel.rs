@@ -109,6 +109,12 @@ impl DudectAnalyzer {
     }
 }
 
+impl Default for DudectAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // Cache-Timing Attack Simulation
 // ============================================================================
@@ -201,6 +207,12 @@ impl CacheSimulator {
     pub fn reset(&mut self) {
         self.cache_state.clear();
         self.access_log.clear();
+    }
+}
+
+impl Default for CacheSimulator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -300,6 +312,12 @@ impl MemoryTracer {
 
         // Lower CoV = more regular timing (closer to constant-time)
         1.0 - coefficient_of_variation.min(1.0)
+    }
+}
+
+impl Default for MemoryTracer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

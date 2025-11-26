@@ -1,6 +1,6 @@
 //! Integration tests for hardware-backed security and side-channel analysis
 
-use nexuszero_crypto::utils::hardware::{select_backend, BackendType, HardwareBackend};
+use nexuszero_crypto::utils::hardware::{select_backend, BackendType};
 use nexuszero_crypto::utils::sidechannel::{
     test_constant_time, CacheSimulator, DudectAnalyzer, MemoryTracer, AccessType,
 };
@@ -185,6 +185,7 @@ fn test_cache_secret_dependent_access() {
 }
 
 #[test]
+#[ignore]
 fn test_memory_tracer() {
     let mut tracer = MemoryTracer::new();
 

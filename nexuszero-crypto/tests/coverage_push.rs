@@ -1,6 +1,6 @@
 //! Tests targeting previously uncovered branches in proof.rs and witness.rs
 use nexuszero_crypto::proof::statement::{StatementBuilder, StatementType};
-use nexuszero_crypto::proof::proof::{prove, verify, Proof};
+use nexuszero_crypto::proof::proof::{prove, verify};
 use nexuszero_crypto::proof::witness::Witness;
 
 // Cover custom statement rejection branches in prove/verify (StatementType::Custom)

@@ -34,6 +34,7 @@ use rand::Rng; // Import Rng trait for gen()
 pub const RANGE_BITS: usize = 64;
 
 /// Security parameter (modulus size in bytes)
+#[allow(dead_code)]
 const MODULUS_BYTES: usize = 32;
 
 /// Generator G for Pedersen commitments
@@ -152,6 +153,7 @@ fn decompose_bits(value: u64, num_bits: usize) -> Vec<u8> {
 }
 
 /// Recompose bits into value
+#[allow(dead_code)]
 fn recompose_bits(bits: &[u8]) -> u64 {
     bits.iter()
         .enumerate()
@@ -251,7 +253,7 @@ pub fn prove_inner_product(
 /// Verify inner product argument
 pub fn verify_inner_product(
     proof: &InnerProductProof,
-    commitment: &[u8],
+    _commitment: &[u8],
     claimed_product: &BigUint,
 ) -> CryptoResult<()> {
     let p = modulus();
@@ -312,7 +314,6 @@ pub fn prove_range(
     let bit_commitments = commit_bits(&bits, &bit_blindings)?;
     
     // Prepare vectors for inner product argument
-    let p = modulus();
     let a_vec: Vec<BigUint> = bits.iter().map(|&b| BigUint::from(b)).collect();
     let b_vec: Vec<BigUint> = (0..num_bits)
         .map(|i| BigUint::from(1u64) << i)
@@ -368,7 +369,7 @@ pub fn prove_range_offset(
         .map(|_| (0..32).map(|_| rng.gen::<u8>()).collect())
         .collect();
     let bit_commitments = commit_bits(&bits, &bit_blindings)?;
-    let p = modulus();
+    
     let a_vec: Vec<BigUint> = bits.iter().map(|&b| BigUint::from(b)).collect();
     let b_vec: Vec<BigUint> = (0..num_bits).map(|i| BigUint::from(1u64) << i).collect();
     let inner_product_proof = prove_inner_product(a_vec, b_vec, &commitment)?;
@@ -567,7 +568,7 @@ pub fn verify_batch_range_proofs(
     for (i, commitment) in commitments.iter().enumerate() {
         let mut hasher = Sha3_256::new();
         hasher.update(b"batch_verify");
-        hasher.update(&i.to_le_bytes());
+        hasher.update(i.to_le_bytes());
         hasher.update(commitment);
         let hash = hasher.finalize();
         let coeff = BigUint::from_bytes_be(&hash);
@@ -717,9 +718,9 @@ pub fn verify_batch_range_proofs_offset(
     for (i, commitment) in commitments.iter().enumerate() {
         let mut hasher = Sha3_256::new();
         hasher.update(b"batch_verify_offset");
-        hasher.update(&i.to_le_bytes());
+        hasher.update(i.to_le_bytes());
         hasher.update(commitment);
-        hasher.update(&mins[i].to_le_bytes());
+        hasher.update(mins[i].to_le_bytes());
         let hash = hasher.finalize();
         let coeff = BigUint::from_bytes_be(&hash);
         
@@ -772,6 +773,7 @@ fn verify_bit_commitment(commitment: &[u8]) -> CryptoResult<bool> {
 }
 
 /// Helper function to check if inner product value is within range
+#[allow(dead_code)]
 fn check_inner_product_range(
     inner_product_value: &BigUint,
     num_bits: usize,
@@ -1004,8 +1006,8 @@ mod tests {
     #[test]
     fn test_batch_range_proofs_success() {
         // Create 3 valid proofs
-        let values = vec![10u64, 42u64, 100u64];
-        let blindings = vec![
+        let values = [10u64, 42u64, 100u64];
+        let blindings = [
             vec![0x11; 32],
             vec![0x22; 32],
             vec![0x33; 32],
@@ -1024,14 +1026,14 @@ mod tests {
         // Batch verification should succeed
         let result = verify_batch_range_proofs(&proofs, &commitments, num_bits);
         assert!(result.is_ok(), "Batch verification should succeed");
-        assert_eq!(result.unwrap(), true, "All proofs should be valid");
+        assert!(result.unwrap(), "All proofs should be valid");
     }
 
     #[test]
     fn test_batch_range_proofs_mismatch_commitment() {
         // Create 3 valid proofs
-        let values = vec![10u64, 42u64, 100u64];
-        let blindings = vec![
+        let values = [10u64, 42u64, 100u64];
+        let blindings = [
             vec![0x11; 32],
             vec![0x22; 32],
             vec![0x33; 32],
@@ -1053,7 +1055,7 @@ mod tests {
         // Batch verification should fail
         let result = verify_batch_range_proofs(&proofs, &commitments, num_bits);
         assert!(result.is_ok(), "Should return Ok with false");
-        assert_eq!(result.unwrap(), false, "Should detect tampered commitment");
+        assert!(!result.unwrap(), "Should detect tampered commitment");
     }
 
     #[test]
@@ -1067,9 +1069,9 @@ mod tests {
         let commitment = proof.commitment.clone();
         
         // Try to verify with wrong bit count
-        let result = verify_batch_range_proofs(&[proof], &[commitment], 16);
+        let result = verify_batch_range_proofs(std::slice::from_ref(&proof), std::slice::from_ref(&commitment), 16);
         assert!(result.is_ok(), "Should return Ok with false");
-        assert_eq!(result.unwrap(), false, "Should detect invalid bit count");
+        assert!(!result.unwrap(), "Should detect invalid bit count");
     }
 
     #[test]
@@ -1102,14 +1104,14 @@ mod tests {
         }
         
         // Test batch verification with single proof
-        let result = verify_batch_range_proofs_offset(&[proof.clone()], &[commitment.clone()], &[min], num_bits);
+        let result = verify_batch_range_proofs_offset(std::slice::from_ref(&proof), std::slice::from_ref(&commitment), &[min], num_bits);
         assert!(result.is_ok(), "Batch offset verification should succeed: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Single offset proof should be valid");
+        assert!(result.unwrap(), "Single offset proof should be valid");
         
         // Now test with multiple proofs
-        let values = vec![110u64, 142u64, 200u64];
-        let mins = vec![100u64, 100u64, 100u64];
-        let blindings = vec![
+        let values = [110u64, 142u64, 200u64];
+        let mins = [100u64, 100u64, 100u64];
+        let blindings = [
             vec![0x11; 32],
             vec![0x22; 32],
             vec![0x33; 32],
@@ -1127,7 +1129,7 @@ mod tests {
         // Batch verification should succeed
         let result = verify_batch_range_proofs_offset(&proofs, &commitments, &mins, num_bits);
         assert!(result.is_ok(), "Batch offset verification should succeed: {:?}", result);
-        assert_eq!(result.unwrap(), true, "All offset proofs should be valid");
+        assert!(result.unwrap(), "All offset proofs should be valid");
     }
 
     #[test]
@@ -1142,10 +1144,10 @@ mod tests {
         let commitment = proof.commitment.clone();
         
         // Try to verify with wrong min value
-        let wrong_mins = vec![50u64];
-        let result = verify_batch_range_proofs_offset(&[proof], &[commitment], &wrong_mins, num_bits);
+        let wrong_mins = [50u64];
+        let result = verify_batch_range_proofs_offset(std::slice::from_ref(&proof), std::slice::from_ref(&commitment), &wrong_mins, num_bits);
         assert!(result.is_ok(), "Should return Ok with false");
-        assert_eq!(result.unwrap(), false, "Should detect wrong offset value");
+        assert!(!result.unwrap(), "Should detect wrong offset value");
     }
 
     #[test]
@@ -1162,17 +1164,17 @@ mod tests {
         proof.offset = Some(100u64);
         // offset_commitment remains None
         
-        let mins = vec![100u64];
-        let result = verify_batch_range_proofs_offset(&[proof], &[commitment], &mins, num_bits);
+        let mins = [100u64];
+        let result = verify_batch_range_proofs_offset(std::slice::from_ref(&proof), std::slice::from_ref(&commitment), &mins, num_bits);
         assert!(result.is_ok(), "Should return Ok with false");
-        assert_eq!(result.unwrap(), false, "Should detect missing offset commitment");
+        assert!(!result.unwrap(), "Should detect missing offset commitment");
     }
 
     #[test]
     fn test_batch_range_proofs_random_coefficients_determinism() {
         // Create 2 valid proofs
-        let values = vec![10u64, 42u64];
-        let blindings = vec![
+        let values = [10u64, 42u64];
+        let blindings = [
             vec![0x11; 32],
             vec![0x22; 32],
         ];
@@ -1195,7 +1197,7 @@ mod tests {
         let val1 = result1.unwrap();
         let val2 = result2.unwrap();
         assert_eq!(val1, val2, "Results should be deterministic");
-        assert_eq!(val1, true, "Both runs should validate proofs");
+        assert!(val1, "Both runs should validate proofs");
     }
 
     // ============================================================================

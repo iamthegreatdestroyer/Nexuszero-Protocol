@@ -1,0 +1,39 @@
+[package]
+name = "chain-connectors-polygon"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Team"]
+description = "Polygon (PoS) blockchain connector for NexusZero Protocol"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nexuszero/nexuszero-protocol"
+keywords = ["polygon", "matic", "evm", "blockchain", "zero-knowledge"]
+categories = ["cryptography", "blockchain"]
+
+[dependencies]
+# Core connector interface
+chain-connectors-common = { path = "../common" }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full", "sync"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+tracing = "0.1"
+
+# Hex encoding
+hex = "0.4"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = []
+mumbai = []  # Mumbai testnet support
+mainnet = [] # Polygon mainnet

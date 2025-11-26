@@ -5,7 +5,6 @@
 use crate::proof::{Statement, Witness};
 use crate::{CryptoError, CryptoResult};
 use serde::{Deserialize, Serialize};
-use crate::utils::constant_time::ct_modpow;
 
 /// A zero-knowledge proof
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -65,6 +64,18 @@ impl Proof {
         if self.responses.is_empty() {
             return Err(CryptoError::ProofError("No responses".to_string()));
         }
+        // Basic structural validation: ensure sizes are within reasonable limits
+        // to guard against malformed or malicious proofs.
+        for c in &self.commitments {
+            if c.value.is_empty() || c.value.len() > 1024 {
+                return Err(CryptoError::ProofError("Invalid commitment size".to_string()));
+            }
+        }
+        for r in &self.responses {
+            if r.value.is_empty() || r.value.len() > 512 {
+                return Err(CryptoError::ProofError("Invalid response size".to_string()));
+            }
+        }
         Ok(())
     }
 
@@ -111,6 +122,7 @@ fn challenge_to_bigint(challenge: &[u8; 32]) -> BigUint {
 }
 
 /// Modular addition: (a + b) mod m, padded to 32 bytes
+#[allow(dead_code)]
 fn add_mod(a: &[u8], b: &[u8], modulus: &BigUint) -> Vec<u8> {
     let a_big = BigUint::from_bytes_be(a);
     let b_big = BigUint::from_bytes_be(b);
@@ -125,6 +137,7 @@ fn add_mod(a: &[u8], b: &[u8], modulus: &BigUint) -> Vec<u8> {
 }
 
 /// Modular multiplication: (a * b) mod m, padded to 32 bytes
+#[allow(dead_code)]
 fn mul_mod(a: &BigUint, b: &[u8], modulus: &BigUint) -> Vec<u8> {
     let b_big = BigUint::from_bytes_be(b);
     let result = (a * b_big) % modulus;
@@ -139,7 +152,7 @@ fn mul_mod(a: &BigUint, b: &[u8], modulus: &BigUint) -> Vec<u8> {
 
 /// Modular exponentiation: base^exp mod modulus (constant-time)
 fn mod_exp(base: &[u8], exp: &[u8], modulus: &[u8]) -> Vec<u8> {
-    use crate::utils::constant_time::ct_modpow;
+    use crate::utils::ct_modpow;
     
     let base_big = BigUint::from_bytes_be(base);
     let exp_big = BigUint::from_bytes_be(exp);
@@ -396,7 +409,7 @@ pub fn prove(statement: &Statement, witness: &Witness) -> CryptoResult<Proof> {
         StatementType::Preimage { .. } => {
             vec![commit_preimage(&blinding[0])?]
         }
-        StatementType::Range { min, max, .. } => {
+        StatementType::Range { .. } => {
             // For Bulletproofs, commitment is generated within the protocol
             // Placeholder commitment for compatibility
             let gen_g = vec![2u8; 32];
@@ -425,7 +438,7 @@ pub fn prove(statement: &Statement, witness: &Witness) -> CryptoResult<Proof> {
         StatementType::Preimage { .. } => {
             vec![compute_preimage_response(&blinding[0], &challenge.value)?]
         }
-        StatementType::Range { min, max, .. } => {
+        StatementType::Range { .. } => {
             // Bulletproofs handles response internally
             vec![compute_range_response(&blinding[0], &blinding[0], &challenge.value)?]
         }
@@ -438,7 +451,7 @@ pub fn prove(statement: &Statement, witness: &Witness) -> CryptoResult<Proof> {
     
     // PHASE 4.5: Generate Bulletproof for Range statements
     let bulletproof = match &statement.statement_type {
-        StatementType::Range { min, max, commitment } => {
+        StatementType::Range { min, max, .. } => {
             // Extract value and blinding from witness
             let secret = witness.get_secret_bytes()
                 .map_err(|e| CryptoError::ProofError(e.to_string()))?;
@@ -744,6 +757,7 @@ pub fn verify_batch(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::constant_time::ct_modpow;
 
     #[test]
     fn test_proof_structure() {

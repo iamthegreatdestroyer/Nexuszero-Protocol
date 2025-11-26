@@ -1,4 +1,6 @@
 //! Zero-knowledge proof system components
+#![allow(clippy::module_inception)]
+
 //!
 //! This module provides Statement, Witness, and Proof structures
 //! for constructing zero-knowledge proofs.

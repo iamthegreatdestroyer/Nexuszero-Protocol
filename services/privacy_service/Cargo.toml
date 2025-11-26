@@ -1,0 +1,75 @@
+[package]
+name = "nexuszero-privacy-service"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexusZero Protocol Team"]
+description = "Adaptive Privacy Morphing (APM) engine for NexusZero Protocol"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { workspace = true }
+
+# Redis
+redis = { workspace = true }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Metrics
+prometheus = "0.13"
+lazy_static = "1.4"
+
+# Logging & Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+dotenvy = "0.15"
+hex = "0.4"
+
+# Cryptographic primitives
+sha2 = "0.10"
+sha3 = "0.10"
+rand = "0.8"
+blake2 = "0.10"
+futures = "0.3"
+
+# ZK proof generation
+ark-ff = "0.4"
+ark-ec = "0.4"
+ark-bn254 = "0.4"
+ark-groth16 = "0.4"
+ark-serialize = "0.4"
+ark-std = "0.4"
+ark-relations = "0.4"
+ark-snark = "0.4"
+
+# NexusZero core dependencies
+nexuszero-crypto = { path = "../../nexuszero-crypto" }
+nexuszero-integration = { path = "../../nexuszero-integration" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[[bin]]
+name = "privacy-service"
+path = "src/main.rs"
