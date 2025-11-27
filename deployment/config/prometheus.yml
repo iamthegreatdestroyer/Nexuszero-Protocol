@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: "nexuszero-api"
+    static_configs:
+      - targets: ["nexuszero-api:8080"]
+    metrics_path: /metrics
+
+  - job_name: "neo4j"
+    static_configs:
+      - targets: ["neo4j:2004"]
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

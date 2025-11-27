@@ -1,7 +1,40 @@
-# Core web example dependency
-flask>=2.0
+# Core web frameworks & gateway
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+starlette>=0.27.0
 
-# Hyperparameter tuning & experiment tracking
+# Validation
+pydantic>=2.0.0
+
+# Security
+pyjwt>=2.8.0
+cryptography>=41.0.0
+
+# Database
+neo4j>=5.0.0
+
+# Deep Learning
+torch>=2.0.0
+numpy>=1.24.0
+
+# Async
+asyncio-throttle>=1.0.2
+
+# Configuration
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# HTTP
+httpx>=0.24.0
+
+# Monitoring
+prometheus-client>=0.17.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Hyperparameter tuning & experiment tracking (kept from the project)
 optuna>=3.6.0
 wandb>=0.17.0
 ray>=2.9.0
