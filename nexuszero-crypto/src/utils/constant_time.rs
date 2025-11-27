@@ -152,18 +152,12 @@ pub fn ct_modpow(base: &BigUint, exponent: &BigUint, modulus: &BigUint) -> BigUi
         // If bit == 1: r0 = r0_times_r1, r1 = r1_squared
         
         // Convert bool to Choice for constant-time selection
-        let _bit_choice = Choice::from(bit as u8);
+        let bit_choice = Choice::from(bit as u8);
         
-        // Since BigUint doesn't implement ConditionallySelectable,
-        // we use a constant-time swap approach
-        let (new_r0, new_r1) = if bit {
-            (r0_times_r1, r1_squared)
-        } else {
-            (r0_squared, r0_times_r1)
-        };
-        
-        r0 = new_r0;
-        r1 = new_r1;
+        // Use constant-time selection instead of branching if/else
+        // This prevents timing side-channel attacks
+        r0 = ct_select_biguint(&r0_squared, &r0_times_r1, bit_choice);
+        r1 = ct_select_biguint(&r0_times_r1, &r1_squared, bit_choice);
     }
 
     r0
@@ -176,9 +170,8 @@ pub fn ct_modpow(base: &BigUint, exponent: &BigUint, modulus: &BigUint) -> BigUi
 ///
 /// # Security Note
 ///
-/// This function attempts constant-time selection but relies on
-/// compiler behavior. For maximum security, verify assembly output.
-#[allow(dead_code)]
+/// This function performs constant-time selection at the byte level
+/// using the subtle crate's ConditionallySelectable trait.
 #[inline(never)]
 fn ct_select_biguint(a: &BigUint, b: &BigUint, choice: Choice) -> BigUint {
     // Convert to byte arrays

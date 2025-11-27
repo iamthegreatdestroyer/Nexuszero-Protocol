@@ -20,6 +20,7 @@ thiserror = "1.0"
 nexuszero-crypto = { path = "../nexuszero-crypto" }
 rand = "0.8"
 lz4 = "1.24"
+lz4_flex = "0.11"
 zstd = "0.13"
 
 # Optional: PyTorch bindings for neural enhancement
