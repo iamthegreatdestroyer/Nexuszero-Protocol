@@ -534,8 +534,11 @@ mod tests {
 
     #[test]
     fn test_estimate_proof_time() {
-        assert_eq!(estimate_proof_time(0, 1024), 0);
+        // Privacy level 0 with 1KB data: base_time=0 + size_factor=10
+        assert_eq!(estimate_proof_time(0, 1024), 10);
+        // Privacy level 3 with 1KB data: base_time=250 + size_factor=10
         assert_eq!(estimate_proof_time(3, 1024), 260);
+        // Privacy level 5 with 2KB data: base_time=1000 + size_factor=20
         assert_eq!(estimate_proof_time(5, 2048), 1020);
     }
 

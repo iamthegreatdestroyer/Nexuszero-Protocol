@@ -34,6 +34,12 @@ members = [
     # SDKs - Phase 4
     "sdks/rust",
     
+    # Privacy Morphing Engine
+    "privacy_morphing",
+    
+    # Frontend CLI
+    "frontend/cli",
+    
     # End-to-End Testing
     "tests/nexuszero-e2e",
 ]
