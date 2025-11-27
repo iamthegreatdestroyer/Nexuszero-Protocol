@@ -213,7 +213,7 @@ mod holographic_functional_tests {
         ];
         
         for (name, config) in configs {
-            let mps = CompressedMPS::from_bytes(&data, config.clone());
+            let mps = CompressedMPS::compress(&data, config.clone());
             
             match mps {
                 Ok(compressed) => {

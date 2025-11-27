@@ -285,10 +285,11 @@ mod fuzzing_tests {
             let random_data = generate_random_bytes(size);
             
             let config = CompressionConfig {
-                precision: StoragePrecision::Float32,
+                block_size: 4,
+                precision: StoragePrecision::F32,
                 max_bond_dim: 16,
                 truncation_threshold: 1e-4,
-                use_lz4: true,
+                hybrid_mode: true,
             };
             
             let result = std::panic::catch_unwind(|| {
@@ -414,10 +415,11 @@ mod data_integrity_tests {
         ];
         
         let config = CompressionConfig {
-            precision: StoragePrecision::Float32,
+            block_size: 4,
+            precision: StoragePrecision::F32,
             max_bond_dim: 32,
             truncation_threshold: 1e-6,
-            use_lz4: true,
+            hybrid_mode: true,
         };
         
         for (i, data) in test_data.iter().enumerate() {

@@ -9,7 +9,7 @@
 use nexuszero_e2e::{
     Timer, TestMetrics, generate_deterministic_bytes, generate_random_bytes,
     prove_range, verify_range, BulletproofRangeProof,
-    compress_proof_data, decompress_proof_data, CompressionConfig,
+    compress_proof_data, decompress_proof_data, CompressionConfig, StoragePrecision,
 };
 use std::time::Duration;
 
@@ -260,10 +260,11 @@ mod soak_tests {
                     // Compression roundtrip
                     let data = generate_deterministic_bytes(256, i as u64);
                     let config = CompressionConfig {
-                        precision: StoragePrecision::Float32,
+                        block_size: 4,
+                        precision: StoragePrecision::F32,
                         max_bond_dim: 16,
                         truncation_threshold: 1e-4,
-                        use_lz4: true,
+                        hybrid_mode: true,
                     };
                     if let Ok(compressed) = compress_proof_data(&data, &config) {
                         decompress_proof_data(&compressed).map(|d| d == data).unwrap_or(false)
@@ -306,10 +307,11 @@ mod soak_tests {
             // Also test compression cleanup
             let data = generate_random_bytes(1024);
             let config = CompressionConfig {
-                precision: StoragePrecision::Float32,
+                block_size: 4,
+                precision: StoragePrecision::F32,
                 max_bond_dim: 16,
                 truncation_threshold: 1e-4,
-                use_lz4: true,
+                hybrid_mode: true,
             };
             
             let _compressed = compress_proof_data(&data, &config);

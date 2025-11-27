@@ -14,6 +14,8 @@ pub struct ProtocolConfig {
     pub max_proof_size: Option<usize>,
     /// Optional maximum verification time (ms) target
     pub max_verify_time: Option<f64>,
+    /// Whether to verify proofs immediately after generation
+    pub verify_after_generation: bool,
 }
 
 impl Default for ProtocolConfig {
@@ -24,6 +26,7 @@ impl Default for ProtocolConfig {
             security_level: SecurityLevel::Bit128,
             max_proof_size: Some(10_000),
             max_verify_time: Some(50.0),
+            verify_after_generation: false,
         }
     }
 }

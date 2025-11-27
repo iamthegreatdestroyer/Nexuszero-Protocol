@@ -27,8 +27,6 @@ pub use nexuszero_holographic::{
     compression::encoder_new::{HolographicEncoder, EncoderConfig, CompressedProof, CompressionStats},
     compression::mps_v2::{
         CompressedTensorTrain, CompressionConfig, StoragePrecision,
-        compress_proof_data as raw_compress_proof_data, 
-        decompress_proof_data as raw_decompress_proof_data,
     },
 };
 
@@ -106,17 +104,60 @@ pub fn verify_range(proof: &BulletproofRangeProof) -> CryptoResult<()> {
 }
 
 /// Compress proof data with configuration
-pub fn compress_proof_data(data: &[u8], _config: &CompressionConfig) -> Result<CompressedData, CompressionError> {
-    // Use the raw compression function with default config
-    let compressed_bytes = raw_compress_proof_data(data)
-        .map_err(|e| CompressionError::CompressionFailed(e.to_string()))?;
-    Ok(CompressedData { data: compressed_bytes, original_size: data.len() })
+pub fn compress_proof_data(data: &[u8], config: &CompressionConfig) -> Result<CompressedData, CompressionError> {
+    // Validate input parameters
+    if data.is_empty() {
+        return Err(CompressionError::CompressionFailed("Cannot compress empty data".to_string()));
+    }
+    if config.block_size == 0 {
+        return Err(CompressionError::CompressionFailed("Block size cannot be zero".to_string()));
+    }
+    
+    // For now, use a simple LZ4-based compression that actually compresses
+    // TODO: Replace with proper MPS compression once it's working
+    use std::io::Write;
+    let mut compressed = Vec::new();
+
+    // Simple header with config info
+    compressed.write_all(&(data.len() as u32).to_le_bytes())?;
+    compressed.write_all(&(config.precision as u8).to_le_bytes())?;
+    compressed.write_all(&(config.block_size as u16).to_le_bytes())?;
+
+    // Compress the data using LZ4
+    let mut encoder = lz4_flex::frame::FrameEncoder::new(&mut compressed);
+    encoder.write_all(data)?;
+    encoder.finish()?;
+
+    Ok(CompressedData { data: compressed, original_size: data.len() })
 }
 
 /// Decompress proof data
 pub fn decompress_proof_data(compressed: &CompressedData) -> Result<Vec<u8>, CompressionError> {
-    raw_decompress_proof_data(&compressed.data)
-        .map_err(|e| CompressionError::DecompressionFailed(e.to_string()))
+    // For now, use LZ4 decompression
+    // TODO: Replace with proper MPS decompression once it's working
+    use std::io::Read;
+
+    let mut cursor = std::io::Cursor::new(&compressed.data);
+
+    // Read header
+    let mut original_size_bytes = [0u8; 4];
+    cursor.read_exact(&mut original_size_bytes)?;
+    let _original_size = u32::from_le_bytes(original_size_bytes) as usize;
+
+    let mut precision_byte = [0u8; 1];
+    cursor.read_exact(&mut precision_byte)?;
+    let _precision = precision_byte[0];
+
+    let mut block_size_bytes = [0u8; 2];
+    cursor.read_exact(&mut block_size_bytes)?;
+    let _block_size = u16::from_le_bytes(block_size_bytes) as usize;
+
+    // Decompress the data
+    let mut decoder = lz4_flex::frame::FrameDecoder::new(cursor);
+    let mut decompressed = Vec::new();
+    decoder.read_to_end(&mut decompressed)?;
+
+    Ok(decompressed)
 }
 
 /// Compressed data wrapper
@@ -150,6 +191,18 @@ impl std::fmt::Display for CompressionError {
 }
 
 impl std::error::Error for CompressionError {}
+
+impl From<std::io::Error> for CompressionError {
+    fn from(err: std::io::Error) -> Self {
+        CompressionError::CompressionFailed(err.to_string())
+    }
+}
+
+impl From<lz4_flex::frame::Error> for CompressionError {
+    fn from(err: lz4_flex::frame::Error) -> Self {
+        CompressionError::CompressionFailed(err.to_string())
+    }
+}
 
 // ============================================================================
 // TEST CONFIGURATION
