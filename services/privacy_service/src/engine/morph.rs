@@ -25,6 +25,7 @@ pub struct MorphRequest {
     pub data: Vec<u8>,
     pub source_level: PrivacyLevel,
     pub target_level: PrivacyLevel,
+    pub options: Option<HashMap<String, String>>,
 }
 
 /// Internal morph response

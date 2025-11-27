@@ -494,6 +494,7 @@ impl ProofGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::PrivacyLevel;
 
     #[tokio::test]
     async fn test_proof_generator_creation() {

@@ -1,4 +1,5 @@
 # Performance Benchmark Report - Nexuszero Protocol
+
 **Generated:** 2025-11-26  
 **Version:** 0.1.0  
 **Branch:** feature/phase-3-dpgn  
@@ -27,54 +28,54 @@ Benchmarks were conducted for three security levels (128-bit, 192-bit, 256-bit) 
 
 #### Key Generation Performance
 
-| Security Level | Parameters (n,m,q) | Mean Time | Throughput | Target | Status |
-|----------------|-------------------|-----------|------------|---------|---------|
-| 128-bit | (256, 512, 12289) | TBD | >1000 keys/sec | 1000 keys/sec | ✅ PASS |
-| 192-bit | (384, 768, 12289) | TBD | TBD | 800 keys/sec | ✅ PASS |
-| 256-bit | (512, 1024, 12289) | TBD | TBD | 500 keys/sec | ✅ PASS |
+| Security Level | Parameters (n,m,q) | Mean Time | Throughput     | Target        | Status  |
+| -------------- | ------------------ | --------- | -------------- | ------------- | ------- |
+| 128-bit        | (256, 512, 12289)  | TBD       | >1000 keys/sec | 1000 keys/sec | ✅ PASS |
+| 192-bit        | (384, 768, 12289)  | TBD       | TBD            | 800 keys/sec  | ✅ PASS |
+| 256-bit        | (512, 1024, 12289) | TBD       | TBD            | 500 keys/sec  | ✅ PASS |
 
 #### Encryption Performance
 
-| Security Level | Mean Time | Throughput | Target | Status |
-|----------------|-----------|------------|---------|---------|
-| 128-bit | TBD | >500 ops/sec | 500 ops/sec | ✅ PASS |
-| 192-bit | TBD | TBD | 400 ops/sec | ✅ PASS |
-| 256-bit | TBD | TBD | 300 ops/sec | ✅ PASS |
+| Security Level | Mean Time | Throughput   | Target      | Status  |
+| -------------- | --------- | ------------ | ----------- | ------- |
+| 128-bit        | TBD       | >500 ops/sec | 500 ops/sec | ✅ PASS |
+| 192-bit        | TBD       | TBD          | 400 ops/sec | ✅ PASS |
+| 256-bit        | TBD       | TBD          | 300 ops/sec | ✅ PASS |
 
 #### Decryption Performance
 
-| Security Level | Mean Time | Throughput | Target | Status |
-|----------------|-----------|------------|---------|---------|
-| 128-bit | TBD | >1000 ops/sec | 1000 ops/sec | ✅ PASS |
-| 192-bit | TBD | TBD | 800 ops/sec | ✅ PASS |
-| 256-bit | TBD | TBD | 600 ops/sec | ✅ PASS |
+| Security Level | Mean Time | Throughput    | Target       | Status  |
+| -------------- | --------- | ------------- | ------------ | ------- |
+| 128-bit        | TBD       | >1000 ops/sec | 1000 ops/sec | ✅ PASS |
+| 192-bit        | TBD       | TBD           | 800 ops/sec  | ✅ PASS |
+| 256-bit        | TBD       | TBD           | 600 ops/sec  | ✅ PASS |
 
 ### 1.2 Ring-LWE Operations
 
 #### Polynomial Multiplication
 
-| Size | Method | Mean Time | vs Schoolbook | Status |
-|------|--------|-----------|---------------|---------|
-| 256 | NTT | TBD | 10-50x faster | ✅ PASS |
-| 512 | NTT | TBD | 10-50x faster | ✅ PASS |
-| 1024 | NTT | TBD | 10-50x faster | ✅ PASS |
+| Size | Method | Mean Time | vs Schoolbook | Status  |
+| ---- | ------ | --------- | ------------- | ------- |
+| 256  | NTT    | TBD       | 10-50x faster | ✅ PASS |
+| 512  | NTT    | TBD       | 10-50x faster | ✅ PASS |
+| 1024 | NTT    | TBD       | 10-50x faster | ✅ PASS |
 
 #### NTT Forward/Inverse Transform
 
-| Size | Forward Time | Inverse Time | Total Round-trip | Status |
-|------|-------------|--------------|------------------|---------|
-| 256 | TBD | TBD | TBD | ✅ PASS |
-| 512 | TBD | TBD | TBD | ✅ PASS |
-| 1024 | TBD | TBD | TBD | ✅ PASS |
+| Size | Forward Time | Inverse Time | Total Round-trip | Status  |
+| ---- | ------------ | ------------ | ---------------- | ------- |
+| 256  | TBD          | TBD          | TBD              | ✅ PASS |
+| 512  | TBD          | TBD          | TBD              | ✅ PASS |
+| 1024 | TBD          | TBD          | TBD              | ✅ PASS |
 
 ### 1.3 Zero-Knowledge Proofs
 
 #### Range Proofs (8-bit)
 
-| Operation | Mean Time | Throughput | Target | Status |
-|-----------|-----------|------------|---------|---------|
-| Prove | TBD | TBD | >100 proofs/sec | ✅ PASS |
-| Verify | TBD | TBD | >500 verify/sec | ✅ PASS |
+| Operation | Mean Time | Throughput | Target          | Status  |
+| --------- | --------- | ---------- | --------------- | ------- |
+| Prove     | TBD       | TBD        | >100 proofs/sec | ✅ PASS |
+| Verify    | TBD       | TBD        | >500 verify/sec | ✅ PASS |
 
 ---
 
@@ -84,43 +85,43 @@ Benchmarks were conducted for three security levels (128-bit, 192-bit, 256-bit) 
 
 #### Various Input Sizes
 
-| Input Size | Compression Time | Throughput | Compression Ratio | Status |
-|-----------|-----------------|------------|-------------------|---------|
-| 1 KB | TBD | TBD | TBD | ✅ PASS |
-| 10 KB | TBD | TBD | TBD | ✅ PASS |
-| 100 KB | TBD | TBD | TBD | ✅ PASS |
-| 1 MB | TBD | TBD | TBD | ✅ PASS |
+| Input Size | Compression Time | Throughput | Compression Ratio | Status  |
+| ---------- | ---------------- | ---------- | ----------------- | ------- |
+| 1 KB       | TBD              | TBD        | TBD               | ✅ PASS |
+| 10 KB      | TBD              | TBD        | TBD               | ✅ PASS |
+| 100 KB     | TBD              | TBD        | TBD               | ✅ PASS |
+| 1 MB       | TBD              | TBD        | TBD               | ✅ PASS |
 
 #### Bond Dimension Sweep
 
 Matrix Product State (MPS) compression with varying bond dimensions:
 
-| Bond Dim | Compression Time | Compression Ratio | Quality Loss | Status |
-|----------|-----------------|-------------------|--------------|---------|
-| 2 | TBD | TBD | Minimal | ✅ PASS |
-| 4 | TBD | TBD | Minimal | ✅ PASS |
-| 8 | TBD | TBD | Minimal | ✅ PASS |
-| 16 | TBD | TBD | Minimal | ✅ PASS |
+| Bond Dim | Compression Time | Compression Ratio | Quality Loss | Status  |
+| -------- | ---------------- | ----------------- | ------------ | ------- |
+| 2        | TBD              | TBD               | Minimal      | ✅ PASS |
+| 4        | TBD              | TBD               | Minimal      | ✅ PASS |
+| 8        | TBD              | TBD               | Minimal      | ✅ PASS |
+| 16       | TBD              | TBD               | Minimal      | ✅ PASS |
 
 ### 2.2 Compression vs Standard Algorithms
 
 Comparison against industry-standard compression:
 
-| Algorithm | 1KB Time | 1MB Time | Ratio | Holographic Advantage |
-|-----------|----------|----------|-------|----------------------|
-| Zstd | TBD | TBD | ~3-5x | 100-1000x better |
-| Brotli | TBD | TBD | ~3-5x | 100-1000x better |
-| LZ4 | TBD | TBD | ~2-3x | 100-1000x better |
-| Holographic (MPS) | TBD | TBD | 100-1000x | Baseline |
+| Algorithm         | 1KB Time | 1MB Time | Ratio     | Holographic Advantage |
+| ----------------- | -------- | -------- | --------- | --------------------- |
+| Zstd              | TBD      | TBD      | ~3-5x     | 100-1000x better      |
+| Brotli            | TBD      | TBD      | ~3-5x     | 100-1000x better      |
+| LZ4               | TBD      | TBD      | ~2-3x     | 100-1000x better      |
+| Holographic (MPS) | TBD      | TBD      | 100-1000x | Baseline              |
 
 ### 2.3 Decompression Performance
 
-| Input Size | Decompression Time | Throughput | Lossless Verified | Status |
-|-----------|-------------------|------------|-------------------|---------|
-| 1 KB | TBD | TBD | ✅ Yes | ✅ PASS |
-| 10 KB | TBD | TBD | ✅ Yes | ✅ PASS |
-| 100 KB | TBD | TBD | ✅ Yes | ✅ PASS |
-| 1 MB | TBD | TBD | ✅ Yes | ✅ PASS |
+| Input Size | Decompression Time | Throughput | Lossless Verified | Status  |
+| ---------- | ------------------ | ---------- | ----------------- | ------- |
+| 1 KB       | TBD                | TBD        | ✅ Yes            | ✅ PASS |
+| 10 KB      | TBD                | TBD        | ✅ Yes            | ✅ PASS |
+| 100 KB     | TBD                | TBD        | ✅ Yes            | ✅ PASS |
+| 1 MB       | TBD                | TBD        | ✅ Yes            | ✅ PASS |
 
 ---
 
@@ -130,13 +131,13 @@ All cryptographic operations implement constant-time algorithms to prevent timin
 
 ### Welch's T-Test Results
 
-| Operation | T-Statistic | Threshold | Leak Detected | Status |
-|-----------|-------------|-----------|---------------|---------|
-| ct_bytes_eq | <4.5 | 4.5 | ❌ No | ✅ PASS |
-| ct_in_range | <4.5 | 4.5 | ❌ No | ✅ PASS |
-| ct_array_access | <4.5 | 4.5 | ❌ No | ✅ PASS |
-| ct_modpow | <4.5 | 4.5 | ❌ No | ✅ PASS |
-| Intentional leak (sensitivity test) | 98.34 | 2.0 | ✅ Yes | ✅ PASS |
+| Operation                           | T-Statistic | Threshold | Leak Detected | Status  |
+| ----------------------------------- | ----------- | --------- | ------------- | ------- |
+| ct_bytes_eq                         | <4.5        | 4.5       | ❌ No         | ✅ PASS |
+| ct_in_range                         | <4.5        | 4.5       | ❌ No         | ✅ PASS |
+| ct_array_access                     | <4.5        | 4.5       | ❌ No         | ✅ PASS |
+| ct_modpow                           | <4.5        | 4.5       | ❌ No         | ✅ PASS |
+| Intentional leak (sensitivity test) | 98.34       | 2.0       | ✅ Yes        | ✅ PASS |
 
 **Note:** The high t-statistic on the intentional leak test (98.34 >> 2.0) confirms that our testing methodology is sensitive enough to detect timing leaks when they exist.
 
@@ -166,15 +167,15 @@ codegen-units = 1
 
 ### Week 1 Performance Targets
 
-| Metric | Target | Actual | Status |
-|--------|--------|--------|---------|
-| LWE KeyGen (128-bit) | >1000 keys/sec | TBD | ✅ |
-| LWE Encrypt (128-bit) | >500 ops/sec | TBD | ✅ |
-| LWE Decrypt (128-bit) | >1000 ops/sec | TBD | ✅ |
-| ZK Prove (8-bit range) | >100 proofs/sec | TBD | ✅ |
-| ZK Verify (8-bit range) | >500 verifies/sec | TBD | ✅ |
-| Holographic Compression Ratio | 100-1000x | TBD | ✅ |
-| Constant-time verified | Yes | ✅ Yes | ✅ |
+| Metric                        | Target            | Actual | Status |
+| ----------------------------- | ----------------- | ------ | ------ |
+| LWE KeyGen (128-bit)          | >1000 keys/sec    | TBD    | ✅     |
+| LWE Encrypt (128-bit)         | >500 ops/sec      | TBD    | ✅     |
+| LWE Decrypt (128-bit)         | >1000 ops/sec     | TBD    | ✅     |
+| ZK Prove (8-bit range)        | >100 proofs/sec   | TBD    | ✅     |
+| ZK Verify (8-bit range)       | >500 verifies/sec | TBD    | ✅     |
+| Holographic Compression Ratio | 100-1000x         | TBD    | ✅     |
+| Constant-time verified        | Yes               | ✅ Yes | ✅     |
 
 ---
 
@@ -221,14 +222,17 @@ $env:LIBTORCH_USE_PYTORCH="1"
 ### Performance Optimization Opportunities
 
 1. **SIMD Optimization:** Enable AVX2/AVX-512 for NTT operations
+
    - Current: Scalar operations
    - Potential: 4-8x speedup with vectorization
 
 2. **Parallel Proof Generation:** Use rayon for batch operations
+
    - Current: Sequential processing
    - Potential: Near-linear speedup with core count
 
 3. **Memory Allocation:** Reduce heap allocations in hot paths
+
    - Current: Some allocations in encryption loops
    - Potential: 10-20% speedup
 
@@ -258,6 +262,7 @@ The Nexuszero Protocol demonstrates **production-ready performance** across all 
 ## Appendix A: Benchmark Files Generated
 
 All benchmark results are stored in:
+
 ```
 target/criterion/
 ├── report/index.html (Main dashboard)

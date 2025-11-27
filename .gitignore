@@ -67,3 +67,4 @@ secrets/
 *.pem
 *.key
 
+frontend/web/.next/
