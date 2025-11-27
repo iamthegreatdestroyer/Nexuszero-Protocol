@@ -4,20 +4,57 @@ version = "0.1.0"
 edition = "2021"
 description = "End-to-end integration layer combining crypto, optimizer, and holographic compression"
 license = "MIT"
+authors = ["NexusZero Protocol Team"]
+repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
+keywords = ["zero-knowledge", "privacy", "integration", "compression"]
+
+[features]
+default = []
+# Enable neural optimizer FFI (requires Python + PyTorch)
+neural = []
 
 [dependencies]
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Error handling
 thiserror = "1.0"
+anyhow = "1.0"
+
+# Random number generation
 rand = "0.8"
+
+# Hashing for checksums
+sha2 = "0.10"
+
+# LZ4 compression
+lz4_flex = "0.11"
+
+# Logging
+log = "0.4"
+
 # Internal crates
 nexuszero_crypto = { path = "../nexuszero-crypto", package = "nexuszero-crypto" }
 nexuszero_holographic = { path = "../nexuszero-holographic", package = "nexuszero-holographic" }
 
 [dev-dependencies]
-serde_json = "1.0"
+# Testing utilities
 sha3 = "0.10"
 num-bigint = "0.4"
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+tempfile = "3.10"
 
 [lib]
 name = "nexuszero_integration"
 path = "src/lib.rs"
+
+[[bench]]
+name = "integration_bench"
+harness = false
+
+[[example]]
+name = "end_to_end_proof_generation"
+path = "examples/end_to_end_proof_generation.rs"

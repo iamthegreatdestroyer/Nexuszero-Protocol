@@ -1,0 +1,207 @@
+# ============================================================================
+# NexusZero Integration Layer Configuration
+# ============================================================================
+# This file configures the integration layer for the NexusZero Protocol.
+# All settings have sensible defaults and are optional.
+
+[general]
+# Version of this configuration schema
+config_version = "1.0.0"
+
+# Log level: trace, debug, info, warn, error
+log_level = "info"
+
+# Enable detailed metrics collection
+enable_metrics = true
+
+# Enable performance profiling
+enable_profiling = false
+
+# ============================================================================
+# Protocol Configuration
+# ============================================================================
+[protocol]
+# Default security level: Bit128, Bit256
+default_security_level = "Bit128"
+
+# Maximum proof size in bytes (0 = unlimited)
+max_proof_size = 100000
+
+# Maximum verification time in milliseconds (0 = unlimited)
+max_verify_time_ms = 1000
+
+# Enable proof verification after generation (slower but safer)
+verify_after_generation = false
+
+# ============================================================================
+# Compression Configuration
+# ============================================================================
+[compression]
+# Enable proof compression
+enabled = true
+
+# Minimum data size (bytes) before compression is attempted
+min_size_threshold = 256
+
+# Compression algorithm preference: lz4, zstd, hybrid, adaptive
+algorithm = "adaptive"
+
+# Maximum bond dimension for MPS compression
+max_bond_dim = 64
+
+# Target compression ratio (minimum acceptable)
+target_ratio = 2.0
+
+# LZ4 compression level (1-12, higher = better compression, slower)
+lz4_level = 4
+
+# Enable pattern detection for compression optimization
+detect_patterns = true
+
+# ============================================================================
+# Optimization Configuration
+# ============================================================================
+[optimization]
+# Enable neural optimization (requires model file)
+enable_neural = false
+
+# Path to neural model file (relative to workspace root)
+neural_model_path = "models/optimizer.pt"
+
+# Fall back to heuristics if neural model unavailable
+fallback_to_heuristics = true
+
+# Optimization strategy: static, heuristic, neural, adaptive
+strategy = "heuristic"
+
+# Maximum time to spend on optimization (ms)
+max_optimization_time_ms = 100
+
+# Cache optimization results
+enable_cache = true
+
+# Maximum cache size (number of entries)
+cache_size = 1000
+
+# ============================================================================
+# Batch Processing Configuration
+# ============================================================================
+[batch]
+# Maximum parallel proof generations
+max_parallelism = 4
+
+# Enable request reordering for efficiency
+enable_reordering = true
+
+# Maximum batch size
+max_batch_size = 100
+
+# Batch timeout in milliseconds (0 = no timeout)
+timeout_ms = 30000
+
+# ============================================================================
+# Proof Cache Configuration
+# ============================================================================
+[cache]
+# Enable proof caching
+enabled = true
+
+# Maximum cache size (number of proofs)
+max_size = 500
+
+# Cache eviction policy: lru, lfu, fifo
+eviction_policy = "lru"
+
+# Cache TTL in seconds (0 = no expiration)
+ttl_seconds = 3600
+
+# Enable cache statistics tracking
+track_stats = true
+
+# ============================================================================
+# Metrics Configuration
+# ============================================================================
+[metrics]
+# Enable detailed metrics collection
+enabled = true
+
+# Metrics collection interval in seconds
+interval_seconds = 10
+
+# Enable latency histogram
+enable_histogram = true
+
+# Histogram bucket boundaries (ms)
+histogram_buckets = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
+
+# Enable throughput tracking
+enable_throughput = true
+
+# Throughput window in seconds
+throughput_window_seconds = 60
+
+# Export format: json, prometheus, statsd
+export_format = "json"
+
+# Export path (for file-based export)
+export_path = "metrics/"
+
+# ============================================================================
+# Validation Configuration
+# ============================================================================
+[validation]
+# Enable strict input validation
+strict_mode = true
+
+# Maximum statement size (bytes)
+max_statement_size = 10000
+
+# Maximum witness size (bytes)
+max_witness_size = 10000
+
+# Allowed statement types (empty = all allowed)
+allowed_statement_types = ["discrete_log", "preimage", "range"]
+
+# ============================================================================
+# Error Handling Configuration
+# ============================================================================
+[error_handling]
+# Maximum retry attempts for transient failures
+max_retries = 3
+
+# Retry backoff strategy: constant, linear, exponential
+retry_backoff = "exponential"
+
+# Initial retry delay in milliseconds
+retry_initial_delay_ms = 100
+
+# Maximum retry delay in milliseconds
+retry_max_delay_ms = 5000
+
+# Enable circuit breaker for repeated failures
+enable_circuit_breaker = true
+
+# Circuit breaker failure threshold
+circuit_breaker_threshold = 5
+
+# Circuit breaker reset timeout in seconds
+circuit_breaker_reset_seconds = 60
+
+# ============================================================================
+# Development/Testing Configuration
+# ============================================================================
+[dev]
+# Enable development mode (extra logging, no caching)
+enabled = false
+
+# Enable test fixtures
+enable_fixtures = true
+
+# Mock neural model for testing
+mock_neural = true
+
+# Simulate network latency (ms, 0 = disabled)
+simulate_latency_ms = 0
+
+# Random seed for deterministic testing (0 = random)
+random_seed = 0
