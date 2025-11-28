@@ -10,8 +10,13 @@
 
 use nexuszero_integration::{
     NexuszeroAPI, ProtocolConfig, MetricsCollector, BatchMetricsAggregator,
-    optimization::{CompressionStrategy, HeuristicOptimizer, Optimizer},
+    optimization::{HeuristicOptimizer, Optimizer},
+    compression::CompressionManager,
 };
+
+use nexuszero_integration::optimization::{CircuitAnalysis, CircuitType};
+use nexuszero_crypto::proof::statement::HashFunction;
+use sha2::{Sha256, Digest};
 
 fn main() {
     println!("═══════════════════════════════════════════════════════════════");
@@ -26,7 +31,7 @@ fn main() {
     let config = ProtocolConfig::default();
     
     println!("   Security Level: {:?}", config.security_level);
-    println!("   Compression Enabled: {}", config.enable_compression);
+    println!("   Compression Enabled: {}", config.use_compression);
     println!("   Neural Optimizer: Disabled (using heuristics)");
     println!();
 
@@ -63,10 +68,10 @@ fn main() {
             println!("   ✓ Proof generated successfully!");
             println!();
             println!("   Results:");
-            println!("   - Proof Size: {} bytes", result.base_proof.len());
-            if let Some(compressed) = &result.compressed {
-                println!("   - Compressed Size: {} bytes", compressed.len());
-                let ratio = result.base_proof.len() as f64 / compressed.len() as f64;
+            println!("   - Proof Size: {} bytes", result.original_size());
+            if result.is_compressed() {
+                println!("   - Compressed Size: {} bytes", result.effective_size());
+                let ratio = result.original_size() as f64 / result.effective_size() as f64;
                 println!("   - Compression Ratio: {:.2}x", ratio);
             }
             println!("   - Generation Time: {:.2}ms", duration.as_secs_f64() * 1000.0);
@@ -97,16 +102,24 @@ fn main() {
     println!("🔐 Step 4: Generating Preimage (Hash) Proof...\n");
     
     let preimage = b"Hello, NexusZero Protocol!";
+    let hash_function = HashFunction::SHA256;
+    
+    // Compute the hash output
+    let mut hasher = Sha256::new();
+    hasher.update(preimage);
+    let hash_output = hasher.finalize().to_vec();
     
     println!("   Preimage: \"{}\"", String::from_utf8_lossy(preimage));
+    println!("   Hash Function: {:?}", hash_function);
+    println!("   Hash Output: {} bytes", hash_output.len());
     println!();
     
     let start = std::time::Instant::now();
-    match api.prove_preimage(preimage) {
+    match api.prove_preimage(hash_function, &hash_output, preimage) {
         Ok(result) => {
             let duration = start.elapsed();
             println!("   ✓ Preimage proof generated!");
-            println!("   - Proof Size: {} bytes", result.base_proof.len());
+            println!("   - Proof Size: {} bytes", result.original_size());
             println!("   - Generation Time: {:.2}ms", duration.as_secs_f64() * 1000.0);
             
             // Verify
@@ -126,19 +139,34 @@ fn main() {
     // ========================================================================
     println!("🧠 Step 5: Testing Heuristic Optimizer...\n");
     
-    let optimizer = HeuristicOptimizer::new();
+    let optimizer = HeuristicOptimizer::new(config.security_level);
     
     // Test data of different sizes
     let test_sizes = [100, 1000, 10000, 100000];
     
     for size in test_sizes.iter() {
-        let test_data = vec![0xABu8; *size];
-        let result = optimizer.optimize(&test_data);
+        // Create a circuit analysis for the optimizer
+        let analysis = CircuitAnalysis {
+            gate_count: *size / 10, // Rough estimate
+            input_count: 32, // 256-bit input
+            output_count: 32, // 256-bit output
+            depth: (*size / 100).max(1), // Rough depth estimate
+            circuit_type: CircuitType::Preimage,
+            estimated_memory: *size * 8, // Rough memory estimate
+            complexity_score: (*size as f64 / 100000.0).min(1.0), // Normalized score
+            has_patterns: *size > 1000, // Larger circuits may have patterns
+            statement_size: *size,
+        };
         
-        println!("   Data Size: {} bytes", size);
-        println!("   - Strategy: {:?}", result.strategy);
-        println!("   - Complexity Score: {:.2}", result.complexity_score);
-        println!("   - Est. Compression: {:.2}x", result.estimated_compression_ratio);
+        let result = optimizer.optimize(&analysis);
+        
+        println!("   Size {} bytes:", size);
+        println!("   - Crypto Params: {:?}", result.crypto_params);
+        println!("   - Compression: {:?}", result.compression_strategy);
+        println!("   - Est. Time: {:.2}ms", result.estimated_time_ms);
+        println!("   - Est. Size: {} bytes", result.estimated_size);
+        println!("   - Confidence: {:.2}", result.confidence);
+        println!("   - Source: {:?}", result.source);
         println!();
     }
 
@@ -154,32 +182,25 @@ fn main() {
     
     for i in 0..num_samples {
         let mut collector = MetricsCollector::new();
-        collector.start_generation();
+        collector.start();
         
         // Simulate work
         std::thread::sleep(std::time::Duration::from_millis(5 + (i as u64 % 10)));
         
-        collector.end_generation();
         collector.record_proof_size(1000 + i * 100, Some(500 + i * 30));
         
         let metrics = collector.finalize();
-        aggregator.add_metrics(metrics);
+        aggregator.add(metrics);
     }
     
     println!("   Batch Statistics:");
     println!("   - Total Samples: {}", aggregator.count());
-    
-    if let Some(stats) = aggregator.total_time_stats() {
-        println!("   - Mean Generation Time: {:.2}ms", stats.mean);
-        println!("   - Std Dev: {:.2}ms", stats.std_dev);
-        println!("   - Min: {:.2}ms", stats.min);
-        println!("   - Max: {:.2}ms", stats.max);
-    }
-    
-    if let Some(stats) = aggregator.compression_ratio_stats() {
-        println!("   - Mean Compression Ratio: {:.2}x", stats.mean);
-    }
-    
+    println!("   - Avg Generation Time: {:.2}ms", aggregator.avg_generation_time_ms());
+    println!("   - Avg Total Time: {:.2}ms", aggregator.avg_total_time_ms());
+    println!("   - Avg Compression Ratio: {:.2}x", aggregator.avg_compression_ratio());
+    println!("   - Min Generation Time: {:.2}ms", aggregator.min_generation_time_ms());
+    println!("   - Max Generation Time: {:.2}ms", aggregator.max_generation_time_ms());
+    println!("   - Total Bytes Processed: {} bytes", aggregator.total_bytes_processed());
     println!();
 
     // ========================================================================
