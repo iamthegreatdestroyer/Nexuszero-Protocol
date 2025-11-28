@@ -16,7 +16,8 @@
 //! collector.start_stage("proof_generation");
 //! // ... generate proof ...
 //! collector.end_stage("proof_generation");
-//! let report = collector.generate_report();
+//! let metrics = collector.finalize();
+//! let report = metrics.summary();
 //! ```
 
 use serde::{Deserialize, Serialize};
