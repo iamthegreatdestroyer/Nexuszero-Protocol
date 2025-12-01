@@ -99,6 +99,10 @@ pub enum CryptoError {
     /// Hardware backend error
     #[error("Hardware error: {0}")]
     HardwareError(String),
+
+    /// Feature not implemented
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }
 
 /// Result type for cryptographic operations
