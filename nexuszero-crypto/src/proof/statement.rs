@@ -6,7 +6,7 @@ use crate::{CryptoError, CryptoResult};
 use serde::{Deserialize, Serialize};
 
 /// Types of statements that can be proven
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub enum StatementType {
     /// Prove knowledge of discrete log: g^x = h
     DiscreteLog {
@@ -42,7 +42,7 @@ pub enum StatementType {
 }
 
 /// Supported hash functions
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Hash, Eq)]
 pub enum HashFunction {
     /// SHA3-256
     SHA3_256,

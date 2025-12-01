@@ -2,9 +2,33 @@
 //!
 //! This module implements the core prove/verify algorithms.
 
-use crate::proof::{Statement, Witness};
+use crate::proof::{Statement, Witness, Prover, Verifier, ProverConfig, VerifierConfig, ProverRegistry, VerifierRegistry, ProverCapabilities, VerifierCapabilities};
+use crate::proof::prover::ZKGuarantee;
+use crate::proof::verifier::VerificationGuarantee;
 use crate::{CryptoError, CryptoResult};
 use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
+use std::sync::Arc;
+
+#[cfg(feature = "lazy_static")]
+use lazy_static::lazy_static;
+
+#[cfg(feature = "lazy_static")]
+lazy_static! {
+    /// Global prover registry instance
+    pub static ref GLOBAL_PROVER_REGISTRY: Arc<ProverRegistry> = {
+        let mut registry = ProverRegistry::new();
+        registry.register(Box::new(LegacyProver));
+        Arc::new(registry)
+    };
+
+    /// Global verifier registry instance
+    pub static ref GLOBAL_VERIFIER_REGISTRY: Arc<VerifierRegistry> = {
+        let mut registry = VerifierRegistry::new();
+        registry.register(Box::new(LegacyVerifier));
+        Arc::new(registry)
+    };
+}
 
 /// A zero-knowledge proof
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -97,6 +121,95 @@ impl Proof {
     pub fn size(&self) -> usize {
         // Size is computed on-demand from serialization
         self.to_bytes().map(|b| b.len()).unwrap_or(0)
+    }
+}
+
+// ============================================================================
+// Legacy Prover/Verifier Implementations
+// ============================================================================
+
+/// Legacy prover that wraps the existing monolithic prove function
+pub struct LegacyProver;
+
+#[async_trait]
+impl Prover for LegacyProver {
+    fn id(&self) -> &str {
+        "legacy"
+    }
+
+    fn supported_statements(&self) -> Vec<crate::proof::StatementType> {
+        use crate::proof::StatementType::*;
+        vec![
+            DiscreteLog { generator: vec![], public_value: vec![] },
+            Preimage { hash_function: HashFunction::SHA256, hash_output: vec![] },
+            Range { min: 0, max: 0, commitment: vec![] },
+        ]
+    }
+
+    async fn prove(&self, statement: &Statement, witness: &Witness, config: &ProverConfig) -> CryptoResult<Proof> { 
+        prove(statement, witness)
+    }
+
+    async fn prove_batch(&self, statements: &[Statement], witnesses: &[Witness], config: &ProverConfig) -> CryptoResult<Vec<Proof>> { 
+        // Convert to the format expected by the existing prove_batch function
+        let statements_and_witnesses: Vec<(Statement, Witness)> = statements.iter()
+            .zip(witnesses.iter())
+            .map(|(s, w)| (s.clone(), w.clone()))
+            .collect();
+        prove_batch(&statements_and_witnesses)
+    }    fn capabilities(&self) -> crate::proof::ProverCapabilities {
+        crate::proof::ProverCapabilities {
+            max_proof_size: 16384,
+            avg_proving_time_ms: 10,
+            trusted_setup_required: false,
+            zk_guarantee: ZKGuarantee::Computational,
+            supported_optimizations: vec!["parallel".to_string()],
+        }
+    }
+}
+
+/// Legacy verifier that wraps the existing monolithic verify function
+pub struct LegacyVerifier;
+
+#[async_trait]
+impl Verifier for LegacyVerifier {
+    fn id(&self) -> &str {
+        "legacy"
+    }
+
+    fn supported_statements(&self) -> Vec<crate::proof::StatementType> {
+        use crate::proof::StatementType::*;
+        vec![
+            DiscreteLog { generator: vec![], public_value: vec![] },
+            Preimage { hash_function: HashFunction::SHA256, hash_output: vec![] },
+            Range { min: 0, max: 0, commitment: vec![] },
+        ]
+    }
+
+    async fn verify(&self, statement: &Statement, proof: &Proof, config: &VerifierConfig) -> CryptoResult<bool> {
+        verify(statement, proof).map(|_| true)
+    }
+
+    async fn verify_batch(&self, statements: &[Statement], proofs: &[Proof], config: &VerifierConfig) -> CryptoResult<Vec<bool>> {
+        // Convert to the format expected by the existing verify_batch function
+        let statements_and_proofs: Vec<(Statement, Proof)> = statements.iter()
+            .zip(proofs.iter())
+            .map(|(s, p)| (s.clone(), p.clone()))
+            .collect();
+        
+        // Call verify_batch and convert the result
+        verify_batch(&statements_and_proofs)?;
+        Ok(vec![true; statements.len()]) // All verifications succeeded
+    }
+
+    fn capabilities(&self) -> crate::proof::VerifierCapabilities {
+        crate::proof::VerifierCapabilities {
+            max_proof_size: 16384,
+            avg_verification_time_ms: 5,
+            trusted_setup_required: false,
+            verification_guarantee: VerificationGuarantee::Computational,
+            supported_optimizations: vec!["parallel".to_string()],
+        }
     }
 }
 
@@ -752,6 +865,142 @@ pub fn verify_batch(
     }
     
     Ok(())
+}
+
+// ============================================================================
+// Modular Proof Functions (Registry-based)
+// ============================================================================
+
+/// Generate a proof using the modular registry system
+pub async fn prove_modular(
+    statement: &Statement,
+    witness: &Witness,
+    prover_id: Option<&str>,
+) -> CryptoResult<Proof> {
+    #[cfg(feature = "lazy_static")]
+    {
+        let registry = Arc::clone(&GLOBAL_PROVER_REGISTRY);
+        let config = ProverConfig {
+            security_level: crate::SecurityLevel::Bit256,
+            optimizations: std::collections::HashMap::new(),
+            backend_params: std::collections::HashMap::new(),
+        };
+
+        let prover = if let Some(id) = prover_id {
+            registry.get(id).ok_or_else(|| CryptoError::InvalidParameter("Prover not found".to_string()))?
+        } else {
+            // For now, just use the legacy prover
+            registry.get("legacy").ok_or_else(|| CryptoError::InvalidParameter("Legacy prover not found".to_string()))?
+        };
+
+        prover.prove(statement, witness, &config).await
+    }
+
+    #[cfg(not(feature = "lazy_static"))]
+    {
+        // Fallback to legacy implementation
+        prove(statement, witness)
+    }
+}
+
+/// Verify a proof using the modular registry system
+pub async fn verify_modular(
+    statement: &Statement,
+    proof: &Proof,
+    verifier_id: Option<&str>,
+) -> CryptoResult<bool> {
+    #[cfg(feature = "lazy_static")]
+    {
+        let registry = Arc::clone(&GLOBAL_VERIFIER_REGISTRY);
+        let config = VerifierConfig {
+            security_level: crate::SecurityLevel::Bit256,
+            optimizations: std::collections::HashMap::new(),
+            backend_params: std::collections::HashMap::new(),
+        };
+
+        let verifier = if let Some(id) = verifier_id {
+            registry.get(id).ok_or_else(|| CryptoError::InvalidParameter("Verifier not found".to_string()))?
+        } else {
+            // For now, just use the legacy verifier
+            registry.get("legacy").ok_or_else(|| CryptoError::InvalidParameter("Legacy verifier not found".to_string()))?
+        };
+
+        verifier.verify(statement, proof, &config).await
+    }
+
+    #[cfg(not(feature = "lazy_static"))]
+    {
+        // Fallback to legacy implementation
+        verify(statement, proof).map(|_| true)
+    }
+}
+
+/// Batch prove using the modular registry system
+pub async fn prove_batch_modular(
+    statements: &[Statement],
+    witnesses: &[Witness],
+    prover_id: Option<&str>,
+) -> CryptoResult<Vec<Proof>> {
+    #[cfg(feature = "lazy_static")]
+    {
+        let registry = Arc::clone(&GLOBAL_PROVER_REGISTRY);
+        let config = ProverConfig {
+            security_level: crate::SecurityLevel::Bit256,
+            optimizations: std::collections::HashMap::new(),
+            backend_params: std::collections::HashMap::new(),
+        };
+
+        let prover = if let Some(id) = prover_id {
+            registry.get(id).ok_or_else(|| CryptoError::InvalidParameter("Prover not found".to_string()))?
+        } else if !statements.is_empty() {
+            // For now, just use the legacy prover
+            registry.get("legacy").ok_or_else(|| CryptoError::InvalidParameter("Legacy prover not found".to_string()))?
+        } else {
+            return Ok(vec![]);
+        };
+
+        prover.prove_batch(statements, witnesses, &config).await
+    }
+
+    #[cfg(not(feature = "lazy_static"))]
+    {
+        // Fallback to legacy implementation
+        prove_batch(statements, witnesses)
+    }
+}
+
+/// Batch verify using the modular registry system
+pub async fn verify_batch_modular(
+    statements: &[Statement],
+    proofs: &[Proof],
+    verifier_id: Option<&str>,
+) -> CryptoResult<Vec<bool>> {
+    #[cfg(feature = "lazy_static")]
+    {
+        let registry = Arc::clone(&GLOBAL_VERIFIER_REGISTRY);
+        let config = VerifierConfig {
+            security_level: crate::SecurityLevel::Bit256,
+            optimizations: std::collections::HashMap::new(),
+            backend_params: std::collections::HashMap::new(),
+        };
+
+        let verifier = if let Some(id) = verifier_id {
+            registry.get(id).ok_or_else(|| CryptoError::InvalidParameter("Verifier not found".to_string()))?
+        } else if !statements.is_empty() {
+            // For now, just use the legacy verifier
+            registry.get("legacy").ok_or_else(|| CryptoError::InvalidParameter("Legacy verifier not found".to_string()))?
+        } else {
+            return Ok(vec![]);
+        };
+
+        verifier.verify_batch(statements, proofs, &config).await
+    }
+
+    #[cfg(not(feature = "lazy_static"))]
+    {
+        // Fallback to legacy implementation
+        verify_batch(statements, proofs)
+    }
 }
 
 #[cfg(test)]

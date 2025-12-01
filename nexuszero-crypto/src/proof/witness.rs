@@ -8,7 +8,7 @@ use crate::utils::constant_time::{ct_modpow, ct_bytes_eq, ct_in_range};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Witness type indicator
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum WitnessType {
     /// Discrete logarithm witness
     DiscreteLog,
@@ -22,7 +22,7 @@ pub enum WitnessType {
 
 /// Secret data for different witness types
 #[allow(dead_code)]
-#[derive(Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
 enum SecretData {
     /// Discrete log witness: the exponent x where g^x = h
     DiscreteLog(Vec<u8>),
@@ -38,8 +38,9 @@ enum SecretData {
 }
 
 /// Witness structure
-/// 
+///
 /// Note: SecretData implements ZeroizeOnDrop to secure sensitive data
+#[derive(Clone, Debug)]
 pub struct Witness {
     /// The secret data (automatically zeroized via ZeroizeOnDrop)
     secret_data: SecretData,
@@ -83,6 +84,18 @@ impl Witness {
             secret_data: SecretData::Range { value, blinding },
             randomness,
             witness_type: WitnessType::Range,
+        }
+    }
+
+    /// Create custom witness
+    pub fn custom(data: Vec<u8>) -> Self {
+        let mut randomness = vec![0u8; 32];
+        rand::Rng::fill(&mut rand::thread_rng(), &mut randomness[..]);
+
+        Self {
+            secret_data: SecretData::Custom(data),
+            randomness,
+            witness_type: WitnessType::Custom,
         }
     }
 

@@ -9,9 +9,29 @@ pub mod bulletproofs;
 pub mod proof;
 pub mod statement;
 pub mod witness;
+pub mod witness_manager;
+pub mod plugins;
+
+// New modular architecture modules
+pub mod circuit;
+pub mod prover;
+pub mod verifier;
+pub mod witness_dsl;
 
 // Re-export main types
 pub use proof::{Proof, ProofMetadata};
 pub use statement::{Statement, StatementBuilder, StatementType};
 pub use witness::{Witness, WitnessType};
+pub use witness_manager::{WitnessManager, DefaultWitnessManager, WitnessMetadata, CachedWitness, ValidationConstraints, WitnessGenerationConfig, TransformationResult, CacheStats};
 pub use bulletproofs::{BulletproofRangeProof, prove_range, verify_range};
+pub use plugins::{
+    ProofPluginEnum, ProofRegistry, ProofType, SetupParams, VerificationKey, ProverKey,
+    CircuitComponent, CircuitInfo, PluginInfo,
+    SchnorrPlugin, BulletproofsPlugin, Groth16Plugin, PlonkPlugin
+};
+
+// Re-export new modular types
+pub use circuit::{Circuit, CircuitEngine, Variable, Constraint};
+pub use prover::{Prover, ProverConfig, ProverCapabilities, ProverRegistry, ProofStrategy};
+pub use verifier::{Verifier, VerifierConfig, VerifierCapabilities, VerifierRegistry, VerificationStrategy, VerificationRequirements};
+pub use witness_dsl::{WitnessGenerator, WitnessGenerationPlan, WitnessBuilder, WitnessGeneratorRegistry, WitnessStrategy};
