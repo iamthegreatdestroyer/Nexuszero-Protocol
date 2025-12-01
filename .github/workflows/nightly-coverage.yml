@@ -82,7 +82,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/coverage/HISTORY.md docs/coverage/badge.svg README.md docs/coverage/python/HISTORY.md docs/coverage/python/badge.svg
-          $changed = git diff --staged --quiet; $LASTEXITCODE -ne 0
+          git diff --staged --quiet
+          $changed = $LASTEXITCODE -ne 0
           if ($changed) {
             $date = Get-Date -Format "yyyy-MM-dd"
             git commit -m "chore(coverage): nightly coverage update for $date [skip ci]"
