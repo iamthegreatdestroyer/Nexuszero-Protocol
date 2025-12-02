@@ -396,7 +396,7 @@ Implementation of Schnorr-style ZK proof protocol with Fiat-Shamir transform for
 
 **Budget**: ~$5,000 (provisional applications)
 
-### Non-Utility Patent Applications**:
+### Non-Utility Patent Applications
 12. Additional continuations and improvements
 
 **Total 12-Month Budget**: ~$15,000 (provisional) + $150,000 (utility conversions)
