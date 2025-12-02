@@ -121,7 +121,14 @@ impl Verifier for DirectVerifier {
 
 /// Hardware-accelerated verifier (future extension)
 pub struct HardwareVerifier {
-    device_type: HardwareType,
+    pub device_type: HardwareType,
+}
+
+impl HardwareVerifier {
+    /// Create a new hardware-accelerated verifier
+    pub fn new(device_type: HardwareType) -> Self {
+        Self { device_type }
+    }
 }
 
 #[derive(Clone, Debug)]

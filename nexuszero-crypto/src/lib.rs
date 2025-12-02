@@ -70,7 +70,7 @@ pub extern "C" fn nexuszero_crypto_version() -> u32 {
 }
 
 /// Custom error type for cryptographic operations
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq, Hash)]
 pub enum CryptoError {
     /// Invalid security parameter
     #[error("Invalid security parameter: {0}")]
@@ -99,6 +99,18 @@ pub enum CryptoError {
     /// Hardware backend error
     #[error("Hardware error: {0}")]
     HardwareError(String),
+
+    /// Invalid input parameters
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
+    /// Internal error
+    #[error("Internal error: {0}")]
+    InternalError(String),
+
+    /// Network communication error
+    #[error("Network error: {0}")]
+    NetworkError(String),
 
     /// Feature not implemented
     #[error("Not implemented: {0}")]

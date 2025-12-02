@@ -7,16 +7,32 @@ sol! {
     /// NexusZero Verifier Contract
     #[sol(rpc)]
     contract NexusZeroVerifier {
-        /// Submit a privacy proof for on-chain verification
+        /// Submit a privacy proof for on-chain verification (structured Groth16 inputs)
         function submitProof(
-            bytes calldata proof,
+            uint256[2] a,
+            uint256[2][2] b,
+            uint256[2] c,
+            uint256[] publicInputs,
+            bytes32 circuitId,
             bytes32 senderCommitment,
             bytes32 recipientCommitment,
             uint8 privacyLevel
-        ) external returns (bytes32 proofId);
+        ) external payable returns (bytes32 proofId);
 
-        /// Verify a previously submitted proof
+        /// Backwards-compatible raw proof submission
+        function submitProofRaw(
+            bytes calldata proof,
+            bytes32 circuitId,
+            bytes32 senderCommitment,
+            bytes32 recipientCommitment,
+            uint8 privacyLevel
+        ) external payable returns (bytes32 proofId);
+
+        /// Verify a previously submitted proof (view)
         function verifyProof(bytes32 proofId) external view returns (bool);
+
+        /// Verify a previously submitted proof by id (exec) with nullifier and commitment
+        function verifyProofById(bytes32 proofId, bytes32 nullifier, bytes32 commitment) external payable returns (bool);
 
         /// Get proof details
         function getProofDetails(bytes32 proofId) external view returns (
@@ -32,6 +48,9 @@ sol! {
 
         /// Get proof count by privacy level
         function proofCountByLevel(uint8 level) external view returns (uint256);
+
+        /// Get the configured verification fee for a privacy level
+        function verificationFeeByLevel(uint8 level) external view returns (uint256);
 
         /// Event emitted when a proof is submitted
         event ProofSubmitted(

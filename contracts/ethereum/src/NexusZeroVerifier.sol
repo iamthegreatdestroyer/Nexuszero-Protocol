@@ -84,12 +84,21 @@ contract NexusZeroVerifier is AccessControl, Pausable, ReentrancyGuard {
     
     /// @notice Proof verification fee in wei
     uint256 public verificationFee;
+    // New: per-level verification fee to support dynamic/chain-aware fees
+    mapping(PrivacyLevel => uint256) public verificationFeeByLevel;
 
     // ============================================================
     // EVENTS
     // ============================================================
 
     event ProofVerified(
+        bytes32 indexed proofHash,
+        PrivacyLevel level,
+        address indexed submitter,
+        uint256 timestamp
+    );
+
+    event ProofSubmitted(
         bytes32 indexed proofHash,
         PrivacyLevel level,
         address indexed submitter,
@@ -128,6 +137,7 @@ contract NexusZeroVerifier is AccessControl, Pausable, ReentrancyGuard {
     error InsufficientFee(uint256 required, uint256 provided);
     error InvalidVerificationKey();
     error ProofAlreadySubmitted(bytes32 proofHash);
+    error ProofNotFound(bytes32 proofHash);
 
     // ============================================================
     // CONSTRUCTOR
@@ -139,6 +149,10 @@ contract NexusZeroVerifier is AccessControl, Pausable, ReentrancyGuard {
         _grantRole(VERIFIER_ROLE, msg.sender);
         
         verificationFee = 0.001 ether;
+        // Default per-level fees - can be tuned by operator
+        for (uint8 i = 0; i <= uint8(PrivacyLevel.Sovereign); i++) {
+            verificationFeeByLevel[PrivacyLevel(i)] = verificationFee;
+        }
     }
 
     // ============================================================
@@ -243,6 +257,207 @@ contract NexusZeroVerifier is AccessControl, Pausable, ReentrancyGuard {
         emit CommitmentAdded(commitment, proofHash);
 
         return true;
+    }
+
+    /**
+     * @notice View whether a stored proof is verified
+     * @param proofHash The proof id
+     * @return isValid Whether the proof has been verified
+     */
+    function verifyProof(bytes32 proofHash) external view returns (bool isValid) {
+        return proofRecords[proofHash].isValid;
+    }
+
+    // ============================================================
+    // Submit & Verify by ID (wrappers for cross-chain/connector flow)
+    // ============================================================
+
+    struct StoredProof {
+        uint256[2] a;
+        uint256[2][2] b;
+        uint256[2] c;
+        uint256[] publicInputs;
+        PrivacyLevel level;
+        bytes32 senderCommitment;
+        bytes32 recipientCommitment;
+        bytes32 circuitId;
+        address submitter;
+        uint256 timestamp;
+        bool verified;
+    }
+
+    /// @notice Stored proofs by hash
+    mapping(bytes32 => StoredProof) public storedProofs;
+
+    /**
+     * @notice Submit a proof for on-chain storage and later verification
+     * @param circuitId circuit ID to identify the verification key
+     * @param proof groth16 proof components
+     * @param publicInputs public inputs encoded as uint256[]
+     * @param senderCommitment sender commitment
+     * @param recipientCommitment recipient commitment
+     * @param level privacy level
+     * @return proofHash unique proof id
+     */
+    function submitProof(
+        uint256[2] calldata a,
+        uint256[2][2] calldata b,
+        uint256[2] calldata c,
+        uint256[] calldata publicInputs,
+        bytes32 circuitId,
+        bytes32 senderCommitment,
+        bytes32 recipientCommitment,
+        PrivacyLevel level
+    ) external payable nonReentrant whenNotPaused returns (bytes32 proofHash) {
+        uint256 requiredFee = verificationFeeByLevel[level];
+        if (msg.value < requiredFee) revert InsufficientFee(requiredFee, msg.value);
+
+        // Compute proof hash
+        proofHash = keccak256(abi.encode(
+            a,
+            b,
+            c,
+            publicInputs,
+            circuitId,
+            senderCommitment,
+            recipientCommitment,
+            msg.sender,
+            block.timestamp
+        ));
+
+        if (storedProofs[proofHash].timestamp != 0) revert ProofAlreadySubmitted(proofHash);
+
+        // Store the proof components
+        StoredProof storage sp = storedProofs[proofHash];
+        sp.a = a;
+        sp.b = b;
+        sp.c = c;
+        sp.level = level;
+        sp.senderCommitment = senderCommitment;
+        sp.recipientCommitment = recipientCommitment;
+        sp.circuitId = circuitId;
+        sp.submitter = msg.sender;
+        sp.timestamp = block.timestamp;
+        sp.verified = false;
+
+        // Store public inputs
+        for (uint256 i = 0; i < publicInputs.length; i++) {
+            sp.publicInputs.push(publicInputs[i]);
+        }
+
+        emit ProofSubmitted(proofHash, level, msg.sender, block.timestamp);
+    }
+
+    /**
+     * @notice Backward-compatible raw proof submission; allows connectors to submit raw bytes
+     */
+    function submitProofRaw(
+        bytes calldata proof,
+        bytes32 circuitId,
+        bytes32 senderCommitment,
+        bytes32 recipientCommitment,
+        PrivacyLevel level
+    ) external payable nonReentrant whenNotPaused returns (bytes32 proofHash) {
+        uint256 requiredFee = verificationFeeByLevel[level];
+        if (msg.value < requiredFee) revert InsufficientFee(requiredFee, msg.value);
+
+        // Compute proof hash from raw bytes
+        proofHash = keccak256(abi.encodePacked(proof, circuitId, msg.sender, block.timestamp));
+        if (storedProofs[proofHash].timestamp != 0) revert ProofAlreadySubmitted(proofHash);
+
+        StoredProof storage sp = storedProofs[proofHash];
+        sp.senderCommitment = senderCommitment;
+        sp.recipientCommitment = recipientCommitment;
+        sp.circuitId = circuitId;
+        sp.level = level;
+        sp.submitter = msg.sender;
+        sp.timestamp = block.timestamp;
+        sp.verified = false;
+
+        emit ProofSubmitted(proofHash, level, msg.sender, block.timestamp);
+    }
+
+    /**
+     * @notice Verify a previously submitted proof by id (operator/relayer)
+     * @param proofHash The stored proof id
+     * @param nullifier nullifier to prevent double-spend
+     * @param commitment commitment to outputs
+     * @return valid whether the proof is valid
+     */
+    function verifyProofById(
+        bytes32 proofHash,
+        bytes32 nullifier,
+        bytes32 commitment
+    ) external payable nonReentrant whenNotPaused returns (bool valid) {
+        StoredProof storage sp = storedProofs[proofHash];
+        if (sp.timestamp == 0) revert ProofNotFound(proofHash);
+        if (sp.verified) revert ProofAlreadySubmitted(proofHash);
+
+        uint256 requiredFee = verificationFeeByLevel[sp.level];
+        if (msg.value < requiredFee) revert InsufficientFee(requiredFee, msg.value);
+
+        // Build Groth16Proof struct
+        Groth16Proof memory proof;
+        proof.a = sp.a;
+        proof.b = sp.b;
+        proof.c = sp.c;
+
+        // Verify using stored circuit id's vk
+        VerificationKey storage vk = verificationKeys[sp.circuitId];
+        if (!vk.isActive) revert CircuitNotRegistered(sp.circuitId);
+
+        valid = _verifyGroth16(vk, proof, sp.publicInputs);
+        if (!valid) revert InvalidProof();
+
+        // Check nullifier and commitment
+        if (nullifiers[nullifier]) revert NullifierAlreadyUsed(nullifier);
+        if (commitments[commitment]) revert CommitmentAlreadyExists(commitment);
+
+        nullifiers[nullifier] = true;
+        commitments[commitment] = true;
+
+        sp.verified = true;
+
+        // Record proof
+        proofRecords[proofHash] = ProofRecord({
+            proofHash: proofHash,
+            level: sp.level,
+            submitter: sp.submitter,
+            timestamp: block.timestamp,
+            isValid: true
+        });
+
+        totalProofsVerified++;
+        proofCountByLevel[sp.level]++;
+
+        emit ProofVerified(proofHash, sp.level, sp.submitter, block.timestamp);
+        emit NullifierUsed(nullifier, proofHash);
+        emit CommitmentAdded(commitment, proofHash);
+
+        return true;
+    }
+
+    /**
+     * @notice Operator-only helper to mark a stored proof as verified (for test or operational acceptance)
+     * @param proofHash id of the proof
+     * @param verified mark verified or not
+     */
+    function operatorMarkProofVerified(bytes32 proofHash, bool verified) external onlyRole(VERIFIER_ROLE) {
+        StoredProof storage sp = storedProofs[proofHash];
+        if (sp.timestamp == 0) revert ProofNotFound(proofHash);
+        sp.verified = verified;
+        if (verified) {
+            emit ProofVerified(proofHash, sp.level, sp.submitter, block.timestamp);
+        }
+    }
+
+    // ============================================================
+    // Admin: dynamic fees
+    // ============================================================
+    function setVerificationFeeForLevel(PrivacyLevel level, uint256 newFee) external onlyRole(OPERATOR_ROLE) {
+        uint256 oldFee = verificationFeeByLevel[level];
+        verificationFeeByLevel[level] = newFee;
+        emit VerificationFeeUpdated(oldFee, newFee);
     }
 
     /**

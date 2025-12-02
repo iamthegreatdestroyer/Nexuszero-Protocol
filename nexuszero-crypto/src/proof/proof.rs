@@ -19,6 +19,18 @@ lazy_static! {
     pub static ref GLOBAL_PROVER_REGISTRY: Arc<ProverRegistry> = {
         let mut registry = ProverRegistry::new();
         registry.register(Box::new(LegacyProver));
+
+        // Register hardware-accelerated provers if available
+        #[cfg(feature = "hardware-acceleration")]
+        {
+            registry.register(Box::new(crate::proof::hardware_acceleration::HardwareProver::new(
+                crate::proof::hardware_acceleration::HardwareType::GPU,
+            )));
+            registry.register(Box::new(crate::proof::hardware_acceleration::HardwareProver::new(
+                crate::proof::hardware_acceleration::HardwareType::TPU,
+            )));
+        }
+
         Arc::new(registry)
     };
 
@@ -26,6 +38,24 @@ lazy_static! {
     pub static ref GLOBAL_VERIFIER_REGISTRY: Arc<VerifierRegistry> = {
         let mut registry = VerifierRegistry::new();
         registry.register(Box::new(LegacyVerifier));
+
+        // Register hardware-accelerated verifiers if available
+        #[cfg(feature = "gpu")]
+        {
+            // Note: GPU verifier registration would happen asynchronously
+            // For now, we register a placeholder that will be replaced at runtime
+            registry.register(Box::new(crate::proof::verifier::HardwareVerifier::new(
+                crate::proof::verifier::HardwareType::GPU,
+            )));
+        }
+
+        #[cfg(feature = "tpu")]
+        {
+            registry.register(Box::new(crate::proof::verifier::HardwareVerifier::new(
+                crate::proof::verifier::HardwareType::TPU,
+            )));
+        }
+
         Arc::new(registry)
     };
 }

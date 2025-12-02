@@ -291,11 +291,21 @@ contract NexusZeroBridge is AccessControl, Pausable, ReentrancyGuard {
             requestId
         ));
 
-        // Verify proof through main verifier
-        bool isValid = verifier.verifyProof{value: verifier.verificationFee()}(
-            circuitId,
-            proof,
+        // Submit proof to verifier and record proofId
+        bytes32 proofId = verifier.submitProof{value: verifier.verificationFeeByLevel(transfer.privacyLevel)}(
+            proof.a,
+            proof.b,
+            proof.c,
             publicInputs,
+            circuitId,
+            bytes32(0), // senderCommitment: unused here
+            transfer.recipientCommitment,
+            transfer.privacyLevel
+        );
+
+        // Verify proof via verifier by id
+        bool isValid = verifier.verifyProofById{value: verifier.verificationFeeByLevel(transfer.privacyLevel)}(
+            proofId,
             transfer.nullifier,
             commitment
         );
@@ -306,7 +316,7 @@ contract NexusZeroBridge is AccessControl, Pausable, ReentrancyGuard {
             // Update TVL
             totalValueLocked[transfer.token] -= transfer.amount;
 
-            bytes32 proofHash = keccak256(abi.encode(proof.a, proof.b, proof.c));
+            bytes32 proofHash = proofId;
             emit TransferCompleted(requestId, proofHash);
         } else {
             transfer.status = TransferStatus.Failed;
