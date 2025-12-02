@@ -28,7 +28,7 @@ legal/
 ├── trademarks/                         # Trademark-related documents
 │   ├── applications/                  # Trademark applications
 │   ├── registrations/                 # Registered trademarks
-│   └── usage-guidelines.md            # Trademark usage guidelines (to be created)
+│   └── TRADEMARK_USAGE_GUIDELINES.md  # Trademark usage guidelines (to be created)
 │
 └── compliance/                         # Regulatory and compliance documentation
     ├── COMPLIANCE_FRAMEWORK.md        # Comprehensive compliance guide
