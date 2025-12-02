@@ -17,6 +17,9 @@ pub mod circuit;
 pub mod prover;
 pub mod verifier;
 pub mod witness_dsl;
+pub mod hardware_acceleration;
+pub mod distributed_verification;
+pub mod performance_optimization;
 
 // Re-export main types
 pub use proof::{Proof, ProofMetadata};
@@ -35,3 +38,9 @@ pub use circuit::{Circuit, CircuitEngine, Variable, Constraint};
 pub use prover::{Prover, ProverConfig, ProverCapabilities, ProverRegistry, ProofStrategy};
 pub use verifier::{Verifier, VerifierConfig, VerifierCapabilities, VerifierRegistry, VerificationStrategy, VerificationRequirements};
 pub use witness_dsl::{WitnessGenerator, WitnessGenerationPlan, WitnessBuilder, WitnessGeneratorRegistry, WitnessStrategy};
+#[cfg(feature = "hardware-acceleration")]
+pub use hardware_acceleration::{GPUVerifier, HardwareProver, HardwareType};
+#[cfg(feature = "tpu")]
+pub use hardware_acceleration::TPUVerifier;
+pub use distributed_verification::{DistributedVerifier, ByzantineDistributedVerifier, VerificationNode, DistributedConfig, LoadBalancingStrategy};
+pub use performance_optimization::{ParallelBatchProver, OptimizedBatchVerifier, AdaptiveProver, PerformanceMonitor, PerformanceMetrics, PerformanceThresholds, PerformanceAlert};

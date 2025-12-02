@@ -3,13 +3,12 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use alloy::{
-    primitives::{Address, Bytes, FixedBytes, U256},
+    primitives::{Address, FixedBytes},
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::http::{Client, Http},
-    network::Ethereum,
     signers::local::PrivateKeySigner,
 };
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info, warn};
 
 use chain_connectors_common::{
     ChainConnector, ChainError, ChainId, ChainOperation, FeeEstimate,
@@ -21,7 +20,7 @@ use chain_connectors_common::{
 
 use crate::config::EthereumConfig;
 use crate::error::EthereumError;
-use crate::contracts::{NexusZeroVerifier, NexusZeroBridge, NexusZeroHTLC};
+use crate::contracts::{NexusZeroVerifier, NexusZeroBridge};
 
 /// Ethereum blockchain connector
 pub struct EthereumConnector {
@@ -97,6 +96,19 @@ impl EthereumConnector {
         self.bridge_address.map(|addr| {
             NexusZeroBridge::new(addr, self.provider.clone())
         })
+    }
+
+    /// Non-trait helper to call verifyProofById (exec) - produces a call that would be sent by a signer
+    pub async fn verify_proof_by_id_exec(&self, proof_id: &[u8;32], nullifier: &[u8;32], commitment: &[u8;32]) -> Result<bool, ChainError> {
+        let contract = self.verifier_contract();
+        let call = contract.verifyProofById(
+            FixedBytes::from(*proof_id),
+            FixedBytes::from(*nullifier),
+            FixedBytes::from(*commitment),
+        );
+        let result = call.call().await
+            .map_err(|e| ChainError::ContractError(e.to_string()))?;
+        Ok(result._0)
     }
 
     /// Convert chain ID to NexusZero ChainId enum
@@ -203,10 +215,11 @@ impl ChainConnector for EthereumConnector {
         );
 
         let contract = self.verifier_contract();
-        
-        // Build the transaction
-        let call = contract.submitProof(
-            Bytes::from(proof.to_vec()),
+
+        // Keep backward-compatible raw proof submission for now
+        let call = contract.submitProofRaw(
+            alloy::primitives::Bytes::from(proof.to_vec()),
+            FixedBytes::from([0u8; 32]), // circuitId - connector must supply appropriate circuit id if available
             FixedBytes::from(metadata.sender_commitment),
             FixedBytes::from(metadata.recipient_commitment),
             metadata.privacy_level,
@@ -241,6 +254,7 @@ impl ChainConnector for EthereumConnector {
 
         Ok(result._0)
     }
+    
 
     async fn get_proof_details(
         &self,

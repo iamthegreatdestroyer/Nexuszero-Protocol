@@ -194,11 +194,21 @@ contract NexusZeroCompliance is AccessControl, Pausable {
         // Create nullifier from subject and type
         bytes32 nullifier = keccak256(abi.encode(subject, complianceType, block.timestamp));
 
-        // Verify the proof
-        bool isValid = verifier.verifyProof{value: verifier.verificationFee()}(
-            circuitId,
-            proof,
+        // Submit the proof
+        bytes32 proofId = verifier.submitProof{value: verifier.verificationFeeByLevel(NexusZeroVerifier.PrivacyLevel.Pseudonymous)}(
+            proof.a,
+            proof.b,
+            proof.c,
             publicInputs,
+            circuitId,
+            bytes32(0), // sender commitment not needed for compliance
+            commitment,
+            NexusZeroVerifier.PrivacyLevel.Pseudonymous
+        );
+
+        // Verify the proof on-chain via stored proof id
+        bool isValid = verifier.verifyProofById{value: verifier.verificationFeeByLevel(NexusZeroVerifier.PrivacyLevel.Pseudonymous)}(
+            proofId,
             nullifier,
             commitment
         );

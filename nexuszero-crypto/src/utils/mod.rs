@@ -3,12 +3,23 @@
 //! This module provides common utility functions used throughout the library.
 
 pub mod math;
+pub mod gpu_math;
 pub mod constant_time;
 pub mod hardware;
 pub mod sidechannel;
 
 // Re-export common functions
-pub use math::{mod_inverse, modular_exponentiation};
+pub use math::{mod_inverse, modular_exponentiation, montgomery_modmul, montgomery_modpow};
+
+// Re-export GPU acceleration functions
+#[cfg(feature = "gpu")]
+pub use gpu_math::GPUModularMath;
+#[cfg(feature = "gpu")]
+pub use math::{
+    init_gpu_acceleration, gpu_acceleration_available,
+    gpu_montgomery_mul_batch, gpu_modular_exponentiation,
+    gpu_batch_modular_multiplication,
+};
 
 // Re-export constant-time cryptographic utilities
 pub use constant_time::{

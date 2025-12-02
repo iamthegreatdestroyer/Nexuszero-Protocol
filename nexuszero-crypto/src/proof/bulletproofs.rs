@@ -25,6 +25,7 @@ use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 use rand::Rng; // Import Rng trait for gen()
+use std::time::{Duration, Instant};
 
 // ============================================================================
 // Constants and Parameters
@@ -64,8 +65,36 @@ fn modulus() -> BigUint {
 }
 
 // ============================================================================
-// Data Structures
+// Profiling and Performance Monitoring
 // ============================================================================
+
+/// Performance metrics for inner product proof generation
+#[derive(Debug, Clone)]
+pub struct InnerProductProfiling {
+    pub total_time: Duration,
+    pub setup_time: Duration,
+    pub inner_product_computation_time: Duration,
+    pub commitment_generation_time: Duration,
+    pub challenge_generation_time: Duration,
+    pub vector_folding_time: Duration,
+    pub rounds_count: usize,
+    pub vector_size: usize,
+}
+
+impl Default for InnerProductProfiling {
+    fn default() -> Self {
+        Self {
+            total_time: Duration::default(),
+            setup_time: Duration::default(),
+            inner_product_computation_time: Duration::default(),
+            commitment_generation_time: Duration::default(),
+            challenge_generation_time: Duration::default(),
+            vector_folding_time: Duration::default(),
+            rounds_count: 0,
+            vector_size: 0,
+        }
+    }
+}
 
 /// Bulletproofs range proof
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -181,67 +210,96 @@ fn inner_product(a: &[BigUint], b: &[BigUint], modulus: &BigUint) -> BigUint {
         })
 }
 
-/// Generate inner product argument proof (recursive halving)
+/// Generate inner product argument proof (recursive halving) with detailed profiling
 pub fn prove_inner_product(
     a: Vec<BigUint>,
     b: Vec<BigUint>,
     commitment: &[u8],
 ) -> CryptoResult<InnerProductProof> {
+    let total_start = Instant::now();
+    let mut profiling = InnerProductProfiling::default();
+
+    let setup_start = Instant::now();
     let p = modulus();
     let g = generator_g();
     let h = generator_h();
-    
+
     let mut left_commitments = Vec::new();
     let mut right_commitments = Vec::new();
-    
+
     let mut a_vec = a;
     let mut b_vec = b;
-    
+    profiling.vector_size = a_vec.len();
+    profiling.setup_time = setup_start.elapsed();
+
     // Recursive halving until vectors have length 1
     while a_vec.len() > 1 {
+        profiling.rounds_count += 1;
         let n = a_vec.len() / 2;
-        
+
         // Split vectors
         let (a_left, a_right) = a_vec.split_at(n);
         let (b_left, b_right) = b_vec.split_at(n);
-        
+
         // Compute cross terms
+        let inner_prod_start = Instant::now();
         let c_left = inner_product(a_left, b_right, &p);
         let c_right = inner_product(a_right, b_left, &p);
-        
-        // Commit to cross terms (using constant-time exponentiation)
-        use crate::utils::constant_time::ct_modpow;
-        let l_commit = (ct_modpow(&g, &c_left, &p) * ct_modpow(&h, &BigUint::from(1u32), &p)) % &p;
-        let r_commit = (ct_modpow(&g, &c_right, &p) * ct_modpow(&h, &BigUint::from(1u32), &p)) % &p;
-        
+        profiling.inner_product_computation_time += inner_prod_start.elapsed();
+
+        // Commit to cross terms (using optimized modular exponentiation)
+        let commit_start = Instant::now();
+        use crate::utils::math::get_montgomery_context;
+
+        let mont_ctx = get_montgomery_context(&p);
+        let l_commit = (mont_ctx.montgomery_pow(&g, &c_left) * mont_ctx.montgomery_pow(&h, &BigUint::from(1u32))) % &p;
+        let r_commit = (mont_ctx.montgomery_pow(&g, &c_right) * mont_ctx.montgomery_pow(&h, &BigUint::from(1u32))) % &p;
+        profiling.commitment_generation_time += commit_start.elapsed();
+
         left_commitments.push(l_commit.to_bytes_be());
         right_commitments.push(r_commit.to_bytes_be());
-        
+
         // Generate challenge for next round
+        let challenge_start = Instant::now();
         let challenge = generate_challenge(&[
             commitment,
             &l_commit.to_bytes_be(),
             &r_commit.to_bytes_be(),
         ])?;
+        profiling.challenge_generation_time += challenge_start.elapsed();
         let x = BigUint::from_bytes_be(&challenge) % &p;
-        
+
         // Use extended Euclidean for inverse (more reliable for edge cases)
         let x_inv = compute_modinv(&x, &p)?;
-        
+
         // Fold vectors: a' = a_left * x + a_right * x^-1
+        let fold_start = Instant::now();
         a_vec = a_left
             .iter()
             .zip(a_right)
             .map(|(al, ar)| ((al * &x) + (ar * &x_inv)) % &p)
             .collect();
-        
+
         b_vec = b_left
             .iter()
             .zip(b_right)
             .map(|(bl, br)| ((bl * &x_inv) + (br * &x)) % &p)
             .collect();
+        profiling.vector_folding_time += fold_start.elapsed();
     }
-    
+
+    profiling.total_time = total_start.elapsed();
+
+    // Log profiling information
+    log::debug!("Inner Product Proof Profiling:");
+    log::debug!("  Total time: {:?}", profiling.total_time);
+    log::debug!("  Setup time: {:?}", profiling.setup_time);
+    log::debug!("  Inner product computation: {:?}", profiling.inner_product_computation_time);
+    log::debug!("  Commitment generation: {:?}", profiling.commitment_generation_time);
+    log::debug!("  Challenge generation: {:?}", profiling.challenge_generation_time);
+    log::debug!("  Vector folding: {:?}", profiling.vector_folding_time);
+    log::debug!("  Rounds: {}, Vector size: {}", profiling.rounds_count, profiling.vector_size);
+
     Ok(InnerProductProof {
         left_commitments,
         right_commitments,

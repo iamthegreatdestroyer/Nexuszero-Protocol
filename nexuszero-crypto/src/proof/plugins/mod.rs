@@ -14,6 +14,7 @@ pub mod schnorr;
 pub mod bulletproofs;
 pub mod groth16;
 pub mod plonk;
+pub mod stark;
 #[cfg(test)]
 pub mod tests;
 
@@ -21,6 +22,7 @@ pub use schnorr::SchnorrPlugin;
 pub use bulletproofs::BulletproofsPlugin;
 pub use groth16::Groth16Plugin;
 pub use plonk::PlonkPlugin;
+pub use stark::StarkPlugin;
 
 /// Unique identifier for a proof system
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -95,6 +97,7 @@ pub enum ProofPluginEnum {
     Bulletproofs(BulletproofsPlugin),
     Groth16(Groth16Plugin),
     Plonk(PlonkPlugin),
+    Stark(StarkPlugin),
 }
 
 impl ProofPluginEnum {
@@ -105,6 +108,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.proof_type(),
             ProofPluginEnum::Groth16(p) => p.proof_type(),
             ProofPluginEnum::Plonk(p) => p.proof_type(),
+            ProofPluginEnum::Stark(p) => p.proof_type(),
         }
     }
 
@@ -115,6 +119,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.name(),
             ProofPluginEnum::Groth16(p) => p.name(),
             ProofPluginEnum::Plonk(p) => p.name(),
+            ProofPluginEnum::Stark(p) => p.name(),
         }
     }
 
@@ -125,6 +130,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.version(),
             ProofPluginEnum::Groth16(p) => p.version(),
             ProofPluginEnum::Plonk(p) => p.version(),
+            ProofPluginEnum::Stark(p) => p.version(),
         }
     }
 
@@ -135,6 +141,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.supported_statements(),
             ProofPluginEnum::Groth16(p) => p.supported_statements(),
             ProofPluginEnum::Plonk(p) => p.supported_statements(),
+            ProofPluginEnum::Stark(p) => p.supported_statements(),
         }
     }
 
@@ -145,6 +152,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.setup(params).await,
             ProofPluginEnum::Groth16(p) => p.setup(params).await,
             ProofPluginEnum::Plonk(p) => p.setup(params).await,
+            ProofPluginEnum::Stark(p) => p.setup(params).await,
         }
     }
 
@@ -155,6 +163,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.prove(statement, witness, prover_key).await,
             ProofPluginEnum::Groth16(p) => p.prove(statement, witness, prover_key).await,
             ProofPluginEnum::Plonk(p) => p.prove(statement, witness, prover_key).await,
+            ProofPluginEnum::Stark(p) => p.prove(statement, witness, prover_key).await,
         }
     }
 
@@ -165,6 +174,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.verify(statement, proof, verification_key).await,
             ProofPluginEnum::Groth16(p) => p.verify(statement, proof, verification_key).await,
             ProofPluginEnum::Plonk(p) => p.verify(statement, proof, verification_key).await,
+            ProofPluginEnum::Stark(p) => p.verify(statement, proof, verification_key).await,
         }
     }
 
@@ -175,6 +185,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.serialize(),
             ProofPluginEnum::Groth16(p) => p.serialize(),
             ProofPluginEnum::Plonk(p) => p.serialize(),
+            ProofPluginEnum::Stark(p) => p.serialize(),
         }
     }
 
@@ -185,6 +196,7 @@ impl ProofPluginEnum {
             ProofPluginEnum::Bulletproofs(p) => p.circuit_info(statement),
             ProofPluginEnum::Groth16(p) => p.circuit_info(statement),
             ProofPluginEnum::Plonk(p) => p.circuit_info(statement),
+            ProofPluginEnum::Stark(p) => p.circuit_info(statement),
         }
     }
 }
