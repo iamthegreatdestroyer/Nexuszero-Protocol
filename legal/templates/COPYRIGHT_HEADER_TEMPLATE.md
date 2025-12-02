@@ -8,7 +8,7 @@ Use these templates in all source code files to establish copyright protection.
 
 ```rust
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2025 NexusZero Protocol Contributors
+// Copyright (c) 2025 Steve (iamthegreatdestroyer)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ Use these templates in all source code files to establish copyright protection.
 
 ```python
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 NexusZero Protocol Contributors
+# Copyright (c) 2025 Steve (iamthegreatdestroyer)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,7 @@ Use these templates in all source code files to establish copyright protection.
 
 ```typescript
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2025 NexusZero Protocol Contributors
+// Copyright (c) 2025 Steve (iamthegreatdestroyer)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -90,7 +90,7 @@ Use these templates in all source code files to establish copyright protection.
 ```markdown
 <!--
 SPDX-License-Identifier: MIT
-Copyright (c) 2025 NexusZero Protocol Contributors
+Copyright (c) 2025 Steve (iamthegreatdestroyer)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -119,7 +119,7 @@ SOFTWARE.
 ```html
 <!--
 SPDX-License-Identifier: MIT
-Copyright (c) 2025 NexusZero Protocol Contributors
+Copyright (c) 2025 Steve (iamthegreatdestroyer)
 -->
 ```
 
@@ -130,7 +130,7 @@ Copyright (c) 2025 NexusZero Protocol Contributors
 ```css
 /*
  * SPDX-License-Identifier: MIT
- * Copyright (c) 2025 NexusZero Protocol Contributors
+ * Copyright (c) 2025 Steve (iamthegreatdestroyer)
  */
 ```
 
@@ -141,7 +141,7 @@ Copyright (c) 2025 NexusZero Protocol Contributors
 ```bash
 #!/bin/bash
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 NexusZero Protocol Contributors
+# Copyright (c) 2025 Steve (iamthegreatdestroyer)
 ```
 
 ---
@@ -150,7 +150,7 @@ Copyright (c) 2025 NexusZero Protocol Contributors
 
 ```powershell
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 NexusZero Protocol Contributors
+# Copyright (c) 2025 Steve (iamthegreatdestroyer)
 ```
 
 ---
@@ -159,7 +159,7 @@ Copyright (c) 2025 NexusZero Protocol Contributors
 
 ```yaml
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 NexusZero Protocol Contributors
+# Copyright (c) 2025 Steve (iamthegreatdestroyer)
 ```
 
 ---
@@ -168,7 +168,7 @@ Copyright (c) 2025 NexusZero Protocol Contributors
 
 ```toml
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 NexusZero Protocol Contributors
+# Copyright (c) 2025 Steve (iamthegreatdestroyer)
 ```
 
 ---
@@ -179,7 +179,7 @@ JSON doesn't support comments, so include copyright in a `"_copyright"` field:
 
 ```json
 {
-  "_copyright": "Copyright (c) 2025 NexusZero Protocol Contributors. SPDX-License-Identifier: MIT",
+  "_copyright": "Copyright (c) 2025 Steve (iamthegreatdestroyer). SPDX-License-Identifier: MIT",
   ...
 }
 ```
@@ -191,7 +191,7 @@ JSON doesn't support comments, so include copyright in a `"_copyright"` field:
 For short utility files or scripts:
 
 ```
-// Copyright (c) 2025 NexusZero Protocol Contributors
+// Copyright (c) 2025 Steve (iamthegreatdestroyer)
 // SPDX-License-Identifier: MIT
 ```
 
@@ -221,7 +221,7 @@ For files implementing patent-pending innovations:
 
 ```rust
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2025 NexusZero Protocol Contributors
+// Copyright (c) 2025 Steve (iamthegreatdestroyer)
 //
 // PATENT PENDING: This file implements technology described in
 // patent application(s): [Patent Application Number(s)]
@@ -237,7 +237,7 @@ When incorporating third-party code:
 
 ```rust
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2025 NexusZero Protocol Contributors
+// Copyright (c) 2025 Steve (iamthegreatdestroyer)
 //
 // Portions derived from [Original Project Name]
 // Copyright (c) [Year] [Original Author]
@@ -342,11 +342,11 @@ Benefits:
 
 **Answer**: Two approaches:
 
-1. **Range**: `Copyright (c) 2025-2026 NexusZero Protocol Contributors`
+1. **Range**: `Copyright (c) 2025-2026 Steve (iamthegreatdestroyer)`
    - Update annually or when file is modified
    - Clearly shows lifetime of modifications
 
-2. **Initial Year Only**: `Copyright (c) 2025 NexusZero Protocol Contributors`
+2. **Initial Year Only**: `Copyright (c) 2025 Steve (iamthegreatdestroyer)`
    - Simpler, doesn't require updates
    - Still valid copyright protection
 
