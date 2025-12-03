@@ -96,6 +96,8 @@ pub mod circuits;
 pub mod types;
 #[cfg(feature = "nova")]
 pub mod recursive;
+#[cfg(feature = "nova")]
+pub mod gpu;
 
 #[cfg(feature = "nova")]
 pub use r1cs::{R1CSConverter, R1CSConstraintSystem, R1CSInstance, R1CSWitness, R1CSVariable, LinearCombination, R1CSConstraint};
@@ -109,6 +111,8 @@ pub use circuits::{StepCircuit, TrivialCircuit, MinRootCircuit, HashChainCircuit
 pub use types::{NovaError, NovaResult, NovaSecurityLevel, CurveType, NovaMetrics, ProofSizeEstimate, CircuitParams};
 #[cfg(feature = "nova")]
 pub use recursive::{RecursiveProver, RecursiveConfig, RecursiveProof, IVCChain, RecursiveStep, RecursiveVerificationResult};
+#[cfg(feature = "nova")]
+pub use gpu::{NovaGPU, GPUConfig, GPUMetrics, GPUAccelerationManager, ScalarPoint, NTTDomain, MSMResult, NTTResult, CommitmentResult};
 
 /// Module version for compatibility checking
 pub const NOVA_MODULE_VERSION: &str = "0.1.0";
