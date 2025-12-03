@@ -54,7 +54,7 @@ pub type Scalar = [u8; 32];
 pub type Scalar2 = [u8; 32];
 
 /// Curve type selection for Nova proving
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum CurveType {
     /// Pallas curve (recommended for Nova)
     #[default]
@@ -139,6 +139,14 @@ pub enum NovaError {
     /// Accumulator error
     #[error("Accumulator error: {0}")]
     AccumulatorError(String),
+
+    /// Invalid input
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
+    /// Invalid state
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
 }
 
 /// Result type for Nova operations
@@ -178,7 +186,7 @@ impl ProofSizeEstimate {
 }
 
 /// Security level configuration for Nova
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NovaSecurityLevel {
     /// 128-bit security (recommended for most applications)
     Bit128,
@@ -214,15 +222,45 @@ impl NovaSecurityLevel {
     }
 }
 
+/// Circuit configuration parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CircuitParams {
+    /// Maximum number of constraints
+    pub max_constraints: usize,
+    /// Maximum number of variables
+    pub max_variables: usize,
+    /// Maximum number of public inputs
+    pub max_public_inputs: usize,
+    /// Security level
+    pub security_level: NovaSecurityLevel,
+}
+
+impl Default for CircuitParams {
+    fn default() -> Self {
+        Self {
+            max_constraints: 1_000_000,
+            max_variables: 1_000_000,
+            max_public_inputs: 100,
+            security_level: NovaSecurityLevel::Bit128,
+        }
+    }
+}
+
+use serde::{Serialize, Deserialize};
+
 /// Metrics for Nova proof generation and verification
 #[derive(Debug, Clone, Default)]
 pub struct NovaMetrics {
     /// Number of folding steps completed
     pub folding_steps: usize,
+    /// Number of steps folded
+    pub steps_folded: usize,
     /// Total constraints in the circuit
     pub total_constraints: usize,
     /// Time spent generating proof (microseconds)
     pub proof_generation_us: u64,
+    /// Proving time in milliseconds
+    pub proving_time_ms: u64,
     /// Time spent verifying proof (microseconds)
     pub verification_us: u64,
     /// Memory usage in bytes

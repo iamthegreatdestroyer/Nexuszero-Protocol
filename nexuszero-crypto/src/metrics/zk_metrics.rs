@@ -866,7 +866,7 @@ mod tests {
     #[test]
     fn test_proof_generation_guard_complete() {
         let metrics = ZkMetrics::global();
-        let guard = metrics.proof_generation_timer(ProofType::Schnorr, SecurityLevel::Bit128);
+        let mut guard = metrics.proof_generation_timer(ProofType::Schnorr, SecurityLevel::Bit128);
         guard.complete();
         // Should not panic
     }

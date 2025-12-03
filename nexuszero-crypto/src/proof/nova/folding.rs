@@ -202,18 +202,19 @@ impl FoldingEngine {
 
     /// Initialize folding with an R1CS shape and return initial accumulator
     pub fn initialize(&self, cs: &R1CSConstraintSystem) -> NovaResult<FoldedInstance> {
-        let initial_instance = R1CSInstance {
-            public_inputs: vec![vec![0u8; 32]; cs.num_public_inputs],
-            cs_hash: {
-                let mut hasher = Sha3_256::new();
-                hasher.update(&cs.num_constraints().to_le_bytes());
-                hasher.update(&cs.num_variables().to_le_bytes());
-                let hash = hasher.finalize();
-                let mut arr = [0u8; 32];
-                arr.copy_from_slice(&hash);
-                arr
-            },
+        let cs_hash = {
+            let mut hasher = Sha3_256::new();
+            hasher.update(&cs.num_constraints().to_le_bytes());
+            hasher.update(&cs.num_variables().to_le_bytes());
+            let hash = hasher.finalize();
+            let mut arr = [0u8; 32];
+            arr.copy_from_slice(&hash);
+            arr
         };
+        let initial_instance = R1CSInstance::new(
+            vec![vec![0u8; 32]; cs.num_public_inputs],
+            cs_hash,
+        );
         Ok(FoldedInstance::relaxed(&initial_instance))
     }
 
@@ -523,10 +524,10 @@ mod tests {
     use super::*;
 
     fn create_test_instance() -> R1CSInstance {
-        R1CSInstance {
-            public_inputs: vec![vec![1, 2, 3], vec![4, 5, 6]],
-            cs_hash: [0u8; 32],
-        }
+        R1CSInstance::new(
+            vec![vec![1, 2, 3], vec![4, 5, 6]],
+            [0u8; 32],
+        )
     }
 
     fn create_test_witness() -> R1CSWitness {
@@ -553,8 +554,7 @@ mod tests {
 
     #[test]
     fn test_folding_engine_creation() {
-        let config = FoldingConfig::default();
-        let engine = FoldingEngine::new(config);
+        let engine = FoldingEngine::new(1000, false);
         
         assert!(engine.accumulator().is_none());
         assert_eq!(engine.metrics().folding_steps, 0);
@@ -562,8 +562,7 @@ mod tests {
 
     #[test]
     fn test_folding_engine_init() {
-        let config = FoldingConfig::default();
-        let mut engine = FoldingEngine::new(config);
+        let mut engine = FoldingEngine::new(1000, false);
         
         let mut cs = R1CSConstraintSystem::new(NovaSecurityLevel::Bit128);
         let a = cs.alloc_public("a");
@@ -589,8 +588,7 @@ mod tests {
 
     #[test]
     fn test_challenge_generation() {
-        let config = FoldingConfig::default();
-        let engine = FoldingEngine::new(config);
+        let engine = FoldingEngine::new(1000, false);
         
         let instance = create_test_instance();
         let running_hash = [0u8; 32];
@@ -603,8 +601,7 @@ mod tests {
 
     #[test]
     fn test_commit() {
-        let config = FoldingConfig::default();
-        let engine = FoldingEngine::new(config);
+        let engine = FoldingEngine::new(1000, false);
         
         let data = vec![1u8, 2, 3, 4, 5];
         let commitment = engine.commit(&data);

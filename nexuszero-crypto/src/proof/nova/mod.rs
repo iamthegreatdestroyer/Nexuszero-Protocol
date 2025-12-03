@@ -94,6 +94,8 @@ pub mod prover;
 pub mod circuits;
 #[cfg(feature = "nova")]
 pub mod types;
+#[cfg(feature = "nova")]
+pub mod recursive;
 
 #[cfg(feature = "nova")]
 pub use r1cs::{R1CSConverter, R1CSConstraintSystem, R1CSInstance, R1CSWitness, R1CSVariable, LinearCombination, R1CSConstraint};
@@ -104,7 +106,9 @@ pub use prover::{NovaProver, NovaConfig, NovaProof, IVCProof, NovaPublicParams, 
 #[cfg(feature = "nova")]
 pub use circuits::{StepCircuit, TrivialCircuit, MinRootCircuit, HashChainCircuit, MerkleUpdateCircuit, CircuitMetadata};
 #[cfg(feature = "nova")]
-pub use types::{NovaError, NovaResult, NovaSecurityLevel, CurveType, NovaMetrics, ProofSizeEstimate};
+pub use types::{NovaError, NovaResult, NovaSecurityLevel, CurveType, NovaMetrics, ProofSizeEstimate, CircuitParams};
+#[cfg(feature = "nova")]
+pub use recursive::{RecursiveProver, RecursiveConfig, RecursiveProof, IVCChain, RecursiveStep, RecursiveVerificationResult};
 
 /// Module version for compatibility checking
 pub const NOVA_MODULE_VERSION: &str = "0.1.0";

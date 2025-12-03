@@ -334,7 +334,7 @@ mod nova_prover_tests {
     fn test_nova_config_fast_proving() {
         let config = NovaConfig::fast_proving();
         
-        assert!(matches!(config.security_level, NovaSecurityLevel::Bit80));
+        assert!(matches!(config.security_level, NovaSecurityLevel::Bit128));
         assert_eq!(config.max_steps, 100_000);
     }
 
@@ -537,8 +537,10 @@ mod types_tests {
     fn test_nova_metrics_display() {
         let metrics = NovaMetrics {
             folding_steps: 10,
+            steps_folded: 10,
             total_constraints: 1000,
             proof_generation_us: 5000,
+            proving_time_ms: 5,
             verification_us: 100,
             memory_bytes: 1024 * 1024,
             instances_folded: 10,
