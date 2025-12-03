@@ -152,6 +152,14 @@ pub enum NovaError {
     /// Hardware/GPU acceleration error
     #[error("Hardware error: {0}")]
     HardwareError(String),
+
+    /// Internal error
+    #[error("Internal error: {0}")]
+    Internal(String),
+
+    /// Resource exhausted
+    #[error("Resource exhausted: {0}")]
+    ResourceExhausted(String),
 }
 
 /// Result type for Nova operations
