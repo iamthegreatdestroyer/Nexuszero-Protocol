@@ -1,12 +1,22 @@
-// Copyright (c) 2025 NexusZero Protocol
+// Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // This file is part of NexusZero Protocol - Advanced Zero-Knowledge Infrastructure
 // Licensed under the GNU Affero General Public License v3.0 or later.
 // Commercial licensing available at https://nexuszero.io/licensing
 //
-// NexusZero Protocol™, Privacy Morphing™, and Holographic Proof Compression™
-// are trademarks of NexusZero Protocol. All Rights Reserved.
+// PROPRIETARY NOTICE: This software contains trade secrets and proprietary
+// algorithms protected under applicable intellectual property laws.
+//
+// PATENT NOTICE: This software implements technology covered by pending patent
+// application: "Hardware-Accelerated Cryptographic Proof Generation Using
+// Parallel Processing Units" - See legal/patents/PROVISIONAL_PATENT_CLAIMS.md
+//
+// TRADEMARK NOTICE: NexusZero Protocol™, Privacy Morphing™, Holographic Proof
+// Compression™, Nova Folding Engine™, and related marks are trademarks of
+// NexusZero Protocol. All Rights Reserved.
+//
+// See legal/IP_INNOVATIONS_REGISTRY.md for full intellectual property terms.
 
 //! SIMD-Optimized Field Operations for Nova Proving System
 //!
