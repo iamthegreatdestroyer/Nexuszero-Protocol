@@ -49,6 +49,18 @@ pub struct FoldedInstance {
     pub last_challenge: Vec<u8>,
 }
 
+impl Default for FoldedInstance {
+    fn default() -> Self {
+        Self {
+            accumulated_x: vec![],
+            error_commitment: vec![0u8; 32],
+            num_steps: 0,
+            running_hash: [0u8; 32],
+            last_challenge: vec![],
+        }
+    }
+}
+
 impl FoldedInstance {
     /// Create initial folded instance from first R1CS instance
     pub fn initial(instance: &R1CSInstance) -> Self {
