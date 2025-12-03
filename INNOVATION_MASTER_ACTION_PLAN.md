@@ -37,42 +37,42 @@ This plan leverages the **Elite Agent Collective v1.0** - a system of 20 special
 
 ### Team-to-Agent Mapping
 
-| Legacy Team Name    | Elite Agent Assignment(s)                         | Primary Expertise                        |
-| ------------------- | ------------------------------------------------- | ---------------------------------------- |
-| **Core Team**       | `@APEX` `@VELOCITY` `@AXIOM`                      | Algorithms, Performance, ZK Math         |
-| **ML Team**         | `@TENSOR` `@NEURAL` `@PRISM`                      | zkML, Deep Learning, Statistics          |
-| **DeFi Team**       | `@CRYPTO` `@ARCHITECT`                            | Blockchain, DeFi Protocols, Smart Contracts |
-| **Crypto Team**     | `@CIPHER` `@QUANTUM`                              | Cryptography, Post-Quantum, ZK Proofs    |
-| **GPU Team**        | `@CORE` `@VELOCITY`                               | Low-Level Systems, CUDA, Performance     |
-| **Identity Team**   | `@CIPHER` `@SYNAPSE`                              | Credentials, BBS+ Signatures, Protocols  |
-| **Bridge Team**     | `@CRYPTO` `@SYNAPSE` `@ARCHITECT`                 | Cross-Chain, State Encoding, APIs        |
-| **Protocol Team**   | `@ARCHITECT` `@AXIOM`                             | Architecture, Formal Methods             |
-| **Frontend Team**   | `@APEX` `@SYNAPSE`                                | Full-Stack, UI Components                |
-| **DevOps Team**     | `@FLUX`                                           | Infrastructure, CI/CD, Kubernetes        |
-| **QA Team**         | `@ECLIPSE`                                        | Testing, Verification, Fuzzing           |
-| **Security Team**   | `@FORTRESS` `@CIPHER`                             | Penetration Testing, Audits              |
-| **SDK Team**        | `@APEX` `@SYNAPSE`                                | Library Design, API Ergonomics           |
-| **Compliance Team** | `@CIPHER` `@VANGUARD`                             | zkAML, Regulatory Research               |
-| **Docs Team**       | `@VANGUARD`                                       | Documentation, Literature Synthesis      |
-| **Research**        | `@VANGUARD` `@GENESIS` `@NEXUS`                   | Novel Algorithms, Cross-Domain           |
-| **Orchestration**   | `@OMNISCIENT`                                     | Multi-Agent Coordination                 |
+| Legacy Team Name    | Elite Agent Assignment(s)         | Primary Expertise                           |
+| ------------------- | --------------------------------- | ------------------------------------------- |
+| **Core Team**       | `@APEX` `@VELOCITY` `@AXIOM`      | Algorithms, Performance, ZK Math            |
+| **ML Team**         | `@TENSOR` `@NEURAL` `@PRISM`      | zkML, Deep Learning, Statistics             |
+| **DeFi Team**       | `@CRYPTO` `@ARCHITECT`            | Blockchain, DeFi Protocols, Smart Contracts |
+| **Crypto Team**     | `@CIPHER` `@QUANTUM`              | Cryptography, Post-Quantum, ZK Proofs       |
+| **GPU Team**        | `@CORE` `@VELOCITY`               | Low-Level Systems, CUDA, Performance        |
+| **Identity Team**   | `@CIPHER` `@SYNAPSE`              | Credentials, BBS+ Signatures, Protocols     |
+| **Bridge Team**     | `@CRYPTO` `@SYNAPSE` `@ARCHITECT` | Cross-Chain, State Encoding, APIs           |
+| **Protocol Team**   | `@ARCHITECT` `@AXIOM`             | Architecture, Formal Methods                |
+| **Frontend Team**   | `@APEX` `@SYNAPSE`                | Full-Stack, UI Components                   |
+| **DevOps Team**     | `@FLUX`                           | Infrastructure, CI/CD, Kubernetes           |
+| **QA Team**         | `@ECLIPSE`                        | Testing, Verification, Fuzzing              |
+| **Security Team**   | `@FORTRESS` `@CIPHER`             | Penetration Testing, Audits                 |
+| **SDK Team**        | `@APEX` `@SYNAPSE`                | Library Design, API Ergonomics              |
+| **Compliance Team** | `@CIPHER` `@VANGUARD`             | zkAML, Regulatory Research                  |
+| **Docs Team**       | `@VANGUARD`                       | Documentation, Literature Synthesis         |
+| **Research**        | `@VANGUARD` `@GENESIS` `@NEXUS`   | Novel Algorithms, Cross-Domain              |
+| **Orchestration**   | `@OMNISCIENT`                     | Multi-Agent Coordination                    |
 
 ### Agent Collaboration Patterns
 
 For complex multi-agent tasks, use these proven collaboration chains:
 
-| Task Type                | Agent Chain                                       |
-| ------------------------ | ------------------------------------------------- |
-| **ZK Circuit Design**    | `@AXIOM` → `@APEX` → `@VELOCITY` → `@ECLIPSE`     |
-| **zkML Implementation**  | `@TENSOR` → `@AXIOM` → `@APEX` → `@VELOCITY`      |
-| **DeFi Protocol**        | `@CRYPTO` → `@CIPHER` → `@ARCHITECT` → `@ECLIPSE` |
-| **Cross-Chain Bridge**   | `@ARCHITECT` → `@CRYPTO` → `@SYNAPSE` → `@FORTRESS` |
-| **Security Audit**       | `@FORTRESS` → `@CIPHER` → `@ECLIPSE`              |
-| **SDK Development**      | `@ARCHITECT` → `@APEX` → `@SYNAPSE` → `@VANGUARD` |
-| **Performance Tuning**   | `@VELOCITY` → `@CORE` → `@APEX`                   |
-| **Novel Research**       | `@GENESIS` → `@NEXUS` → `@AXIOM` → `@APEX`        |
-| **Full Stack Feature**   | `@ARCHITECT` → `@APEX` → `@ECLIPSE` → `@FLUX`     |
-| **Compliance Design**    | `@VANGUARD` → `@CIPHER` → `@CRYPTO`               |
+| Task Type               | Agent Chain                                         |
+| ----------------------- | --------------------------------------------------- |
+| **ZK Circuit Design**   | `@AXIOM` → `@APEX` → `@VELOCITY` → `@ECLIPSE`       |
+| **zkML Implementation** | `@TENSOR` → `@AXIOM` → `@APEX` → `@VELOCITY`        |
+| **DeFi Protocol**       | `@CRYPTO` → `@CIPHER` → `@ARCHITECT` → `@ECLIPSE`   |
+| **Cross-Chain Bridge**  | `@ARCHITECT` → `@CRYPTO` → `@SYNAPSE` → `@FORTRESS` |
+| **Security Audit**      | `@FORTRESS` → `@CIPHER` → `@ECLIPSE`                |
+| **SDK Development**     | `@ARCHITECT` → `@APEX` → `@SYNAPSE` → `@VANGUARD`   |
+| **Performance Tuning**  | `@VELOCITY` → `@CORE` → `@APEX`                     |
+| **Novel Research**      | `@GENESIS` → `@NEXUS` → `@AXIOM` → `@APEX`          |
+| **Full Stack Feature**  | `@ARCHITECT` → `@APEX` → `@ECLIPSE` → `@FLUX`       |
+| **Compliance Design**   | `@VANGUARD` → `@CIPHER` → `@CRYPTO`                 |
 
 ---
 
@@ -105,14 +105,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                                    | Agent(s)                          | Effort  | Dependencies | Status      |
-| ----- | --------------------------------------- | --------------------------------- | ------- | ------------ | ----------- |
-| 1.1.1 | SIMD operations production hardening    | `@APEX` `@VELOCITY`               | 2 weeks | -            | NOT STARTED |
-| 1.1.2 | Parallel operations thread safety audit | `@APEX` `@ECLIPSE`                | 1 week  | 1.1.1        | NOT STARTED |
-| 1.1.3 | Memory pool stress testing (1M+ proofs) | `@VELOCITY` `@ECLIPSE`            | 1 week  | 1.1.1        | NOT STARTED |
-| 1.1.4 | GPU kernel integration (CUDA priority)  | `@CORE` `@VELOCITY`               | 3 weeks | 1.1.1        | NOT STARTED |
-| 1.1.5 | Proof cache Redis/Memcached backend     | `@APEX` `@FLUX`                   | 2 weeks | -            | NOT STARTED |
-| 1.1.6 | Performance regression test suite       | `@ECLIPSE` `@VELOCITY`            | 2 weeks | 1.1.1-1.1.5  | NOT STARTED |
+| ID    | Task                                    | Agent(s)               | Effort  | Dependencies | Status      |
+| ----- | --------------------------------------- | ---------------------- | ------- | ------------ | ----------- |
+| 1.1.1 | SIMD operations production hardening    | `@APEX` `@VELOCITY`    | 2 weeks | -            | NOT STARTED |
+| 1.1.2 | Parallel operations thread safety audit | `@APEX` `@ECLIPSE`     | 1 week  | 1.1.1        | NOT STARTED |
+| 1.1.3 | Memory pool stress testing (1M+ proofs) | `@VELOCITY` `@ECLIPSE` | 1 week  | 1.1.1        | NOT STARTED |
+| 1.1.4 | GPU kernel integration (CUDA priority)  | `@CORE` `@VELOCITY`    | 3 weeks | 1.1.1        | NOT STARTED |
+| 1.1.5 | Proof cache Redis/Memcached backend     | `@APEX` `@FLUX`        | 2 weeks | -            | NOT STARTED |
+| 1.1.6 | Performance regression test suite       | `@ECLIPSE` `@VELOCITY` | 2 weeks | 1.1.1-1.1.5  | NOT STARTED |
 
 #### Deliverables
 
@@ -137,14 +137,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                                | Agent(s)                          | Effort  | Dependencies | Status      |
-| ----- | ----------------------------------- | --------------------------------- | ------- | ------------ | ----------- |
-| 1.2.1 | zkML architecture design document   | `@TENSOR` `@ARCHITECT`            | 1 week  | Phase 1.1    | NOT STARTED |
-| 1.2.2 | Linear layer circuit implementation | `@TENSOR` `@AXIOM`                | 2 weeks | 1.2.1        | NOT STARTED |
-| 1.2.3 | ReLU approximation circuit          | `@TENSOR` `@AXIOM`                | 1 week  | 1.2.1        | NOT STARTED |
-| 1.2.4 | Softmax circuit (log-sum-exp)       | `@TENSOR` `@AXIOM` `@PRISM`       | 2 weeks | 1.2.3        | NOT STARTED |
-| 1.2.5 | Layer folding integration (Nova)    | `@APEX` `@AXIOM`                  | 2 weeks | 1.2.2-1.2.4  | NOT STARTED |
-| 1.2.6 | Simple MLP proof generation         | `@TENSOR` `@APEX`                 | 1 week  | 1.2.5        | NOT STARTED |
+| ID    | Task                                | Agent(s)                    | Effort  | Dependencies | Status      |
+| ----- | ----------------------------------- | --------------------------- | ------- | ------------ | ----------- |
+| 1.2.1 | zkML architecture design document   | `@TENSOR` `@ARCHITECT`      | 1 week  | Phase 1.1    | NOT STARTED |
+| 1.2.2 | Linear layer circuit implementation | `@TENSOR` `@AXIOM`          | 2 weeks | 1.2.1        | NOT STARTED |
+| 1.2.3 | ReLU approximation circuit          | `@TENSOR` `@AXIOM`          | 1 week  | 1.2.1        | NOT STARTED |
+| 1.2.4 | Softmax circuit (log-sum-exp)       | `@TENSOR` `@AXIOM` `@PRISM` | 2 weeks | 1.2.3        | NOT STARTED |
+| 1.2.5 | Layer folding integration (Nova)    | `@APEX` `@AXIOM`            | 2 weeks | 1.2.2-1.2.4  | NOT STARTED |
+| 1.2.6 | Simple MLP proof generation         | `@TENSOR` `@APEX`           | 1 week  | 1.2.5        | NOT STARTED |
 
 #### Deliverables
 
@@ -169,14 +169,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                                 | Agent(s)                          | Effort  | Dependencies | Status      |
-| ----- | ------------------------------------ | --------------------------------- | ------- | ------------ | ----------- |
-| 1.3.1 | Private transaction pool design      | `@CRYPTO` `@ARCHITECT`            | 1 week  | Phase 1.1    | NOT STARTED |
-| 1.3.2 | Encrypted mempool implementation     | `@CRYPTO` `@CIPHER`               | 2 weeks | 1.3.1        | NOT STARTED |
-| 1.3.3 | Threshold decryption for sequencer   | `@CIPHER` `@QUANTUM`              | 2 weeks | 1.3.2        | NOT STARTED |
-| 1.3.4 | Compliance proof circuit design      | `@CIPHER` `@VANGUARD`             | 2 weeks | 1.3.1        | NOT STARTED |
-| 1.3.5 | zkAML attestation framework          | `@CIPHER` `@VANGUARD` `@CRYPTO`   | 2 weeks | 1.3.4        | NOT STARTED |
-| 1.3.6 | Selective disclosure proof generator | `@CIPHER` `@AXIOM`                | 2 weeks | 1.3.4        | NOT STARTED |
+| ID    | Task                                 | Agent(s)                        | Effort  | Dependencies | Status      |
+| ----- | ------------------------------------ | ------------------------------- | ------- | ------------ | ----------- |
+| 1.3.1 | Private transaction pool design      | `@CRYPTO` `@ARCHITECT`          | 1 week  | Phase 1.1    | NOT STARTED |
+| 1.3.2 | Encrypted mempool implementation     | `@CRYPTO` `@CIPHER`             | 2 weeks | 1.3.1        | NOT STARTED |
+| 1.3.3 | Threshold decryption for sequencer   | `@CIPHER` `@QUANTUM`            | 2 weeks | 1.3.2        | NOT STARTED |
+| 1.3.4 | Compliance proof circuit design      | `@CIPHER` `@VANGUARD`           | 2 weeks | 1.3.1        | NOT STARTED |
+| 1.3.5 | zkAML attestation framework          | `@CIPHER` `@VANGUARD` `@CRYPTO` | 2 weeks | 1.3.4        | NOT STARTED |
+| 1.3.6 | Selective disclosure proof generator | `@CIPHER` `@AXIOM`              | 2 weeks | 1.3.4        | NOT STARTED |
 
 #### Deliverables
 
@@ -203,15 +203,15 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                              | Agent(s)                          | Effort  | Dependencies | Status      |
-| ----- | --------------------------------- | --------------------------------- | ------- | ------------ | ----------- |
-| 2.1.1 | Conv2D circuit implementation     | `@TENSOR` `@AXIOM`                | 3 weeks | Phase 1.2    | NOT STARTED |
-| 2.1.2 | Attention mechanism circuit       | `@TENSOR` `@NEURAL` `@AXIOM`      | 3 weeks | Phase 1.2    | NOT STARTED |
-| 2.1.3 | BatchNorm/LayerNorm circuits      | `@TENSOR` `@PRISM`                | 2 weeks | 2.1.1-2.1.2  | NOT STARTED |
-| 2.1.4 | Quantization-aware proving        | `@APEX` `@VELOCITY`               | 2 weeks | 2.1.1-2.1.3  | NOT STARTED |
-| 2.1.5 | GPU kernel optimization for zkML  | `@CORE` `@VELOCITY`               | 3 weeks | 2.1.1-2.1.4  | NOT STARTED |
-| 2.1.6 | Model marketplace smart contracts | `@CRYPTO` `@ARCHITECT`            | 2 weeks | -            | NOT STARTED |
-| 2.1.7 | zkML SDK (Python/JS)              | `@SYNAPSE` `@APEX`                | 3 weeks | 2.1.1-2.1.5  | NOT STARTED |
+| ID    | Task                              | Agent(s)                     | Effort  | Dependencies | Status      |
+| ----- | --------------------------------- | ---------------------------- | ------- | ------------ | ----------- |
+| 2.1.1 | Conv2D circuit implementation     | `@TENSOR` `@AXIOM`           | 3 weeks | Phase 1.2    | NOT STARTED |
+| 2.1.2 | Attention mechanism circuit       | `@TENSOR` `@NEURAL` `@AXIOM` | 3 weeks | Phase 1.2    | NOT STARTED |
+| 2.1.3 | BatchNorm/LayerNorm circuits      | `@TENSOR` `@PRISM`           | 2 weeks | 2.1.1-2.1.2  | NOT STARTED |
+| 2.1.4 | Quantization-aware proving        | `@APEX` `@VELOCITY`          | 2 weeks | 2.1.1-2.1.3  | NOT STARTED |
+| 2.1.5 | GPU kernel optimization for zkML  | `@CORE` `@VELOCITY`          | 3 weeks | 2.1.1-2.1.4  | NOT STARTED |
+| 2.1.6 | Model marketplace smart contracts | `@CRYPTO` `@ARCHITECT`       | 2 weeks | -            | NOT STARTED |
+| 2.1.7 | zkML SDK (Python/JS)              | `@SYNAPSE` `@APEX`           | 3 weeks | 2.1.1-2.1.5  | NOT STARTED |
 
 #### Deliverables
 
@@ -237,15 +237,15 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                                  | Agent(s)                          | Effort  | Dependencies | Status      |
-| ----- | ------------------------------------- | --------------------------------- | ------- | ------------ | ----------- |
-| 2.2.1 | Private AMM core contracts            | `@CRYPTO` `@ARCHITECT`            | 4 weeks | Phase 1.3    | NOT STARTED |
-| 2.2.2 | Dark pool order matching engine       | `@CRYPTO` `@APEX`                 | 3 weeks | 2.2.1        | NOT STARTED |
-| 2.2.3 | Privacy-preserving liquidation        | `@CRYPTO` `@CIPHER`               | 2 weeks | 2.2.1        | NOT STARTED |
-| 2.2.4 | Compliance dashboard (regulator view) | `@APEX` `@SYNAPSE`                | 3 weeks | Phase 1.3    | NOT STARTED |
-| 2.2.5 | User privacy dashboard                | `@APEX` `@SYNAPSE`                | 2 weeks | 2.2.1        | NOT STARTED |
-| 2.2.6 | Security audit (external)             | `@FORTRESS` `@CIPHER` `@ECLIPSE`  | 4 weeks | 2.2.1-2.2.3  | NOT STARTED |
-| 2.2.7 | Testnet deployment                    | `@FLUX`                           | 1 week  | 2.2.6        | NOT STARTED |
+| ID    | Task                                  | Agent(s)                         | Effort  | Dependencies | Status      |
+| ----- | ------------------------------------- | -------------------------------- | ------- | ------------ | ----------- |
+| 2.2.1 | Private AMM core contracts            | `@CRYPTO` `@ARCHITECT`           | 4 weeks | Phase 1.3    | NOT STARTED |
+| 2.2.2 | Dark pool order matching engine       | `@CRYPTO` `@APEX`                | 3 weeks | 2.2.1        | NOT STARTED |
+| 2.2.3 | Privacy-preserving liquidation        | `@CRYPTO` `@CIPHER`              | 2 weeks | 2.2.1        | NOT STARTED |
+| 2.2.4 | Compliance dashboard (regulator view) | `@APEX` `@SYNAPSE`               | 3 weeks | Phase 1.3    | NOT STARTED |
+| 2.2.5 | User privacy dashboard                | `@APEX` `@SYNAPSE`               | 2 weeks | 2.2.1        | NOT STARTED |
+| 2.2.6 | Security audit (external)             | `@FORTRESS` `@CIPHER` `@ECLIPSE` | 4 weeks | 2.2.1-2.2.3  | NOT STARTED |
+| 2.2.7 | Testnet deployment                    | `@FLUX`                          | 1 week  | 2.2.6        | NOT STARTED |
 
 #### Deliverables
 
@@ -271,15 +271,15 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                             | Agent(s)                          | Effort  | Dependencies | Status      |
-| ----- | -------------------------------- | --------------------------------- | ------- | ------------ | ----------- |
-| 2.3.1 | Credential schema design         | `@CIPHER` `@SYNAPSE`              | 2 weeks | -            | NOT STARTED |
-| 2.3.2 | BBS+ signature implementation    | `@CIPHER` `@AXIOM`                | 3 weeks | 2.3.1        | NOT STARTED |
-| 2.3.3 | Selective disclosure proofs      | `@CIPHER` `@AXIOM`                | 3 weeks | 2.3.2        | NOT STARTED |
-| 2.3.4 | Unlinkable presentation protocol | `@CIPHER` `@QUANTUM`              | 2 weeks | 2.3.3        | NOT STARTED |
-| 2.3.5 | Reputation accumulation circuit  | `@APEX` `@AXIOM`                  | 3 weeks | 2.3.4        | NOT STARTED |
-| 2.3.6 | Mobile SDK (iOS/Android)         | `@SYNAPSE` `@APEX`                | 4 weeks | 2.3.1-2.3.5  | NOT STARTED |
-| 2.3.7 | Issuer portal web app            | `@APEX` `@SYNAPSE`                | 3 weeks | 2.3.1-2.3.5  | NOT STARTED |
+| ID    | Task                             | Agent(s)             | Effort  | Dependencies | Status      |
+| ----- | -------------------------------- | -------------------- | ------- | ------------ | ----------- |
+| 2.3.1 | Credential schema design         | `@CIPHER` `@SYNAPSE` | 2 weeks | -            | NOT STARTED |
+| 2.3.2 | BBS+ signature implementation    | `@CIPHER` `@AXIOM`   | 3 weeks | 2.3.1        | NOT STARTED |
+| 2.3.3 | Selective disclosure proofs      | `@CIPHER` `@AXIOM`   | 3 weeks | 2.3.2        | NOT STARTED |
+| 2.3.4 | Unlinkable presentation protocol | `@CIPHER` `@QUANTUM` | 2 weeks | 2.3.3        | NOT STARTED |
+| 2.3.5 | Reputation accumulation circuit  | `@APEX` `@AXIOM`     | 3 weeks | 2.3.4        | NOT STARTED |
+| 2.3.6 | Mobile SDK (iOS/Android)         | `@SYNAPSE` `@APEX`   | 4 weeks | 2.3.1-2.3.5  | NOT STARTED |
+| 2.3.7 | Issuer portal web app            | `@APEX` `@SYNAPSE`   | 3 weeks | 2.3.1-2.3.5  | NOT STARTED |
 
 #### Deliverables
 
@@ -307,15 +307,15 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                            | Agent(s)                            | Effort  | Dependencies | Status      |
-| ----- | ------------------------------- | ----------------------------------- | ------- | ------------ | ----------- |
-| 3.1.1 | State encoding circuit (EVM)    | `@CRYPTO` `@SYNAPSE`                | 3 weeks | Phase 2      | NOT STARTED |
-| 3.1.2 | State encoding circuit (Solana) | `@CRYPTO` `@SYNAPSE`                | 3 weeks | 3.1.1        | NOT STARTED |
-| 3.1.3 | State encoding circuit (Cosmos) | `@CRYPTO` `@SYNAPSE`                | 2 weeks | 3.1.1        | NOT STARTED |
-| 3.1.4 | Proof relay network design      | `@ARCHITECT` `@NEXUS`               | 2 weeks | 3.1.1-3.1.3  | NOT STARTED |
-| 3.1.5 | Light client proof verification | `@ARCHITECT` `@AXIOM`               | 3 weeks | 3.1.4        | NOT STARTED |
-| 3.1.6 | Cross-chain message passing     | `@CRYPTO` `@SYNAPSE` `@ARCHITECT`   | 3 weeks | 3.1.5        | NOT STARTED |
-| 3.1.7 | Bridge security audit           | `@FORTRESS` `@CIPHER` `@ECLIPSE`    | 4 weeks | 3.1.6        | NOT STARTED |
+| ID    | Task                            | Agent(s)                          | Effort  | Dependencies | Status      |
+| ----- | ------------------------------- | --------------------------------- | ------- | ------------ | ----------- |
+| 3.1.1 | State encoding circuit (EVM)    | `@CRYPTO` `@SYNAPSE`              | 3 weeks | Phase 2      | NOT STARTED |
+| 3.1.2 | State encoding circuit (Solana) | `@CRYPTO` `@SYNAPSE`              | 3 weeks | 3.1.1        | NOT STARTED |
+| 3.1.3 | State encoding circuit (Cosmos) | `@CRYPTO` `@SYNAPSE`              | 2 weeks | 3.1.1        | NOT STARTED |
+| 3.1.4 | Proof relay network design      | `@ARCHITECT` `@NEXUS`             | 2 weeks | 3.1.1-3.1.3  | NOT STARTED |
+| 3.1.5 | Light client proof verification | `@ARCHITECT` `@AXIOM`             | 3 weeks | 3.1.4        | NOT STARTED |
+| 3.1.6 | Cross-chain message passing     | `@CRYPTO` `@SYNAPSE` `@ARCHITECT` | 3 weeks | 3.1.5        | NOT STARTED |
+| 3.1.7 | Bridge security audit           | `@FORTRESS` `@CIPHER` `@ECLIPSE`  | 4 weeks | 3.1.6        | NOT STARTED |
 
 #### Deliverables
 
@@ -341,14 +341,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                          | Agent(s)                            | Effort  | Dependencies   | Status      |
-| ----- | ----------------------------- | ----------------------------------- | ------- | -------------- | ----------- |
-| 3.2.1 | zkML risk scoring integration | `@TENSOR` `@PRISM` `@CRYPTO`        | 3 weeks | Phase 2.1, 2.2 | NOT STARTED |
-| 3.2.2 | zkCredentials DeFi compliance | `@CIPHER` `@CRYPTO`                 | 3 weeks | Phase 2.2, 2.3 | NOT STARTED |
-| 3.2.3 | Unified SDK architecture      | `@SYNAPSE` `@ARCHITECT`             | 2 weeks | 3.2.1-3.2.2    | NOT STARTED |
-| 3.2.4 | SDK documentation             | `@VANGUARD` `@SYNAPSE`              | 2 weeks | 3.2.3          | NOT STARTED |
-| 3.2.5 | Example applications          | `@APEX` `@SYNAPSE`                  | 3 weeks | 3.2.3-3.2.4    | NOT STARTED |
-| 3.2.6 | Developer portal launch       | `@APEX` `@SYNAPSE` `@FLUX`          | 2 weeks | 3.2.4-3.2.5    | NOT STARTED |
+| ID    | Task                          | Agent(s)                     | Effort  | Dependencies   | Status      |
+| ----- | ----------------------------- | ---------------------------- | ------- | -------------- | ----------- |
+| 3.2.1 | zkML risk scoring integration | `@TENSOR` `@PRISM` `@CRYPTO` | 3 weeks | Phase 2.1, 2.2 | NOT STARTED |
+| 3.2.2 | zkCredentials DeFi compliance | `@CIPHER` `@CRYPTO`          | 3 weeks | Phase 2.2, 2.3 | NOT STARTED |
+| 3.2.3 | Unified SDK architecture      | `@SYNAPSE` `@ARCHITECT`      | 2 weeks | 3.2.1-3.2.2    | NOT STARTED |
+| 3.2.4 | SDK documentation             | `@VANGUARD` `@SYNAPSE`       | 2 weeks | 3.2.3          | NOT STARTED |
+| 3.2.5 | Example applications          | `@APEX` `@SYNAPSE`           | 3 weeks | 3.2.3-3.2.4    | NOT STARTED |
+| 3.2.6 | Developer portal launch       | `@APEX` `@SYNAPSE` `@FLUX`   | 2 weeks | 3.2.4-3.2.5    | NOT STARTED |
 
 #### Deliverables
 
@@ -376,14 +376,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                                 | Agent(s)                            | Effort  | Dependencies | Status      |
-| ----- | ------------------------------------ | ----------------------------------- | ------- | ------------ | ----------- |
-| 4.1.1 | Final security audit (all contracts) | `@FORTRESS` `@CIPHER` `@ECLIPSE`    | 6 weeks | Phase 3      | NOT STARTED |
-| 4.1.2 | Bug bounty program launch            | `@FORTRESS` `@FLUX`                 | 2 weeks | 4.1.1        | NOT STARTED |
-| 4.1.3 | Mainnet deployment (Ethereum)        | `@FLUX` `@CRYPTO`                   | 1 week  | 4.1.1        | NOT STARTED |
-| 4.1.4 | Mainnet deployment (Polygon)         | `@FLUX` `@CRYPTO`                   | 1 week  | 4.1.3        | NOT STARTED |
-| 4.1.5 | Mainnet deployment (Solana)          | `@FLUX` `@CRYPTO`                   | 1 week  | 4.1.4        | NOT STARTED |
-| 4.1.6 | Monitoring/alerting infrastructure   | `@FLUX` `@PRISM`                    | 2 weeks | 4.1.3-4.1.5  | NOT STARTED |
+| ID    | Task                                 | Agent(s)                         | Effort  | Dependencies | Status      |
+| ----- | ------------------------------------ | -------------------------------- | ------- | ------------ | ----------- |
+| 4.1.1 | Final security audit (all contracts) | `@FORTRESS` `@CIPHER` `@ECLIPSE` | 6 weeks | Phase 3      | NOT STARTED |
+| 4.1.2 | Bug bounty program launch            | `@FORTRESS` `@FLUX`              | 2 weeks | 4.1.1        | NOT STARTED |
+| 4.1.3 | Mainnet deployment (Ethereum)        | `@FLUX` `@CRYPTO`                | 1 week  | 4.1.1        | NOT STARTED |
+| 4.1.4 | Mainnet deployment (Polygon)         | `@FLUX` `@CRYPTO`                | 1 week  | 4.1.3        | NOT STARTED |
+| 4.1.5 | Mainnet deployment (Solana)          | `@FLUX` `@CRYPTO`                | 1 week  | 4.1.4        | NOT STARTED |
+| 4.1.6 | Monitoring/alerting infrastructure   | `@FLUX` `@PRISM`                 | 2 weeks | 4.1.3-4.1.5  | NOT STARTED |
 
 #### Deliverables
 
@@ -409,14 +409,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                          | Agent(s)                            | Effort  | Dependencies | Status      |
-| ----- | ----------------------------- | ----------------------------------- | ------- | ------------ | ----------- |
-| 4.2.1 | Compute marketplace contracts | `@CRYPTO` `@ARCHITECT`              | 2 weeks | Phase 3      | NOT STARTED |
-| 4.2.2 | Provider onboarding system    | `@APEX` `@SYNAPSE`                  | 2 weeks | 4.2.1        | NOT STARTED |
-| 4.2.3 | Proof aggregation service     | `@APEX` `@VELOCITY`                 | 2 weeks | 4.2.1        | NOT STARTED |
-| 4.2.4 | Compute provider SDK          | `@SYNAPSE` `@APEX`                  | 2 weeks | 4.2.1-4.2.3  | NOT STARTED |
-| 4.2.5 | Client SDK for job submission | `@SYNAPSE` `@APEX`                  | 2 weeks | 4.2.1-4.2.3  | NOT STARTED |
-| 4.2.6 | Provider incentive program    | `@CRYPTO` `@PRISM`                  | 1 week  | 4.2.2        | NOT STARTED |
+| ID    | Task                          | Agent(s)               | Effort  | Dependencies | Status      |
+| ----- | ----------------------------- | ---------------------- | ------- | ------------ | ----------- |
+| 4.2.1 | Compute marketplace contracts | `@CRYPTO` `@ARCHITECT` | 2 weeks | Phase 3      | NOT STARTED |
+| 4.2.2 | Provider onboarding system    | `@APEX` `@SYNAPSE`     | 2 weeks | 4.2.1        | NOT STARTED |
+| 4.2.3 | Proof aggregation service     | `@APEX` `@VELOCITY`    | 2 weeks | 4.2.1        | NOT STARTED |
+| 4.2.4 | Compute provider SDK          | `@SYNAPSE` `@APEX`     | 2 weeks | 4.2.1-4.2.3  | NOT STARTED |
+| 4.2.5 | Client SDK for job submission | `@SYNAPSE` `@APEX`     | 2 weeks | 4.2.1-4.2.3  | NOT STARTED |
+| 4.2.6 | Provider incentive program    | `@CRYPTO` `@PRISM`     | 1 week  | 4.2.2        | NOT STARTED |
 
 #### Deliverables
 
@@ -442,14 +442,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 #### Tasks
 
-| ID    | Task                                 | Agent(s)                            | Effort  | Dependencies | Status      |
-| ----- | ------------------------------------ | ----------------------------------- | ------- | ------------ | ----------- |
-| 4.3.1 | Proving throughput optimization      | `@VELOCITY` `@APEX` `@CORE`         | 3 weeks | Phase 4.1    | NOT STARTED |
-| 4.3.2 | Verification optimization (batching) | `@VELOCITY` `@AXIOM`                | 2 weeks | 4.3.1        | NOT STARTED |
-| 4.3.3 | Enterprise SDK tier                  | `@SYNAPSE` `@APEX` `@ARCHITECT`     | 2 weeks | 4.3.1-4.3.2  | NOT STARTED |
-| 4.3.4 | SLA monitoring infrastructure        | `@FLUX` `@PRISM`                    | 2 weeks | 4.3.3        | NOT STARTED |
-| 4.3.5 | Enterprise documentation             | `@VANGUARD` `@SYNAPSE`              | 1 week  | 4.3.3        | NOT STARTED |
-| 4.3.6 | Year-end performance report          | `@PRISM` `@VANGUARD` `@OMNISCIENT`  | 1 week  | All          | NOT STARTED |
+| ID    | Task                                 | Agent(s)                           | Effort  | Dependencies | Status      |
+| ----- | ------------------------------------ | ---------------------------------- | ------- | ------------ | ----------- |
+| 4.3.1 | Proving throughput optimization      | `@VELOCITY` `@APEX` `@CORE`        | 3 weeks | Phase 4.1    | NOT STARTED |
+| 4.3.2 | Verification optimization (batching) | `@VELOCITY` `@AXIOM`               | 2 weeks | 4.3.1        | NOT STARTED |
+| 4.3.3 | Enterprise SDK tier                  | `@SYNAPSE` `@APEX` `@ARCHITECT`    | 2 weeks | 4.3.1-4.3.2  | NOT STARTED |
+| 4.3.4 | SLA monitoring infrastructure        | `@FLUX` `@PRISM`                   | 2 weeks | 4.3.3        | NOT STARTED |
+| 4.3.5 | Enterprise documentation             | `@VANGUARD` `@SYNAPSE`             | 1 week  | 4.3.3        | NOT STARTED |
+| 4.3.6 | Year-end performance report          | `@PRISM` `@VANGUARD` `@OMNISCIENT` | 1 week  | All          | NOT STARTED |
 
 #### Deliverables
 
@@ -469,45 +469,45 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 ### Elite Agent Collective - Utilization by Phase
 
-| Agent           | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Primary Domain                    |
-| --------------- | ------- | ------- | ------- | ------- | --------------------------------- |
-| `@APEX`         | ●●●●○   | ●●●●○   | ●●●○○   | ●●●●○   | Core Engineering, Algorithms      |
-| `@CIPHER`       | ●●●○○   | ●●●●●   | ●●●●○   | ●●●○○   | Cryptography, ZK Proofs           |
-| `@ARCHITECT`    | ●●○○○   | ●●●○○   | ●●●●●   | ●●●○○   | Systems Design, Architecture      |
-| `@AXIOM`        | ●●●●○   | ●●●●○   | ●●●○○   | ●●○○○   | Mathematics, Formal Proofs        |
-| `@VELOCITY`     | ●●●●●   | ●●●●○   | ●●○○○   | ●●●●●   | Performance Optimization          |
-| `@QUANTUM`      | ●●○○○   | ●●○○○   | ●○○○○   | ●○○○○   | Post-Quantum Crypto               |
-| `@TENSOR`       | ●●●●●   | ●●●●●   | ●●●○○   | ●○○○○   | ML/zkML, Deep Learning            |
-| `@FORTRESS`     | ●○○○○   | ●●●●○   | ●●●●●   | ●●●●●   | Security, Penetration Testing     |
-| `@NEURAL`       | ●○○○○   | ●●●○○   | ●●○○○   | ●○○○○   | AGI Research, Cognitive           |
-| `@CRYPTO`       | ●●●●○   | ●●●●●   | ●●●●●   | ●●●●●   | Blockchain, DeFi, Smart Contracts |
-| `@FLUX`         | ●●○○○   | ●●○○○   | ●●●○○   | ●●●●●   | DevOps, Infrastructure            |
-| `@PRISM`        | ●○○○○   | ●●○○○   | ●●●○○   | ●●●○○   | Data Science, Statistics          |
-| `@SYNAPSE`      | ●○○○○   | ●●●●○   | ●●●●●   | ●●●●○   | API Design, SDK Development       |
-| `@CORE`         | ●●●●○   | ●●●●○   | ●○○○○   | ●●●○○   | Low-Level Systems, CUDA           |
-| `@VANGUARD`     | ●●○○○   | ●●○○○   | ●●●○○   | ●●●○○   | Research, Documentation           |
-| `@ECLIPSE`      | ●●●○○   | ●●●●○   | ●●●●○   | ●●●○○   | Testing, Verification             |
-| `@NEXUS`        | ●○○○○   | ●○○○○   | ●●●○○   | ●●○○○   | Cross-Domain Synthesis            |
-| `@GENESIS`      | ●●○○○   | ●●○○○   | ●●○○○   | ●●○○○   | Novel Innovation                  |
-| `@OMNISCIENT`   | ●○○○○   | ●○○○○   | ●●○○○   | ●●●●○   | Multi-Agent Orchestration         |
+| Agent         | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Primary Domain                    |
+| ------------- | ------- | ------- | ------- | ------- | --------------------------------- |
+| `@APEX`       | ●●●●○   | ●●●●○   | ●●●○○   | ●●●●○   | Core Engineering, Algorithms      |
+| `@CIPHER`     | ●●●○○   | ●●●●●   | ●●●●○   | ●●●○○   | Cryptography, ZK Proofs           |
+| `@ARCHITECT`  | ●●○○○   | ●●●○○   | ●●●●●   | ●●●○○   | Systems Design, Architecture      |
+| `@AXIOM`      | ●●●●○   | ●●●●○   | ●●●○○   | ●●○○○   | Mathematics, Formal Proofs        |
+| `@VELOCITY`   | ●●●●●   | ●●●●○   | ●●○○○   | ●●●●●   | Performance Optimization          |
+| `@QUANTUM`    | ●●○○○   | ●●○○○   | ●○○○○   | ●○○○○   | Post-Quantum Crypto               |
+| `@TENSOR`     | ●●●●●   | ●●●●●   | ●●●○○   | ●○○○○   | ML/zkML, Deep Learning            |
+| `@FORTRESS`   | ●○○○○   | ●●●●○   | ●●●●●   | ●●●●●   | Security, Penetration Testing     |
+| `@NEURAL`     | ●○○○○   | ●●●○○   | ●●○○○   | ●○○○○   | AGI Research, Cognitive           |
+| `@CRYPTO`     | ●●●●○   | ●●●●●   | ●●●●●   | ●●●●●   | Blockchain, DeFi, Smart Contracts |
+| `@FLUX`       | ●●○○○   | ●●○○○   | ●●●○○   | ●●●●●   | DevOps, Infrastructure            |
+| `@PRISM`      | ●○○○○   | ●●○○○   | ●●●○○   | ●●●○○   | Data Science, Statistics          |
+| `@SYNAPSE`    | ●○○○○   | ●●●●○   | ●●●●●   | ●●●●○   | API Design, SDK Development       |
+| `@CORE`       | ●●●●○   | ●●●●○   | ●○○○○   | ●●●○○   | Low-Level Systems, CUDA           |
+| `@VANGUARD`   | ●●○○○   | ●●○○○   | ●●●○○   | ●●●○○   | Research, Documentation           |
+| `@ECLIPSE`    | ●●●○○   | ●●●●○   | ●●●●○   | ●●●○○   | Testing, Verification             |
+| `@NEXUS`      | ●○○○○   | ●○○○○   | ●●●○○   | ●●○○○   | Cross-Domain Synthesis            |
+| `@GENESIS`    | ●●○○○   | ●●○○○   | ●●○○○   | ●●○○○   | Novel Innovation                  |
+| `@OMNISCIENT` | ●○○○○   | ●○○○○   | ●●○○○   | ●●●●○   | Multi-Agent Orchestration         |
 
-*Legend: ●●●●● = Heavy (>80%) | ●●●●○ = High (60-80%) | ●●●○○ = Medium (40-60%) | ●●○○○ = Light (20-40%) | ●○○○○ = Minimal (<20%)*
+_Legend: ●●●●● = Heavy (>80%) | ●●●●○ = High (60-80%) | ●●●○○ = Medium (40-60%) | ●●○○○ = Light (20-40%) | ●○○○○ = Minimal (<20%)_
 
 ### Agent Sprint Assignments Summary
 
-| Sprint | Lead Agent(s)               | Supporting Agents                                           |
-| ------ | --------------------------- | ----------------------------------------------------------- |
-| 1.1    | `@APEX`                     | `@VELOCITY`, `@CORE`, `@ECLIPSE`                            |
-| 1.2    | `@TENSOR`                   | `@AXIOM`, `@APEX`, `@PRISM`, `@VELOCITY`                    |
-| 1.3    | `@CRYPTO`                   | `@CIPHER`, `@VANGUARD`, `@QUANTUM`, `@ARCHITECT`            |
-| 2.1    | `@TENSOR`                   | `@NEURAL`, `@AXIOM`, `@CORE`, `@VELOCITY`, `@SYNAPSE`       |
-| 2.2    | `@CRYPTO`                   | `@ARCHITECT`, `@CIPHER`, `@APEX`, `@SYNAPSE`, `@FORTRESS`   |
-| 2.3    | `@CIPHER`                   | `@AXIOM`, `@QUANTUM`, `@SYNAPSE`, `@APEX`                   |
-| 3.1    | `@CRYPTO`                   | `@SYNAPSE`, `@ARCHITECT`, `@NEXUS`, `@AXIOM`, `@FORTRESS`   |
-| 3.2    | `@SYNAPSE`                  | `@TENSOR`, `@CIPHER`, `@CRYPTO`, `@APEX`, `@VANGUARD`       |
-| 4.1    | `@FLUX`                     | `@FORTRESS`, `@CIPHER`, `@CRYPTO`, `@ECLIPSE`, `@PRISM`     |
-| 4.2    | `@CRYPTO`                   | `@ARCHITECT`, `@APEX`, `@SYNAPSE`, `@VELOCITY`, `@PRISM`    |
-| 4.3    | `@VELOCITY`                 | `@APEX`, `@CORE`, `@AXIOM`, `@SYNAPSE`, `@OMNISCIENT`       |
+| Sprint | Lead Agent(s) | Supporting Agents                                         |
+| ------ | ------------- | --------------------------------------------------------- |
+| 1.1    | `@APEX`       | `@VELOCITY`, `@CORE`, `@ECLIPSE`                          |
+| 1.2    | `@TENSOR`     | `@AXIOM`, `@APEX`, `@PRISM`, `@VELOCITY`                  |
+| 1.3    | `@CRYPTO`     | `@CIPHER`, `@VANGUARD`, `@QUANTUM`, `@ARCHITECT`          |
+| 2.1    | `@TENSOR`     | `@NEURAL`, `@AXIOM`, `@CORE`, `@VELOCITY`, `@SYNAPSE`     |
+| 2.2    | `@CRYPTO`     | `@ARCHITECT`, `@CIPHER`, `@APEX`, `@SYNAPSE`, `@FORTRESS` |
+| 2.3    | `@CIPHER`     | `@AXIOM`, `@QUANTUM`, `@SYNAPSE`, `@APEX`                 |
+| 3.1    | `@CRYPTO`     | `@SYNAPSE`, `@ARCHITECT`, `@NEXUS`, `@AXIOM`, `@FORTRESS` |
+| 3.2    | `@SYNAPSE`    | `@TENSOR`, `@CIPHER`, `@CRYPTO`, `@APEX`, `@VANGUARD`     |
+| 4.1    | `@FLUX`       | `@FORTRESS`, `@CIPHER`, `@CRYPTO`, `@ECLIPSE`, `@PRISM`   |
+| 4.2    | `@CRYPTO`     | `@ARCHITECT`, `@APEX`, `@SYNAPSE`, `@VELOCITY`, `@PRISM`  |
+| 4.3    | `@VELOCITY`   | `@APEX`, `@CORE`, `@AXIOM`, `@SYNAPSE`, `@OMNISCIENT`     |
 
 ### Total Budget
 
@@ -521,17 +521,17 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 ### Team Requirements (Agent-Augmented)
 
-| Role                      | Agent Assignment            | Human Support | Phase      |
-| ------------------------- | --------------------------- | ------------- | ---------- |
-| Core ZK Engineering       | `@APEX` `@AXIOM` `@VELOCITY`| 2 engineers   | All        |
-| ML Engineering            | `@TENSOR` `@NEURAL` `@PRISM`| 1 engineer    | Phase 1-2  |
-| DeFi Engineering          | `@CRYPTO` `@ARCHITECT`      | 2 engineers   | Phase 1-4  |
-| Frontend Engineering      | `@APEX` `@SYNAPSE`          | 1 engineer    | Phase 2-4  |
-| DevOps Engineering        | `@FLUX`                     | 1 engineer    | All        |
-| Security Engineering      | `@FORTRESS` `@CIPHER`       | 1 specialist  | Phase 3-4  |
-| Technical Documentation   | `@VANGUARD`                 | 1 writer      | Phase 2-4  |
-| Multi-Agent Orchestration | `@OMNISCIENT`               | Project Lead  | All        |
-| **Total Human Team**      | **20 AI Agents**            | **10 humans** | Peak Q2-Q3 |
+| Role                      | Agent Assignment             | Human Support | Phase      |
+| ------------------------- | ---------------------------- | ------------- | ---------- |
+| Core ZK Engineering       | `@APEX` `@AXIOM` `@VELOCITY` | 2 engineers   | All        |
+| ML Engineering            | `@TENSOR` `@NEURAL` `@PRISM` | 1 engineer    | Phase 1-2  |
+| DeFi Engineering          | `@CRYPTO` `@ARCHITECT`       | 2 engineers   | Phase 1-4  |
+| Frontend Engineering      | `@APEX` `@SYNAPSE`           | 1 engineer    | Phase 2-4  |
+| DevOps Engineering        | `@FLUX`                      | 1 engineer    | All        |
+| Security Engineering      | `@FORTRESS` `@CIPHER`        | 1 specialist  | Phase 3-4  |
+| Technical Documentation   | `@VANGUARD`                  | 1 writer      | Phase 2-4  |
+| Multi-Agent Orchestration | `@OMNISCIENT`                | Project Lead  | All        |
+| **Total Human Team**      | **20 AI Agents**             | **10 humans** | Peak Q2-Q3 |
 
 > **Note:** The Elite Agent Collective reduces human headcount by ~50% while increasing velocity through 24/7 AI-powered engineering support. Human engineers provide oversight, review, and domain expertise validation.
 
@@ -629,14 +629,14 @@ This Master Action Plan outlines the strategic execution roadmap for six major i
 
 ### How to Engage Elite Agents
 
-Each agent is invoked using the `@AGENT-CODENAME` syntax followed by your task or question:
+Each agent is invoked using the `@elite-agent-collective @AGENT-CODENAME` syntax followed by your task or question:
 
 ```
-@APEX implement a rate limiter with sliding window for proof submissions
-@CIPHER design threshold decryption for the encrypted mempool
-@TENSOR design quantization-aware zkML circuit for ResNet layers
-@CRYPTO audit this AMM contract for MEV vulnerabilities
-@FORTRESS perform security review of the bridge contracts
+@elite-agent-collective @APEX implement a rate limiter with sliding window for proof submissions
+@elite-agent-collective @CIPHER design threshold decryption for the encrypted mempool
+@elite-agent-collective @TENSOR design quantization-aware zkML circuit for ResNet layers
+@elite-agent-collective @CRYPTO audit this AMM contract for MEV vulnerabilities
+@elite-agent-collective @FORTRESS perform security review of the bridge contracts
 ```
 
 ### Multi-Agent Collaboration Examples
@@ -645,59 +645,59 @@ For complex tasks requiring multiple domains:
 
 ```
 # zkML Architecture Design
-@OMNISCIENT coordinate: @TENSOR @AXIOM @APEX @VELOCITY
+@elite-agent-collective @OMNISCIENT coordinate: @TENSOR @AXIOM @APEX @VELOCITY
 Task: Design CNN circuit architecture with Nova folding
 
 # Private DeFi Security
-@OMNISCIENT coordinate: @CRYPTO @CIPHER @FORTRESS @ECLIPSE
+@elite-agent-collective @OMNISCIENT coordinate: @CRYPTO @CIPHER @FORTRESS @ECLIPSE
 Task: Security audit of dark pool order matching engine
 
 # Cross-Chain Bridge
-@OMNISCIENT coordinate: @CRYPTO @SYNAPSE @ARCHITECT @FORTRESS
+@elite-agent-collective @OMNISCIENT coordinate: @CRYPTO @SYNAPSE @ARCHITECT @FORTRESS
 Task: Design proof relay network with multi-chain support
 
 # Novel Algorithm Research
-@OMNISCIENT coordinate: @GENESIS @NEXUS @AXIOM @VANGUARD
+@elite-agent-collective @OMNISCIENT coordinate: @GENESIS @NEXUS @AXIOM @VANGUARD
 Task: Explore novel approaches to recursive proof composition
 ```
 
 ### Agent Philosophies (Quick Reference)
 
-| Agent         | Philosophy                                                                    |
-| ------------- | ----------------------------------------------------------------------------- |
-| `@APEX`       | *"Every problem has an elegant solution waiting to be discovered."*           |
-| `@CIPHER`     | *"Security is not a feature—it is a foundation upon which trust is built."*   |
-| `@ARCHITECT`  | *"Architecture is the art of making complexity manageable."*                  |
-| `@AXIOM`      | *"From axioms flow theorems; from theorems flow certainty."*                  |
-| `@VELOCITY`   | *"The fastest code is the code that doesn't run."*                            |
-| `@TENSOR`     | *"Intelligence emerges from the right architecture trained on the right data."*|
-| `@FORTRESS`   | *"To defend, you must think like the attacker."*                              |
-| `@CRYPTO`     | *"Trust is not given—it is computed and verified."*                           |
-| `@FLUX`       | *"Infrastructure is code. Deployment is continuous. Recovery is automatic."*  |
-| `@ECLIPSE`    | *"Untested code is broken code you haven't discovered yet."*                  |
-| `@NEXUS`      | *"The most powerful ideas live at the intersection of domains."*              |
-| `@GENESIS`    | *"The greatest discoveries are not improvements—they are revelations."*       |
-| `@OMNISCIENT` | *"The collective intelligence exceeds the sum of their parts."*               |
+| Agent         | Philosophy                                                                      |
+| ------------- | ------------------------------------------------------------------------------- |
+| `@APEX`       | _"Every problem has an elegant solution waiting to be discovered."_             |
+| `@CIPHER`     | _"Security is not a feature—it is a foundation upon which trust is built."_     |
+| `@ARCHITECT`  | _"Architecture is the art of making complexity manageable."_                    |
+| `@AXIOM`      | _"From axioms flow theorems; from theorems flow certainty."_                    |
+| `@VELOCITY`   | _"The fastest code is the code that doesn't run."_                              |
+| `@TENSOR`     | _"Intelligence emerges from the right architecture trained on the right data."_ |
+| `@FORTRESS`   | _"To defend, you must think like the attacker."_                                |
+| `@CRYPTO`     | _"Trust is not given—it is computed and verified."_                             |
+| `@FLUX`       | _"Infrastructure is code. Deployment is continuous. Recovery is automatic."_    |
+| `@ECLIPSE`    | _"Untested code is broken code you haven't discovered yet."_                    |
+| `@NEXUS`      | _"The most powerful ideas live at the intersection of domains."_                |
+| `@GENESIS`    | _"The greatest discoveries are not improvements—they are revelations."_         |
+| `@OMNISCIENT` | _"The collective intelligence exceeds the sum of their parts."_                 |
 
 ### Sprint Kickoff Protocol
 
 At the start of each sprint:
 
-1. **@OMNISCIENT** reviews sprint goals and assigns lead agents
+1. **@elite-agent-collective @OMNISCIENT** reviews sprint goals and assigns lead agents
 2. **Lead Agent** breaks down tasks into sub-tasks
 3. **Supporting Agents** are engaged for specialized work
-4. **@ECLIPSE** creates test plans and verification criteria
-5. **@VANGUARD** prepares documentation templates
+4. **@elite-agent-collective @ECLIPSE** creates test plans and verification criteria
+5. **@elite-agent-collective @VANGUARD** prepares documentation templates
 
 ### Sprint Review Protocol
 
 At the end of each sprint:
 
-1. **@ECLIPSE** validates all deliverables against acceptance criteria
-2. **@FORTRESS** performs security review (if applicable)
-3. **@VANGUARD** updates documentation
-4. **@OMNISCIENT** synthesizes learnings and adjusts next sprint
-5. **@PRISM** analyzes metrics and generates reports
+1. **@elite-agent-collective @ECLIPSE** validates all deliverables against acceptance criteria
+2. **@elite-agent-collective @FORTRESS** performs security review (if applicable)
+3. **@elite-agent-collective @VANGUARD** updates documentation
+4. **@elite-agent-collective @OMNISCIENT** synthesizes learnings and adjusts next sprint
+5. **@elite-agent-collective @PRISM** analyzes metrics and generates reports
 
 ---
 
@@ -796,9 +796,9 @@ At the end of each sprint:
 **Prepared By:** NexusZero Protocol Team  
 **Date:** December 3, 2025
 
-**Reviewed By:** ************\_\_\_************ Date: ******\_\_\_******
+**Reviewed By:** ****\*\*\*\*****\_\_\_****\*\*\*\***** Date: **\*\***\_\_\_**\*\***
 
-**Approved By:** ************\_\_\_************ Date: ******\_\_\_******
+**Approved By:** ****\*\*\*\*****\_\_\_****\*\*\*\***** Date: **\*\***\_\_\_**\*\***
 
 ---
 
