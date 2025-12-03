@@ -101,6 +101,18 @@ pub mod gpu;
 #[cfg(feature = "nova")]
 pub mod integration;
 
+// Phase 3: Performance Optimization Modules
+#[cfg(feature = "nova")]
+pub mod simd_ops;
+#[cfg(feature = "nova")]
+pub mod parallel_ops;
+#[cfg(feature = "nova")]
+pub mod memory_pool;
+#[cfg(feature = "nova")]
+pub mod gpu_kernels;
+#[cfg(feature = "nova")]
+pub mod proof_cache;
+
 #[cfg(feature = "nova")]
 pub use r1cs::{R1CSConverter, R1CSConstraintSystem, R1CSInstance, R1CSWitness, R1CSVariable, LinearCombination, R1CSConstraint};
 #[cfg(feature = "nova")]
@@ -108,7 +120,7 @@ pub use folding::{FoldingEngine, FoldedInstance, FoldingProof, FoldedWitness, Fo
 #[cfg(feature = "nova")]
 pub use prover::{NovaProver, NovaConfig, NovaProof, IVCProof, NovaPublicParams, CompressionLevel};
 #[cfg(feature = "nova")]
-pub use circuits::{StepCircuit, TrivialCircuit, MinRootCircuit, HashChainCircuit, MerkleUpdateCircuit, CircuitMetadata};
+pub use circuits::{StepCircuit, TrivialCircuit, MinRootCircuit, HashChainCircuit, MerkleUpdateCircuit, CircuitMetadata, HashType};
 #[cfg(feature = "nova")]
 pub use types::{NovaError, NovaResult, NovaSecurityLevel, CurveType, NovaMetrics, ProofSizeEstimate, CircuitParams};
 #[cfg(feature = "nova")]
@@ -120,6 +132,26 @@ pub use integration::{
     NovaSystem, NovaSystemConfig, ProofRequest, ProofResult, CircuitType, HashChainType,
     VerificationRequest, VerificationResult, VerificationStatus,
     ProofTiming, ProofMetrics, SystemMetrics, BatchProver, StreamProver,
+};
+
+// Phase 3: Performance Optimization Exports
+#[cfg(feature = "nova")]
+pub use simd_ops::{SimdFieldOps, SimdCapability, SimdMetrics, detect_simd_support};
+#[cfg(feature = "nova")]
+pub use parallel_ops::{ParallelProver, ParallelConfig, ParallelMetrics};
+#[cfg(feature = "nova")]
+pub use memory_pool::{
+    ArenaAllocator, ArenaScope, BufferPool, PooledBuffer, ProofMemoryManager,
+    CacheAligned, AlignedU64Vec, MappedBuffer, MmapConfig,
+    MemoryMetrics, AtomicMemoryMetrics, CACHE_LINE_SIZE,
+};
+#[cfg(feature = "nova")]
+pub use proof_cache::{
+    ProofCacheManager, CacheConfig, CacheKey, CacheKeyType, CacheStats,
+    WitnessCache, CommitmentCache, MatrixCache, MSMCache, NTTCache,
+    CachedWitness, CachedCommitment, CachedMatrix, CachedMSMResult, CachedNTTResult,
+    CommitmentType, CacheAwareProofGenerator, CombinedCacheStats, MemoryUsageStats,
+    LruCache, MemoCache, GlobalCacheStats,
 };
 
 /// Module version for compatibility checking

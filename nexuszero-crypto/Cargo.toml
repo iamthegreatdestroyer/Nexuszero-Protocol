@@ -150,6 +150,14 @@ harness = false
 name = "gpu_acceleration_benchmarks"
 harness = false
 
+[[bench]]
+name = "nova_gpu_benchmarks"
+harness = false
+
+[[bench]]
+name = "nova_proving_benchmarks"
+harness = false
+
 [features]
 default = ["lazy_static"]
 simd = []
