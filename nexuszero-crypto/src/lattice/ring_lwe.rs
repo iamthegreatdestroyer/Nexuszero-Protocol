@@ -7,6 +7,7 @@ use crate::{CryptoError, CryptoResult, LatticeParameters};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
+use zeroize::Zeroize;
 
 /// High-performance polynomial with cache-aligned memory layout
 /// Optimized for SIMD operations and cache efficiency
@@ -75,6 +76,17 @@ impl Polynomial {
     /// Convert from regular Polynomial to AlignedPolynomial (for compatibility)
     pub fn as_aligned(&self) -> Option<&Self> {
         Some(self) // Since we're now always aligned
+    }
+}
+
+impl Zeroize for Polynomial {
+    fn zeroize(&mut self) {
+        // Zeroize all coefficients
+        for coeff in self.coeffs.iter_mut() {
+            coeff.zeroize();
+        }
+        self.modulus.zeroize();
+        self.degree.zeroize();
     }
 }
 
@@ -287,10 +299,27 @@ pub struct RingLWEPublicKey {
 }
 
 /// Ring-LWE secret key
+/// 
+/// # Security
+/// This struct implements [`Zeroize`] and [`ZeroizeOnDrop`] to ensure
+/// the secret key material is securely erased from memory when dropped.
+/// This protects against memory forensics and cold boot attacks.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RingLWESecretKey {
     /// Secret polynomial s
     pub s: Polynomial,
+}
+
+impl Zeroize for RingLWESecretKey {
+    fn zeroize(&mut self) {
+        self.s.zeroize();
+    }
+}
+
+impl Drop for RingLWESecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
 }
 
 /// Ring-LWE ciphertext
@@ -1071,36 +1100,58 @@ unsafe fn butterfly_avx512_intt_ptr(
 /// Number Theoretic Transform (NTT) - Forward transform with SIMD optimizations
 /// Uses AVX2/NEON SIMD instructions when available for 4x/2x performance improvement
 /// Now uses aligned memory for optimal cache performance and parallel processing
+///
+/// # Security Considerations - Cache Timing
+///
+/// **WARNING**: This NTT implementation uses data-dependent memory access patterns
+/// during the butterfly operations. The loop indices `i`, `j`, and array accesses
+/// `coeffs[i + j]`, `coeffs[i + j + len]` follow predictable patterns but may leak
+/// information through cache timing side-channels in multi-tenant environments.
+///
+/// For environments where cache timing attacks are a concern (e.g., shared cloud VMs):
+/// - Consider using constant-time NTT implementations with fixed memory access patterns
+/// - Use cache partitioning or timing isolation mechanisms
+/// - The impact is LIMITED because coefficient indices are public (only values are secret)
+/// - Secret-dependent branching is NOT present in this implementation
+///
+/// For maximum security environments, consider:
+/// - Barrett reduction instead of modular operations (avoids division timing)
+/// - Montgomery form for modular multiplication
+/// - Cache-line-aligned memory with prefetching to mask access patterns
 pub fn ntt(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
     let n = poly.degree;
     assert!(n.is_power_of_two(), "Size must be power of 2 for NTT");
 
     let mut coeffs = poly.coeffs.clone();
-    
-    let omega = mod_exp(primitive_root, ((q - 1) / n as u64), q);
 
-    let mut len = 2;
-    while len <= n {
-        let wlen = mod_exp(omega, (n / (2 * len)) as u64, q);
-        println!("NTT: len={}, wlen={}", len, wlen);
-        for i in (0..n).step_by(len) {
-            let mut w = 1i64;
-            for j in 0..(len / 2) {
+    // 'primitive_root' is a primitive 2n-th root (ω) such that ω^n = -1.
+    // For the canonical NTT, use root_n = ω^2 which is a primitive n-th root of unity.
+    let root_n = mod_exp(primitive_root, 2, q);
+
+    // Use canonical Cooley-Tukey NTT: len = 1..n-1 doubling each iteration
+    let mut len = 1;
+    while len < n {
+        // wlen is root_n^(n / (2*len))
+        let wlen = mod_exp(root_n, (n / (2 * len)) as u64, q);
+        // debug: println!("NTT: len={}, wlen={}", len, wlen);
+        for i in (0..n).step_by(2 * len) {
+            let mut w = 1u64;
+            for j in 0..len {
                 let u = coeffs[i + j];
-                let v = coeffs[i + j + len / 2];
-                let t = (v * w % q as i64 + q as i64) % q as i64;
-                let u_new = (u + t) % q as i64;
-                let v_new = (u - t + q as i64) % q as i64;
+                let v = coeffs[i + j + len];
+                let t = ((v as i128 * w as i128) % q as i128) as i64;
+                let u_new = (u + t).rem_euclid(q as i64);
+                let v_new = (u - t).rem_euclid(q as i64);
                 coeffs[i + j] = u_new;
-                coeffs[i + j + len / 2] = v_new;
-                println!("NTT butterfly: i={}, j={}, u={}, v={}, w={}, t={}, u'={}, v'={}", i, j, u, v, w, t, u_new, v_new);
-                w = ((w as i128 * wlen as i128) % q as i128) as i64;
+                coeffs[i + j + len] = v_new;
+                // debug: println!("NTT butterfly: i={}, j={}, u={}, v={}, w={}, t={}, u'={}, v'={}", i, j, u, v, w, t, u_new, v_new);
+                w = ((w as u128 * wlen as u128) % q as u128) as u64;
             }
         }
-        len *= 2;
+        len <<= 1;
     }
 
-    // Bit-reverse permutation for DIF ordering
+    // For DIT ordering NTT we do an initial bit-reverse permutation
     bit_reverse_permute(&mut coeffs);
 
     coeffs
@@ -1109,43 +1160,45 @@ pub fn ntt(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
 /// Inverse Number Theoretic Transform (INTT) with SIMD optimizations and parallel processing
 pub fn intt(transformed: &[i64], n: usize, q: u64, primitive_root: u64) -> Polynomial {
     let mut coeffs = transformed.to_vec();
-    
-    let omega = mod_exp(primitive_root, ((q - 1) / n as u64), q);
-    let omega_inv = mod_inverse(omega as i64, q as i64) as u64;
 
-    // Bit-reverse permutation for DIF ordering
-    bit_reverse_permute(&mut coeffs);
+    // 'primitive_root' is a primitive 2n-th root (ω); use root_n = ω^2
+    let root_n = mod_exp(primitive_root, 2, q);
+    let root_n_inv = mod_inverse(root_n as i64, q as i64) as u64;
 
-    let mut len = n;
-    while len > 1 {
-        let wlen = mod_exp(omega_inv, (n / (2 * len)) as u64, q);
-        println!("INTT: len={}, wlen={}", len, wlen);
-        for i in (0..n).step_by(len) {
-            let mut w = 1i64;
-            for j in 0..(len / 2) {
+    // Use canonical inverse NTT with increasing len and root_inv
+    let mut len = 1;
+    while len < n {
+        let wlen = mod_exp(root_n_inv, (n / (2 * len)) as u64, q);
+        // debug: println!("INTT: len={}, wlen={}", len, wlen);
+        for i in (0..n).step_by(2 * len) {
+            let mut w = 1u64;
+            for j in 0..len {
                 let u = coeffs[i + j];
-                let v = coeffs[i + j + len / 2];
-                let t = (v * w % q as i64 + q as i64) % q as i64;
-                let u_new = (u + t) % q as i64;
-                let v_new = (u - t + q as i64) % q as i64;
+                let v = coeffs[i + j + len];
+                let t = ((v as i128 * w as i128) % q as i128) as i64;
+                let u_new = (u + t).rem_euclid(q as i64);
+                let v_new = (u - t).rem_euclid(q as i64);
                 coeffs[i + j] = u_new;
-                coeffs[i + j + len / 2] = v_new;
-                // println!("INTT butterfly: i={}, j={}, u={}, v={}, w={}, t={}, u'={}, v'={}", i, j, u, v, w, t, u_new, v_new);
-                w = ((w as i128 * wlen as i128) % q as i128) as i64;
+                coeffs[i + j + len] = v_new;
+                w = ((w as u128 * wlen as u128) % q as u128) as u64;
             }
         }
-        len /= 2;
+        len <<= 1;
     }
-    
+
     // Apply n^{-1} scaling
     let n_inv = mod_inverse(n as i64, q as i64);
-    println!("n_inv = {}", n_inv);
-    println!("coeffs before scaling: {:?}", &coeffs[0..10]);
+    // debug: println!("n_inv = {}", n_inv);
+    // debug: println!("coeffs before scaling: {:?}", &coeffs[0..10]);
     for coeff in &mut coeffs {
         *coeff = ((*coeff as i128 * n_inv as i128) % q as i128) as i64;
     }
-    println!("coeffs after scaling: {:?}", &coeffs[0..10]);
 
+    // Final bit-reverse permutation to restore normal ordering
+    bit_reverse_permute(&mut coeffs);
+    // debug: println!("coeffs after scaling: {:?}", &coeffs[0..10]);
+
+    // For inverse DIT, after the inverse butterflies and scaling, the data is in normal order
     Polynomial::from_coeffs(coeffs, q)
 }
 

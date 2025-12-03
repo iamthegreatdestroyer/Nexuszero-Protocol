@@ -1,3 +1,13 @@
+// Copyright (c) 2025 NexusZero Protocol
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// This file is part of NexusZero Protocol - Advanced Zero-Knowledge Infrastructure
+// Licensed under the GNU Affero General Public License v3.0 or later.
+// Commercial licensing available at https://nexuszero.io/licensing
+//
+// NexusZero Protocol™, Privacy Morphing™, and Holographic Proof Compression™
+// are trademarks of NexusZero Protocol. All Rights Reserved.
+
 //! Compliance Service (RCL - Regulatory Compliance Layer)
 //!
 //! Multi-jurisdiction regulatory compliance service providing:

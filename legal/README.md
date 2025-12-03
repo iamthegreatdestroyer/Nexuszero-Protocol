@@ -1,21 +1,119 @@
-# Legal / IP Directory
+# NexusZero Protocol™ - Legal & Intellectual Property
 
-This folder contains starter legal and Intellectual Property documents for the NexusZero Protocol repository. It is intended to provide guidance and templates that the project owner or legal counsel can use. These materials are not legal advice—consult a qualified attorney for formal filings or opinions.
+> **IMPORTANT**: This directory contains intellectual property documentation for the NexusZero Protocol project. All materials are proprietary and confidential unless otherwise specified.
 
-Structure:
+## 📋 Directory Structure
 
-- patents/: Patent-related templates and provisional application notes.
-- trademarks/: Trademark application templates and usage guidance.
-- licenses/: Licensing strategy and license text references.
-- copyrights/: Copyright notice templates and attributions.
-- templates/: Reusable header and consent templates for source files.
+```
+legal/
+├── patents/                    # Patent documentation and claims
+│   ├── provisional_application.md
+│   ├── PATENT_CLAIMS.md       # Documented patent-pending innovations
+│   └── prior_art_search.md
+├── trademarks/                 # Trademark registration and usage
+│   ├── application.md
+│   ├── TRADEMARK_GUIDELINES.md
+│   └── brand_assets/
+├── copyrights/                 # Copyright notices and registrations
+│   ├── copyright_notices.md
+│   └── COPYRIGHT_REGISTRY.md
+├── licenses/                   # Licensing strategy and agreements
+│   ├── dual_license.md
+│   ├── AGPL-3.0.txt
+│   └── COMMERCIAL_LICENSE.md
+├── templates/                  # Reusable header templates
+│   ├── rust_header.txt
+│   ├── python_header.txt
+│   ├── typescript_header.txt
+│   ├── solidity_header.txt
+│   └── documentation_header.txt
+└── README.md                   # This file
+```
 
-How to use:
+## 🛡️ Intellectual Property Summary
 
-- Add new IP-related documents to the appropriate subfolder.
-- Keep any legally sensitive drafts encrypted or in a secure vault; do not commit secrets or private drafts to the repository.
-- If you publish any IP filings, add a reference to the public record and version metadata.
+### Patents (Patent Pending)
 
-Contact:
+The following innovations are documented for patent protection:
 
-- For legal questions, involve a qualified lawyer. This is a scaffold only.
+| Innovation                               | Status         | Filing Date | Priority |
+| ---------------------------------------- | -------------- | ----------- | -------- |
+| Quantum-Resistant ZK Proof System        | Patent Pending | 2025        | P0       |
+| Cross-Chain Privacy Bridge Protocol      | Patent Pending | 2025        | P0       |
+| Lattice-Based Commitment Schemes         | Patent Pending | 2025        | P1       |
+| Nova/Plonky3 Hybrid Folding Architecture | Documented     | 2025        | P1       |
+| Privacy Morphing Engine                  | Documented     | 2025        | P2       |
+
+### Trademarks
+
+| Mark                | Status | Classes | Jurisdictions     |
+| ------------------- | ------ | ------- | ----------------- |
+| NexusZero Protocol™ | In Use | 9, 42   | US, International |
+| NexusZero™          | In Use | 9, 42   | US, International |
+| Privacy Morphing™   | In Use | 9       | US                |
+
+### Copyrights
+
+- **Source Code**: © 2025 NexusZero Protocol. All Rights Reserved.
+- **Documentation**: © 2025 NexusZero Protocol. All Rights Reserved.
+- **Brand Assets**: © 2025 NexusZero Protocol. All Rights Reserved.
+
+### Licensing Model
+
+NexusZero Protocol uses a **dual-licensing** model:
+
+1. **Open Source (AGPLv3)**: Free for personal, educational, and open-source projects
+2. **Commercial License**: Available for enterprise customers requiring different terms
+
+## 📜 Legal Notices
+
+### Patent Notice
+
+```
+PATENT PENDING
+
+Portions of this software are covered by one or more pending patent applications.
+Unauthorized use, reproduction, or distribution may constitute patent infringement.
+
+For licensing inquiries: legal@nexuszero.io
+```
+
+### Copyright Notice
+
+```
+Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+
+This software is proprietary and confidential. Unauthorized copying, modification,
+distribution, or use of this software, via any medium, is strictly prohibited.
+
+Licensed under AGPLv3 for open-source use. Commercial licenses available.
+```
+
+### Trademark Notice
+
+```
+NexusZero Protocol™, NexusZero™, and Privacy Morphing™ are trademarks of
+NexusZero Protocol. Use of these marks without authorization is prohibited.
+```
+
+## 🔒 Confidentiality
+
+- **DO NOT** commit sensitive legal documents, signed agreements, or private correspondence to this repository
+- **DO NOT** include patent application drafts with claims in public repositories
+- **USE** secure, encrypted storage for sensitive IP documents
+- **CONSULT** qualified legal counsel before filing any IP applications
+
+## 📞 Contact
+
+For legal and licensing inquiries:
+
+- **Email**: legal@nexuszero.io
+- **Website**: https://nexuszero.io/legal
+
+---
+
+**Last Updated**: December 2, 2025  
+**Version**: 1.0.0  
+**Status**: Active
+
+© 2025 NexusZero Protocol. All Rights Reserved.

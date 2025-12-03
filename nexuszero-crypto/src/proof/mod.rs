@@ -21,6 +21,10 @@ pub mod hardware_acceleration;
 pub mod distributed_verification;
 pub mod performance_optimization;
 
+// Nova folding scheme (feature-gated)
+#[cfg(feature = "nova")]
+pub mod nova;
+
 // Re-export main types
 pub use proof::{Proof, ProofMetadata};
 pub use statement::{Statement, StatementBuilder, StatementType};
@@ -44,3 +48,13 @@ pub use hardware_acceleration::{GPUVerifier, HardwareProver, HardwareType};
 pub use hardware_acceleration::TPUVerifier;
 pub use distributed_verification::{DistributedVerifier, ByzantineDistributedVerifier, VerificationNode, DistributedConfig, LoadBalancingStrategy};
 pub use performance_optimization::{ParallelBatchProver, OptimizedBatchVerifier, AdaptiveProver, PerformanceMonitor, PerformanceMetrics, PerformanceThresholds, PerformanceAlert};
+
+// Nova re-exports when feature enabled
+#[cfg(feature = "nova")]
+pub use nova::{
+    NovaProver, NovaConfig, NovaProof, IVCProof, 
+    StepCircuit, TrivialCircuit, MinRootCircuit,
+    R1CSConverter, R1CSConstraintSystem, R1CSInstance, R1CSWitness,
+    FoldingEngine, FoldedInstance, FoldingProof,
+    NovaError, NovaResult,
+};

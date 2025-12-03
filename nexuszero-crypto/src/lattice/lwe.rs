@@ -7,6 +7,7 @@ use crate::{CryptoError, CryptoResult, LatticeParameters};
 use ndarray::{Array1, Array2};
 use rand::{CryptoRng, Rng};
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroize;
 
 /// LWE parameters defining security and operational characteristics
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -76,10 +77,30 @@ pub struct LWEPublicKey {
 }
 
 /// LWE secret key
+/// 
+/// # Security
+/// This struct implements [`Zeroize`] and [`ZeroizeOnDrop`] to ensure
+/// the secret key material is securely erased from memory when dropped.
+/// This protects against memory forensics and cold boot attacks.
 #[derive(Clone, Debug)]
 pub struct LWESecretKey {
     /// Secret vector s (n-dimensional)
     pub s: Array1<i64>,
+}
+
+impl Zeroize for LWESecretKey {
+    fn zeroize(&mut self) {
+        // Manually zeroize each coefficient in the ndarray
+        for coeff in self.s.iter_mut() {
+            coeff.zeroize();
+        }
+    }
+}
+
+impl Drop for LWESecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
 }
 
 /// LWE ciphertext

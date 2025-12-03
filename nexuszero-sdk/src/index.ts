@@ -1,6 +1,18 @@
 /**
+ * Copyright (c) 2025 NexusZero Protocol
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * This file is part of NexusZero Protocol - Advanced Zero-Knowledge Infrastructure
+ * Licensed under the GNU Affero General Public License v3.0 or later.
+ * Commercial licensing available at https://nexuszero.io/licensing
+ *
+ * NexusZero Protocol™, Privacy Morphing™, and Holographic Proof Compression™
+ * are trademarks of NexusZero Protocol. All Rights Reserved.
+ */
+
+/**
  * Nexuszero SDK - TypeScript client for quantum-resistant zero-knowledge proofs
- * 
+ *
  * @packageDocumentation
  */
 
@@ -35,11 +47,7 @@ export {
 } from "./crypto";
 
 // Export proof functions
-export {
-  ProofBuilder,
-  proveRange,
-  verifyProof,
-} from "./proof";
+export { ProofBuilder, proveRange, verifyProof } from "./proof";
 
 // Re-export for convenience
 import { ProofBuilder, proveRange, verifyProof } from "./proof";
@@ -56,28 +64,26 @@ import type {
   Commitment,
   RangeProofOptions,
 } from "./types";
-import {
-  SecurityLevel,
-} from "./types";
+import { SecurityLevel } from "./types";
 
 /**
  * Main SDK client class for Nexuszero Protocol
- * 
+ *
  * @example
  * ```typescript
  * import { NexuszeroClient } from 'nexuszero-sdk';
- * 
+ *
  * const client = new NexuszeroClient({
  *   securityLevel: SecurityLevel.Bit128
  * });
- * 
+ *
  * // Generate a range proof
  * const proof = await client.proveRange({
  *   value: 42n,
  *   min: 0n,
  *   max: 100n,
  * });
- * 
+ *
  * // Verify the proof
  * const result = await client.verifyProof(proof);
  * console.log('Valid:', result.valid);
@@ -107,7 +113,10 @@ export class NexuszeroClient {
     }
 
     if (this.config.debug) {
-      console.log("Nexuszero SDK initialized with parameters:", this.parameters);
+      console.log(
+        "Nexuszero SDK initialized with parameters:",
+        this.parameters
+      );
     }
   }
 
@@ -121,12 +130,12 @@ export class NexuszeroClient {
 
   /**
    * Generate a range proof
-   * 
+   *
    * Proves that a value is within a specified range without revealing the value.
-   * 
+   *
    * @param options - Range proof options
    * @returns Promise that resolves to the generated proof
-   * 
+   *
    * @example
    * ```typescript
    * const proof = await client.proveRange({
@@ -138,7 +147,10 @@ export class NexuszeroClient {
    */
   async proveRange(options: RangeProofOptions): Promise<Proof> {
     if (this.config.debug) {
-      console.log("Generating range proof for value in range", [options.min, options.max]);
+      console.log("Generating range proof for value in range", [
+        options.min,
+        options.max,
+      ]);
     }
 
     return proveRange(options);
@@ -146,10 +158,10 @@ export class NexuszeroClient {
 
   /**
    * Verify a zero-knowledge proof
-   * 
+   *
    * @param proof - Proof to verify
    * @returns Promise that resolves to the verification result
-   * 
+   *
    * @example
    * ```typescript
    * const result = await client.verifyProof(proof);
@@ -168,11 +180,11 @@ export class NexuszeroClient {
 
   /**
    * Create a commitment to a value
-   * 
+   *
    * @param value - Value to commit to
    * @param blinding - Optional blinding factor
    * @returns Promise that resolves to the commitment
-   * 
+   *
    * @example
    * ```typescript
    * const commitment = await client.createCommitment(42n);
@@ -191,10 +203,10 @@ export class NexuszeroClient {
 
   /**
    * Generate a random blinding factor
-   * 
+   *
    * @param length - Length in bytes (default: 32)
    * @returns Random bytes
-   * 
+   *
    * @example
    * ```typescript
    * const blinding = client.generateBlinding();
@@ -206,9 +218,9 @@ export class NexuszeroClient {
 
   /**
    * Create a proof builder for advanced proof construction
-   * 
+   *
    * @returns A new ProofBuilder instance
-   * 
+   *
    * @example
    * ```typescript
    * const proof = await client.createProofBuilder()

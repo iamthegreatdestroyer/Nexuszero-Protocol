@@ -1,3 +1,13 @@
+// Copyright (c) 2025 NexusZero Protocol
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// This file is part of NexusZero Protocol - Advanced Zero-Knowledge Infrastructure
+// Licensed under the GNU Affero General Public License v3.0 or later.
+// Commercial licensing available at https://nexuszero.io/licensing
+//
+// NexusZero Protocol™, Privacy Morphing™, and Holographic Proof Compression™
+// are trademarks of NexusZero Protocol. All Rights Reserved.
+
 //! Nexuszero Crypto - Quantum-Resistant Zero-Knowledge Proof System
 //!
 //! This library provides lattice-based cryptographic primitives for building
@@ -53,6 +63,7 @@
 // creating deprecation warnings in test/bench targets. The advisory can be found in SECURITY_AUDIT.md.
 
 pub mod lattice;
+pub mod metrics;
 pub mod params;
 pub mod proof;
 pub mod utils;

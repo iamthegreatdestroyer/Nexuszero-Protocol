@@ -2,6 +2,14 @@
 name = "nexuszero-holographic"
 version = "0.1.0"
 edition = "2021"
+authors = ["NexusZero Protocol Team <team@nexuszero.io>"]
+description = "Holographic proof compression using tensor networks"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
+homepage = "https://nexuszero.io"
+documentation = "https://docs.nexuszero.io"
+keywords = ["compression", "tensor-networks", "zero-knowledge", "holographic"]
+categories = ["compression", "mathematics"]
 
 [features]
 default = []
