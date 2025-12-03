@@ -107,7 +107,7 @@ impl NovaConfig {
     /// Create configuration for fast proving (lower security margin)
     pub fn fast_proving() -> Self {
         Self {
-            security_level: NovaSecurityLevel::Bit80,
+            security_level: NovaSecurityLevel::Bit128,
             compression_level: CompressionLevel::Minimum,
             max_steps: 100_000,
             ..Default::default()
@@ -342,15 +342,20 @@ impl NovaProver {
             
             // Create witness
             let mut assignments = Vec::new();
+            let mut witness_values = Vec::new();
             for (i, state_elem) in current_state.iter().enumerate() {
                 assignments.push((i, state_elem.clone()));
+                witness_values.push(state_elem.clone());
             }
-            let witness = R1CSWitness { assignments };
-            
-            let instance = R1CSInstance {
-                public_inputs: current_state.clone(),
-                shape_hash: [0u8; 32], // Placeholder
+            let witness = R1CSWitness { 
+                witness_values, 
+                assignments,
             };
+            
+            let instance = R1CSInstance::new(
+                current_state.clone(),
+                [0u8; 32], // Placeholder hash
+            );
             
             // Fold this step
             let (new_folded, proof) = self.folding_engine.fold_step(
@@ -488,8 +493,39 @@ pub struct ProverStats {
 }
 
 /// Implement the standard Prover trait for integration
+#[async_trait::async_trait]
 impl Prover for NovaProver {
-    fn prove(&self, statement: &Statement, witness: &Witness) -> crate::CryptoResult<Proof> {
+    fn id(&self) -> &str {
+        "nova-prover"
+    }
+
+    fn supported_statements(&self) -> Vec<crate::proof::StatementType> {
+        vec![
+            crate::proof::StatementType::Range {
+                min: 0,
+                max: u64::MAX,
+                commitment: vec![],
+            },
+            crate::proof::StatementType::DiscreteLog {
+                generator: vec![],
+                public_value: vec![],
+            },
+            crate::proof::StatementType::Preimage {
+                hash_function: crate::proof::statement::HashFunction::SHA3_256,
+                hash_output: vec![],
+            },
+            crate::proof::StatementType::Custom {
+                description: "custom".to_string(),
+            },
+        ]
+    }
+
+    async fn prove(
+        &self,
+        statement: &Statement,
+        witness: &Witness,
+        _config: &crate::proof::prover::ProverConfig,
+    ) -> crate::CryptoResult<Proof> {
         // Convert to R1CS
         let r1cs_instance = self.r1cs_converter.convert(statement, witness)
             .map_err(|e| crate::CryptoError::ProofError(e.to_string()))?;
@@ -499,34 +535,62 @@ impl Prover for NovaProver {
         let proof_data = bincode::serialize(&r1cs_instance)
             .map_err(|e| crate::CryptoError::SerializationError(e.to_string()))?;
         
+        // Create commitment from proof data
+        let commitment = crate::proof::proof::Commitment {
+            value: proof_data.clone(),
+        };
+        
+        // Create challenge (hash of statement)
+        let challenge_bytes = statement.hash()
+            .map_err(|e| crate::CryptoError::ProofError(e.to_string()))?;
+        let challenge = crate::proof::proof::Challenge {
+            value: challenge_bytes,
+        };
+        
+        // Create response
+        let response = crate::proof::proof::Response {
+            value: proof_data,
+        };
+        
         Ok(Proof {
-            data: proof_data,
-            statement_type: statement.statement_type.clone(),
-            public_inputs: statement.public_inputs.clone(),
+            commitments: vec![commitment],
+            challenge,
+            responses: vec![response],
+            metadata: crate::proof::proof::ProofMetadata {
+                version: 1,
+                timestamp: 0,
+                size: 0,
+            },
+            bulletproof: None,
         })
     }
 
-    fn verify(&self, _statement: &Statement, proof: &Proof) -> crate::CryptoResult<bool> {
-        // Verify the proof
-        // In full implementation, deserialize and verify
-        if proof.data.is_empty() {
-            return Ok(false);
+    async fn prove_batch(
+        &self,
+        statements: &[Statement],
+        witnesses: &[Witness],
+        config: &crate::proof::prover::ProverConfig,
+    ) -> crate::CryptoResult<Vec<Proof>> {
+        let mut proofs = Vec::with_capacity(statements.len());
+        for (statement, witness) in statements.iter().zip(witnesses.iter()) {
+            let proof = self.prove(statement, witness, config).await?;
+            proofs.push(proof);
         }
-        Ok(true)
+        Ok(proofs)
     }
 
-    fn name(&self) -> &str {
-        "NovaProver"
-    }
-
-    fn supported_statements(&self) -> Vec<crate::proof::StatementType> {
-        vec![
-            crate::proof::StatementType::Range,
-            crate::proof::StatementType::DiscreteLog,
-            crate::proof::StatementType::Preimage,
-            crate::proof::StatementType::SetMembership,
-            crate::proof::StatementType::Equality,
-        ]
+    fn capabilities(&self) -> crate::proof::prover::ProverCapabilities {
+        crate::proof::prover::ProverCapabilities {
+            max_proof_size: 1_000_000, // 1MB
+            avg_proving_time_ms: 1000,
+            trusted_setup_required: false,
+            zk_guarantee: crate::proof::prover::ZKGuarantee::Computational,
+            supported_optimizations: vec![
+                "ivc".to_string(),
+                "batching".to_string(),
+                "recursion".to_string(),
+            ],
+        }
     }
 }
 

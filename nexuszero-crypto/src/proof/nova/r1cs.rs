@@ -380,7 +380,7 @@ impl R1CSConverter {
     }
 
     /// Create a converter with default security level
-    pub fn default() -> Self {
+    pub fn with_default_security() -> Self {
         Self {
             security_level: NovaSecurityLevel::default(),
         }
@@ -397,9 +397,7 @@ impl R1CSConverter {
         let _ = self.convert_witness(statement, witness, &cs)?;
         
         // Create instance with public inputs from statement
-        let public_inputs = statement.public_inputs.iter()
-            .map(|v| v.clone())
-            .collect();
+        let public_inputs = self.extract_public_inputs(statement);
         
         let cs_hash = {
             use sha3::{Sha3_256, Digest};
@@ -415,25 +413,43 @@ impl R1CSConverter {
         Ok(R1CSInstance::new(public_inputs, cs_hash))
     }
 
+    /// Extract public inputs from statement
+    fn extract_public_inputs(&self, statement: &Statement) -> Vec<Vec<u8>> {
+        match &statement.statement_type {
+            StatementType::DiscreteLog { generator, public_value } => {
+                vec![generator.clone(), public_value.clone()]
+            }
+            StatementType::Preimage { hash_output, .. } => {
+                vec![hash_output.clone()]
+            }
+            StatementType::Range { commitment, min, max, .. } => {
+                let mut inputs = vec![commitment.clone()];
+                inputs.push(min.to_le_bytes().to_vec());
+                inputs.push(max.to_le_bytes().to_vec());
+                inputs
+            }
+            StatementType::Custom { .. } => {
+                vec![]
+            }
+        }
+    }
+
     /// Convert a NexusZero Statement to R1CS constraint system
     pub fn convert_statement(&self, statement: &Statement) -> NovaResult<R1CSConstraintSystem> {
-        let mut cs = R1CSConstraintSystem::new(self.security_level);
+        let mut cs = R1CSConstraintSystem::new(self.security_level.clone());
 
         match &statement.statement_type {
             StatementType::DiscreteLog { generator, public_value } => {
                 self.convert_discrete_log(&mut cs, generator, public_value)?;
             }
-            StatementType::Preimage { hash_function, hash_output } => {
+            StatementType::Preimage { hash_output, .. } => {
                 self.convert_preimage(&mut cs, hash_output)?;
             }
             StatementType::Range { min, max, commitment } => {
                 self.convert_range(&mut cs, *min, *max, commitment)?;
             }
-            StatementType::Equality { left, right } => {
-                self.convert_equality(&mut cs, left, right)?;
-            }
-            StatementType::Custom { type_id, data } => {
-                self.convert_custom(&mut cs, type_id, data)?;
+            StatementType::Custom { description } => {
+                self.convert_custom(&mut cs, description)?;
             }
         }
 
@@ -451,21 +467,24 @@ impl R1CSConverter {
         let mut witness_values = Vec::with_capacity(cs.num_witness);
 
         // Extract witness data based on statement type
+        let witness_data = witness.get_secret_bytes()
+            .map_err(|e| NovaError::WitnessError(e.to_string()))?;
+        
         match &statement.statement_type {
             StatementType::DiscreteLog { .. } => {
                 // Discrete log witness is the exponent
-                witness_values.push(witness.data.clone());
+                witness_values.push(witness_data.clone());
             }
             StatementType::Preimage { .. } => {
                 // Preimage witness is the preimage itself
-                witness_values.push(witness.data.clone());
+                witness_values.push(witness_data.clone());
             }
             StatementType::Range { .. } => {
                 // Range witness is the value and possibly bit decomposition
-                witness_values.push(witness.data.clone());
+                witness_values.push(witness_data.clone());
                 // Add bit decomposition if needed
                 let value = u64::from_le_bytes(
-                    witness.data.get(..8)
+                    witness_data.get(..8)
                         .and_then(|s| s.try_into().ok())
                         .unwrap_or([0u8; 8])
                 );
@@ -474,11 +493,8 @@ impl R1CSConverter {
                     witness_values.push(vec![bit]);
                 }
             }
-            StatementType::Equality { .. } => {
-                witness_values.push(witness.data.clone());
-            }
             StatementType::Custom { .. } => {
-                witness_values.push(witness.data.clone());
+                witness_values.push(witness_data.clone());
             }
         }
 
@@ -507,12 +523,9 @@ impl R1CSConverter {
                 public_inputs.push(max.to_le_bytes().to_vec());
                 public_inputs.push(commitment.clone());
             }
-            StatementType::Equality { left, right } => {
-                public_inputs.push(left.clone());
-                public_inputs.push(right.clone());
-            }
-            StatementType::Custom { data, .. } => {
-                public_inputs.push(data.clone());
+            StatementType::Custom { description } => {
+                // For custom statements, encode description as public input
+                public_inputs.push(description.as_bytes().to_vec());
             }
         }
 
@@ -524,10 +537,7 @@ impl R1CSConverter {
         })?);
         let cs_hash: [u8; 32] = hasher.finalize().into();
 
-        Ok(R1CSInstance {
-            public_inputs,
-            cs_hash,
-        })
+        Ok(R1CSInstance::new(public_inputs, cs_hash))
     }
 
     // Private conversion methods for each statement type
@@ -611,32 +621,19 @@ impl R1CSConverter {
         Ok(())
     }
 
-    fn convert_equality(
-        &self,
-        cs: &mut R1CSConstraintSystem,
-        left: &[u8],
-        right: &[u8],
-    ) -> NovaResult<()> {
-        let l = cs.alloc_public("left");
-        let r = cs.alloc_public("right");
-        let witness = cs.alloc_private("equality_witness");
-
-        cs.enforce_equal(l, r, Some("equality_check"));
-
-        Ok(())
-    }
-
     fn convert_custom(
         &self,
         cs: &mut R1CSConstraintSystem,
-        type_id: &str,
-        data: &[u8],
+        description: &str,
     ) -> NovaResult<()> {
         // Custom statements need custom conversion logic
         // For now, we just create placeholder constraints
         let input = cs.alloc_public("custom_input");
         let witness = cs.alloc_private("custom_witness");
         let output = cs.alloc_private("custom_output");
+
+        // Add description as metadata hint (unused but documents intent)
+        let _desc = description;
 
         cs.enforce_mul(input, witness, output, Some("custom_constraint"));
 
@@ -646,14 +643,13 @@ impl R1CSConverter {
 
 impl Default for R1CSConverter {
     fn default() -> Self {
-        Self::new()
+        Self::new(NovaSecurityLevel::default())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::proof::statement::HashFunction;
 
     #[test]
     fn test_r1cs_constraint_system_creation() {
@@ -683,16 +679,14 @@ mod tests {
 
     #[test]
     fn test_r1cs_converter_discrete_log() {
-        let converter = R1CSConverter::new();
+        let converter = R1CSConverter::default();
         
         let statement = Statement {
             statement_type: StatementType::DiscreteLog {
                 generator: vec![1, 2, 3],
                 public_value: vec![4, 5, 6],
             },
-            commitment: None,
-            timestamp: 0,
-            metadata: None,
+            version: 1,
         };
 
         let result = converter.convert_statement(&statement);
@@ -705,7 +699,7 @@ mod tests {
 
     #[test]
     fn test_r1cs_converter_range() {
-        let converter = R1CSConverter::new();
+        let converter = R1CSConverter::default();
         
         let statement = Statement {
             statement_type: StatementType::Range {
@@ -713,9 +707,7 @@ mod tests {
                 max: 100,
                 commitment: vec![1, 2, 3, 4],
             },
-            commitment: None,
-            timestamp: 0,
-            metadata: None,
+            version: 1,
         };
 
         let result = converter.convert_statement(&statement);
