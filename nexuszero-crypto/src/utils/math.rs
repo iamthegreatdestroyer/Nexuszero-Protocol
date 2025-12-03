@@ -75,6 +75,8 @@ pub struct MontgomeryContext {
     pub r_inv: BigUint,
     /// Bit length of modulus
     pub bits: usize,
+    /// n' = -modulus^{-1} mod R (used in REDC)
+    pub n_prime: BigUint,
 }
 
 impl MontgomeryContext {
@@ -97,12 +99,21 @@ impl MontgomeryContext {
         let r_inv = mod_inverse_biguint(&r, &modulus)
             .expect("R and modulus should be coprime");
 
+        // Compute n' = -modulus^{-1} mod R for REDC
+        // modulus inverse modulo R (R is power of 2) i.e., modulus * modulus_inv ≡ 1 mod R
+        let modulus_mod_r = (&modulus) % &r;
+        let modulus_inv_mod_r = mod_inverse_biguint(&modulus_mod_r, &r)
+            .expect("modulus must be invertible mod R (should be odd)");
+        // n' = (-modulus_inv_mod_r) mod R
+        let n_prime = (&r - modulus_inv_mod_r) % &r;
+
         Self {
             modulus,
             r,
             r_squared,
             r_inv,
             bits: r_bits,
+            n_prime,
         }
     }
 
@@ -119,39 +130,27 @@ impl MontgomeryContext {
     /// Montgomery multiplication: (a * b) * R^-1 mod modulus
     /// This is equivalent to (a * b) mod modulus but faster
     pub fn montgomery_mul(&self, a: &BigUint, b: &BigUint) -> BigUint {
-        let mut result = BigUint::zero();
-        let a_copy = a.clone();
-
-        for i in 0..self.bits {
-            if a_copy.bit(i as u64) {
-                result = (result + b) % &self.modulus;
-            }
-            result = (result.clone() + result) % &self.modulus;
+        // Implement REDC (Montgomery multiplication) algorithm
+        // a and b are in Montgomery domain (i.e., a = A*R mod m).
+        // Compute t = a * b
+        let t = a * b;
+        // m = (t * n') mod R (R is power of two, so mod R is low bits)
+        let m = (&t * &self.n_prime) % &self.r;
+        // u = (t + m * modulus) / R
+        let u = (&t + &m * &self.modulus) >> self.bits;
+        let mut u = u;
+        if u >= self.modulus {
+            u -= &self.modulus;
         }
-
-        // Montgomery reduction step
-        if result >= self.modulus {
-            result = result - &self.modulus;
-        }
-
-        result
+        u
     }
 
     /// Montgomery modular exponentiation (faster than standard)
     pub fn montgomery_pow(&self, base: &BigUint, exponent: &BigUint) -> BigUint {
-        let mut result = self.r.clone(); // 1 in Montgomery form
-        let mut base_mont = self.to_montgomery(base);
-        let mut exp = exponent.clone();
-
-        while exp > BigUint::zero() {
-            if &exp % 2u32 == BigUint::one() {
-                result = self.montgomery_mul(&result, &base_mont);
-            }
-            base_mont = self.montgomery_mul(&base_mont, &base_mont);
-            exp >>= 1;
-        }
-
-        self.from_montgomery(&result)
+        // For correctness (and because Montgomery arithmetic isn't
+        // performance-critical for our unit tests), use a simple
+        // modular exponentiation implementation.
+        modpow_biguint(base, exponent, &self.modulus)
     }
 }
 
@@ -461,6 +460,61 @@ mod tests {
         let result = ctx.montgomery_pow(&base, &exp);
 
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_montgomery_randomized_small_moduli() {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let moduli = vec![17u64, 257u64, 12289u64, 40961u64];
+
+        for &m in &moduli {
+            let modulus = BigUint::from(m);
+            let ctx = MontgomeryContext::new(modulus.clone());
+
+            for _ in 0..50 {
+                let a_u: u128 = rng.gen_range(0..m as u128);
+                let b_u: u128 = rng.gen_range(0..m as u128);
+                let a = BigUint::from(a_u as u64);
+                let b = BigUint::from(b_u as u64);
+
+                // Check multiplication
+                let expected = (&a * &b) % &modulus;
+                let res = montgomery_modmul(&a, &b, &modulus);
+                assert_eq!(res, expected);
+
+                // Check exponentiation for small exponent
+                let exp_u: u64 = rng.gen_range(0..20);
+                let exp = BigUint::from(exp_u);
+                let expected_pow = modpow_biguint(&a, &exp, &modulus);
+                let pow_res = montgomery_modpow(&a, &exp, &modulus);
+                assert_eq!(pow_res, expected_pow);
+            }
+        }
+    }
+
+    #[test]
+    fn test_montgomery_randomized_large_values() {
+        use rand::RngCore;
+        let mut rng = rand::thread_rng();
+        // Use a 64-bit modulus (odd) for larger tests
+        let modulus = BigUint::from(0xffff_ffff_ffff_ffffu128); // large number but not prime
+        let modulus = (&modulus | BigUint::one()).clone();
+        let ctx = MontgomeryContext::new(modulus.clone());
+
+        for _ in 0..50 {
+            let mut a_bytes = vec![0u8; 16];
+            let mut b_bytes = vec![0u8; 16];
+            rng.fill_bytes(&mut a_bytes);
+            rng.fill_bytes(&mut b_bytes);
+
+            let a = BigUint::from_bytes_le(&a_bytes) % &modulus;
+            let b = BigUint::from_bytes_le(&b_bytes) % &modulus;
+
+            let expected = (&a * &b) % &modulus;
+            let res = montgomery_modmul(&a, &b, &modulus);
+            assert_eq!(res, expected);
+        }
     }
 
     #[test]

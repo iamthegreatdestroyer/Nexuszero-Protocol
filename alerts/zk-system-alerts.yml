@@ -1,0 +1,502 @@
+# NexusZero ZK System Alerting Rules
+# Prometheus alerting rules for proof generation, verification,
+# circuit compilation, and error tracking
+
+groups:
+  # ==========================================================================
+  # PROOF GENERATION ALERTS
+  # ==========================================================================
+  - name: nexuszero_zk_proof_generation
+    interval: 30s
+    rules:
+      # Proof generation latency exceeds SLA (100ms target)
+      - alert: ZKProofGenerationLatencyHigh
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(nexuszero_zk_proof_generation_duration_seconds_bucket[5m])) by (proof_type, le)
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_proof_generation
+        annotations:
+          summary: "ZK proof generation latency exceeds target"
+          description: |
+            Proof type {{ $labels.proof_type }} has p95 generation latency of 
+            {{ $value | humanizeDuration }} which exceeds the 100ms target.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-proof-latency"
+
+      # Critical: Proof generation latency severely degraded
+      - alert: ZKProofGenerationLatencyCritical
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(nexuszero_zk_proof_generation_duration_seconds_bucket[5m])) by (proof_type, le)
+          ) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          component: zk_proof_generation
+        annotations:
+          summary: "ZK proof generation latency critically high"
+          description: |
+            Proof type {{ $labels.proof_type }} has p95 latency of {{ $value | humanizeDuration }}.
+            This is 5x the target and indicates severe performance degradation.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-proof-latency-critical"
+
+      # Proof generation queue backing up
+      - alert: ZKProofQueueBacklog
+        expr: nexuszero_zk_proof_queue_depth > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_proof_generation
+        annotations:
+          summary: "ZK proof generation queue building up"
+          description: |
+            Proof queue depth is {{ $value }} which indicates generation is not 
+            keeping up with demand. Consider scaling prover capacity.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-queue-backlog"
+
+      # Critical queue backlog
+      - alert: ZKProofQueueCritical
+        expr: nexuszero_zk_proof_queue_depth > 500
+        for: 2m
+        labels:
+          severity: critical
+          component: zk_proof_generation
+        annotations:
+          summary: "ZK proof queue critically backed up"
+          description: |
+            Proof queue depth is {{ $value }}. System may be unable to process
+            proofs in acceptable time. Immediate action required.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-queue-critical"
+
+      # Too many concurrent proof generations
+      - alert: ZKActiveProofGenerationsHigh
+        expr: sum(nexuszero_zk_active_proof_generations) > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_proof_generation
+        annotations:
+          summary: "High number of concurrent proof generations"
+          description: |
+            {{ $value }} proof generations are currently active. This may indicate
+            resource contention or slow proof generation.
+
+      # Proof generation throughput dropped
+      - alert: ZKProofThroughputDrop
+        expr: |
+          sum(rate(nexuszero_zk_proofs_generated_total[5m])) < 
+          sum(rate(nexuszero_zk_proofs_generated_total[1h] offset 1d)) * 0.5
+        for: 15m
+        labels:
+          severity: warning
+          component: zk_proof_generation
+        annotations:
+          summary: "ZK proof throughput significantly lower than yesterday"
+          description: |
+            Current throughput is {{ $value | humanize }}/s, which is less than 
+            50% of the same period yesterday.
+
+  # ==========================================================================
+  # VERIFICATION ALERTS
+  # ==========================================================================
+  - name: nexuszero_zk_verification
+    interval: 30s
+    rules:
+      # Verification latency exceeds SLA (50ms target)
+      - alert: ZKVerificationLatencyHigh
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(nexuszero_zk_verification_duration_seconds_bucket[5m])) by (proof_type, le)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_verification
+        annotations:
+          summary: "ZK verification latency exceeds target"
+          description: |
+            Proof type {{ $labels.proof_type }} has p95 verification latency of 
+            {{ $value | humanizeDuration }} which exceeds the 50ms target.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-verification-latency"
+
+      # Critical verification latency
+      - alert: ZKVerificationLatencyCritical
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(nexuszero_zk_verification_duration_seconds_bucket[5m])) by (proof_type, le)
+          ) > 0.25
+        for: 2m
+        labels:
+          severity: critical
+          component: zk_verification
+        annotations:
+          summary: "ZK verification latency critically high"
+          description: |
+            Verification latency for {{ $labels.proof_type }} is {{ $value | humanizeDuration }}.
+            This is 5x the target. Transaction processing may be impacted.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-verification-critical"
+
+      # Verification failure rate
+      - alert: ZKVerificationFailureRate
+        expr: |
+          sum(rate(nexuszero_zk_verifications_total{result="invalid"}[5m])) /
+          sum(rate(nexuszero_zk_verifications_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_verification
+        annotations:
+          summary: "ZK verification failure rate above 1%"
+          description: |
+            {{ $value | humanizePercentage }} of verifications are failing.
+            This may indicate proof generation issues or attack attempts.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-verification-failures"
+
+      # Critical verification failure rate
+      - alert: ZKVerificationFailureRateCritical
+        expr: |
+          sum(rate(nexuszero_zk_verifications_total{result="invalid"}[5m])) /
+          sum(rate(nexuszero_zk_verifications_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: zk_verification
+        annotations:
+          summary: "ZK verification failure rate critically high"
+          description: |
+            {{ $value | humanizePercentage }} of verifications are failing.
+            This indicates a serious issue. Investigate immediately.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-verification-critical-failures"
+
+      # No verifications happening
+      - alert: ZKVerificationStalled
+        expr: |
+          sum(rate(nexuszero_zk_verifications_total[5m])) == 0 
+          and sum(nexuszero_zk_proofs_generated_total) > 0
+        for: 10m
+        labels:
+          severity: critical
+          component: zk_verification
+        annotations:
+          summary: "No ZK verifications occurring"
+          description: |
+            No verifications have occurred in the last 10 minutes despite 
+            proofs being generated. Verification system may be down.
+
+  # ==========================================================================
+  # CIRCUIT COMPILATION ALERTS
+  # ==========================================================================
+  - name: nexuszero_zk_circuit
+    interval: 60s
+    rules:
+      # Circuit compilation time high
+      - alert: ZKCircuitCompilationSlow
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(nexuszero_zk_circuit_compilation_seconds_bucket[10m])) by (circuit_type, le)
+          ) > 30
+        for: 10m
+        labels:
+          severity: warning
+          component: zk_circuit
+        annotations:
+          summary: "Circuit compilation taking too long"
+          description: |
+            Circuit type {{ $labels.circuit_type }} p95 compilation time is 
+            {{ $value | humanizeDuration }}. Consider circuit optimizations.
+
+      # Circuit cache miss rate high
+      - alert: ZKCircuitCacheMissRateHigh
+        expr: |
+          sum(rate(nexuszero_zk_circuit_cache_operations{result="miss"}[5m])) /
+          sum(rate(nexuszero_zk_circuit_cache_operations[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: zk_circuit
+        annotations:
+          summary: "Circuit cache miss rate high"
+          description: |
+            {{ $value | humanizePercentage }} of circuit lookups are cache misses.
+            Consider increasing cache size or precompiling common circuits.
+
+      # Circuit constraint count unusually high
+      - alert: ZKCircuitConstraintsHigh
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(nexuszero_zk_circuit_constraints_bucket[10m])) by (circuit_type, le)
+          ) > 1000000
+        for: 5m
+        labels:
+          severity: info
+          component: zk_circuit
+        annotations:
+          summary: "Circuit has high constraint count"
+          description: |
+            Circuit type {{ $labels.circuit_type }} has {{ $value | humanize }} 
+            constraints. This may impact proof generation performance.
+
+  # ==========================================================================
+  # ERROR TRACKING ALERTS
+  # ==========================================================================
+  - name: nexuszero_zk_errors
+    interval: 30s
+    rules:
+      # Overall error rate high
+      - alert: ZKErrorRateHigh
+        expr: |
+          sum(rate(nexuszero_zk_errors_total[5m])) /
+          (sum(rate(nexuszero_zk_proofs_generated_total[5m])) + 
+           sum(rate(nexuszero_zk_verifications_total[5m])) + 0.001) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_system
+        annotations:
+          summary: "ZK system error rate above 1%"
+          description: |
+            {{ $value | humanizePercentage }} of operations are resulting in errors.
+            Check logs for error details.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-error-rate"
+
+      # Critical errors occurring
+      - alert: ZKCriticalErrors
+        expr: |
+          sum(rate(nexuszero_zk_errors_total{severity="critical"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: zk_system
+        annotations:
+          summary: "Critical ZK errors detected"
+          description: |
+            {{ $value }} critical errors/s are occurring. 
+            Categories: {{ with query "sum(rate(nexuszero_zk_errors_total{severity='critical'}[5m])) by (category)" }}{{ . | first | label "category" }}{{ end }}
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-critical-errors"
+
+      # Specific error category spikes
+      - alert: ZKProofGenerationErrors
+        expr: |
+          sum(rate(nexuszero_zk_errors_total{category="proof_generation"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_proof_generation
+        annotations:
+          summary: "Elevated proof generation errors"
+          description: |
+            {{ $value | humanize }}/s proof generation errors occurring.
+            This may indicate issues with witness generation or circuit setup.
+
+      - alert: ZKVerificationErrors
+        expr: |
+          sum(rate(nexuszero_zk_errors_total{category="verification_failed"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_verification
+        annotations:
+          summary: "Elevated verification errors"
+          description: |
+            {{ $value | humanize }}/s verification errors occurring.
+            This may indicate malformed proofs or system issues.
+
+      - alert: ZKCompressionErrors
+        expr: |
+          sum(rate(nexuszero_zk_errors_total{category="compression"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_compression
+        annotations:
+          summary: "Compression errors occurring"
+          description: |
+            {{ $value | humanize }}/s compression errors. Check holographic 
+            compression module health.
+
+      # Excessive retries
+      - alert: ZKExcessiveRetries
+        expr: |
+          sum(rate(nexuszero_zk_retry_attempts_total{attempt_number="4+"}[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_system
+        annotations:
+          summary: "Excessive retry attempts for ZK operations"
+          description: |
+            Operations requiring 4+ retry attempts: {{ $value | humanize }}/s.
+            This indicates persistent failures in the ZK system.
+
+      # Resource exhaustion
+      - alert: ZKResourceExhaustion
+        expr: |
+          sum(rate(nexuszero_zk_errors_total{category="resource_exhaustion"}[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+          component: zk_system
+        annotations:
+          summary: "ZK system resource exhaustion"
+          description: |
+            Resource exhaustion errors detected. System may be running out of 
+            memory, CPU, or hitting timeouts. Scale resources immediately.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-resource-exhaustion"
+
+  # ==========================================================================
+  # RESOURCE USAGE ALERTS
+  # ==========================================================================
+  - name: nexuszero_zk_resources
+    interval: 30s
+    rules:
+      # High memory usage during proof operations
+      - alert: ZKMemoryUsageHigh
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(nexuszero_zk_proof_memory_bytes_bucket[5m])) by (operation, le)
+          ) > 2147483648
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_resources
+        annotations:
+          summary: "ZK operation memory usage high"
+          description: |
+            Operation {{ $labels.operation }} p95 memory usage is 
+            {{ $value | humanize1024 }}B. Consider optimizing or limiting concurrency.
+
+      # GPU utilization saturated
+      - alert: ZKGpuUtilizationSaturated
+        expr: nexuszero_zk_gpu_utilization_percent > 95
+        for: 10m
+        labels:
+          severity: warning
+          component: zk_resources
+        annotations:
+          summary: "GPU utilization near saturation"
+          description: |
+            GPU utilization is {{ $value }}%. Consider adding GPU capacity 
+            or optimizing proof batch sizes.
+
+      # GPU memory pressure
+      - alert: ZKGpuMemoryHigh
+        expr: nexuszero_zk_gpu_memory_bytes > 10737418240
+        for: 5m
+        labels:
+          severity: warning
+          component: zk_resources
+        annotations:
+          summary: "GPU memory usage high"
+          description: |
+            GPU memory usage is {{ $value | humanize1024 }}B. 
+            Monitor for OOM conditions.
+
+  # ==========================================================================
+  # OPTIMIZATION ALERTS
+  # ==========================================================================
+  - name: nexuszero_zk_optimization
+    interval: 60s
+    rules:
+      # Neural optimizer not being used when it should be
+      - alert: ZKNeuralOptimizerUnderutilized
+        expr: |
+          sum(rate(nexuszero_zk_neural_optimization_total{decision="skipped"}[1h])) /
+          sum(rate(nexuszero_zk_neural_optimization_total[1h])) > 0.8
+        for: 30m
+        labels:
+          severity: info
+          component: zk_optimization
+        annotations:
+          summary: "Neural optimizer being skipped frequently"
+          description: |
+            {{ $value | humanizePercentage }} of optimizations are skipping 
+            the neural optimizer. This may be expected for simple circuits.
+
+      # Neural speedup factor low
+      - alert: ZKNeuralSpeedupLow
+        expr: |
+          histogram_quantile(0.5, 
+            sum(rate(nexuszero_zk_neural_speedup_factor_bucket[1h])) by (le)
+          ) < 1.1
+        for: 1h
+        labels:
+          severity: info
+          component: zk_optimization
+        annotations:
+          summary: "Neural optimization not providing significant speedup"
+          description: |
+            Median neural speedup factor is {{ $value }}x. Consider retraining 
+            the neural optimizer or adjusting selection criteria.
+
+  # ==========================================================================
+  # SLA ALERTS (COMPOSITE)
+  # ==========================================================================
+  - name: nexuszero_zk_sla
+    interval: 30s
+    rules:
+      # Overall ZK system health
+      - alert: ZKSystemDegraded
+        expr: |
+          (
+            histogram_quantile(0.95, sum(rate(nexuszero_zk_proof_generation_duration_seconds_bucket[5m])) by (le)) > 0.1
+            or
+            histogram_quantile(0.95, sum(rate(nexuszero_zk_verification_duration_seconds_bucket[5m])) by (le)) > 0.05
+            or
+            sum(rate(nexuszero_zk_errors_total[5m])) / 
+              (sum(rate(nexuszero_zk_proofs_generated_total[5m])) + 
+               sum(rate(nexuszero_zk_verifications_total[5m])) + 0.001) > 0.01
+          )
+        for: 10m
+        labels:
+          severity: warning
+          component: zk_system
+          sla_impact: "true"
+        annotations:
+          summary: "ZK system performance degraded"
+          description: |
+            One or more ZK SLA targets are not being met:
+            - Proof generation p95 target: 100ms
+            - Verification p95 target: 50ms
+            - Error rate target: <1%
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-sla-degraded"
+
+      # ZK system down
+      - alert: ZKSystemDown
+        expr: |
+          sum(rate(nexuszero_zk_proofs_generated_total[5m])) == 0
+          and sum(rate(nexuszero_zk_verifications_total[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: zk_system
+          sla_impact: "true"
+        annotations:
+          summary: "ZK system appears to be down"
+          description: |
+            No proof generation or verification activity detected in the last 
+            5 minutes. The ZK system may be completely down.
+          runbook_url: "https://docs.nexuszero.io/runbooks/zk-system-down"
+
+      # Monthly error budget burn rate
+      - alert: ZKErrorBudgetBurnRate
+        expr: |
+          (
+            sum(rate(nexuszero_zk_errors_total[1h])) / 
+            (sum(rate(nexuszero_zk_proofs_generated_total[1h])) + 
+             sum(rate(nexuszero_zk_verifications_total[1h])) + 0.001)
+          ) > (
+            0.001 * 720 / 24  # Monthly budget (0.1%) burn rate threshold
+          )
+        for: 1h
+        labels:
+          severity: warning
+          component: zk_system
+          sla_impact: "true"
+        annotations:
+          summary: "ZK error budget burning too fast"
+          description: |
+            Current error rate will exhaust the monthly 0.1% error budget 
+            in less than 24 hours at current pace.

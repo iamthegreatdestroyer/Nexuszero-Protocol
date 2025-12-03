@@ -1,4 +1,13 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2025 NexusZero Protocol
+//
+// This file is part of NexusZero Protocol - Advanced Zero-Knowledge Infrastructure
+// Licensed under the GNU Affero General Public License v3.0 or later.
+// Commercial licensing available at https://nexuszero.io/licensing
+//
+// NexusZero Protocol™, Privacy Morphing™, and Holographic Proof Compression™
+// are trademarks of NexusZero Protocol. All Rights Reserved.
+
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";

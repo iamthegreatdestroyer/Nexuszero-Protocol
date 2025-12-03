@@ -4,7 +4,7 @@
 ![Sessions](https://img.shields.io/badge/Sessions%20Complete-4%2F6-blue)
 ![Documentation](https://img.shields.io/badge/Documentation-Complete-success)
 ![Coverage](https://img.shields.io/badge/Coverage-90.48%25-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-informational)
+![License](https://img.shields.io/badge/License-AGPL%20v3-blue)
 
 > A comprehensive VS Code workspace configuration system with automated terminal environment setup, integrated with Claude AI and GitHub automation for zero-friction developer onboarding.
 
@@ -882,6 +882,40 @@ project-info
 ```
 
 **Questions?** Check the documentation in `/docs/` or use `help-vscode` after profile installation.
+
+---
+
+## ⚖️ Legal & Licensing
+
+### License
+
+NexusZero Protocol is dual-licensed:
+
+- **Open Source License:** [GNU Affero General Public License v3.0](LICENSE) - Free for personal and open-source use
+- **Commercial License:** Available for proprietary use - Contact [licensing@nexuszero.io](mailto:licensing@nexuszero.io)
+
+### Intellectual Property
+
+**Patents Pending:** The following technologies are covered by pending patent applications:
+
+- Quantum-Resistant ZK-SNARK State Channels
+- Privacy Morphing Engine (Adaptive Privacy Levels)
+- Holographic Proof Compression using Tensor Networks
+- Neural Tensor Network Compression
+- Cross-Chain Privacy Bridge Protocol
+
+**Trademarks:**
+
+- NexusZero Protocol™
+- NexusZero™
+- Privacy Morphing™
+- Holographic Proof Compression™
+
+See [IP_NOTICE.md](IP_NOTICE.md) for complete intellectual property information.
+
+### Third-Party Licenses
+
+This project uses open-source libraries. See [legal/licenses/](legal/licenses/) for attribution.
 
 ---
 

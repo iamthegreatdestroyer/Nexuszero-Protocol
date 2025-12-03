@@ -2,11 +2,14 @@
 name = "nexuszero-integration"
 version = "0.1.0"
 edition = "2021"
+authors = ["NexusZero Protocol Team <team@nexuszero.io>"]
 description = "End-to-end integration layer combining crypto, optimizer, and holographic compression"
-license = "MIT"
-authors = ["NexusZero Protocol Team"]
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
+homepage = "https://nexuszero.io"
+documentation = "https://docs.nexuszero.io"
 keywords = ["zero-knowledge", "privacy", "integration", "compression"]
+categories = ["cryptography", "development-tools"]
 
 [features]
 default = []

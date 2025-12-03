@@ -2,6 +2,27 @@
   "name": "nexuszero-protocol",
   "version": "0.1.0",
   "private": true,
+  "description": "Quantum-resistant zero-knowledge proof system for cross-chain privacy",
+  "author": "NexusZero Protocol Team <team@nexuszero.io>",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://nexuszero.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol/issues",
+    "email": "security@nexuszero.io"
+  },
+  "keywords": [
+    "zero-knowledge",
+    "cryptography",
+    "blockchain",
+    "privacy",
+    "quantum-resistant",
+    "zk-proofs",
+    "cross-chain"
+  ],
   "scripts": {
     "dev": "node examples/node-app/index.js",
     "start": "node examples/node-app/index.js",
@@ -10,6 +31,5 @@
     "docs:dev": "cd docs-site && npm run docs:dev",
     "docs:build": "cd docs-site && npm run docs:build",
     "docs:preview": "cd docs-site && npm run docs:preview"
-  },
-  "license": "MIT"
+  }
 }

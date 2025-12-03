@@ -47,9 +47,21 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["NexusZero Protocol Team"]
-license = "MIT"
+authors = ["NexusZero Protocol Team <team@nexuszero.io>"]
+license = "AGPL-3.0-or-later"
+license-file = "LICENSE"
 repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
+homepage = "https://nexuszero.io"
+documentation = "https://docs.nexuszero.io"
+readme = "README.md"
+keywords = ["zero-knowledge", "cryptography", "blockchain", "privacy", "quantum-resistant"]
+categories = ["cryptography", "blockchain", "security"]
+description = "Quantum-resistant zero-knowledge proof system for cross-chain privacy"
+
+# Patent and IP Notice
+# PATENT PENDING - See legal/patents/PATENT_CLAIMS.md
+# Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+# NexusZero Protocol™ is a trademark of NexusZero Protocol.
 
 [workspace.dependencies]
 # Async runtime

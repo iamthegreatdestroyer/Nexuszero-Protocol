@@ -2,10 +2,12 @@
 name = "nexuszero-crypto"
 version = "0.1.0"
 edition = "2021"
-authors = ["Steve <iamthegreatdestroyer@github.com>"]
+authors = ["NexusZero Protocol Team <team@nexuszero.io>"]
 description = "Quantum-resistant zero-knowledge proof system based on lattice cryptography"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
+homepage = "https://nexuszero.io"
+documentation = "https://docs.nexuszero.io"
 keywords = ["cryptography", "zero-knowledge", "lattice", "post-quantum", "zkp"]
 categories = ["cryptography", "mathematics"]
 
@@ -53,6 +55,13 @@ rayon = "1.10"
 # LRU cache for witness management
 lru = "0.12"
 
+# Nova folding scheme for IVC/PCD proofs
+nova-snark = { version = "0.37", optional = true }
+pasta_curves = { version = "0.5", optional = true }
+bellpepper-core = { version = "0.4", optional = true }
+bellpepper = { version = "0.4", optional = true }
+ff = { version = "0.13", optional = true }
+
 # Async runtime
 tokio = { version = "1.0", features = ["sync", "macros", "rt-multi-thread", "time"] }
 
@@ -64,6 +73,14 @@ async-trait = "0.1"
 
 # Lazy static for global registries
 lazy_static = "1.4"
+
+# Metrics and monitoring
+prometheus = "0.13"
+hyper = { version = "0.14", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # Hardware acceleration
 wgpu = { version = "0.19", optional = true }
@@ -144,6 +161,8 @@ lazy_static = []
 hardware-acceleration = ["wgpu", "pollster"]
 gpu = ["hardware-acceleration", "bytemuck"]
 tpu = ["hardware-acceleration"]
+# Nova folding scheme feature flag
+nova = ["nova-snark", "pasta_curves", "bellpepper-core", "bellpepper", "ff"]
 
 [lib]
 name = "nexuszero_crypto"

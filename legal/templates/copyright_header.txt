@@ -1,5 +1,148 @@
-/*
- * Copyright (c) 2025 [Your Name/Org]. All Rights Reserved.
+================================================================================
+                    NEXUSZERO PROTOCOL™ COPYRIGHT HEADER TEMPLATES
+================================================================================
+
+Use these templates to add proper copyright and license headers to all source
+files. Choose the appropriate template based on file type.
+
+================================================================================
+RUST FILES (.rs)
+================================================================================
+
+// Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+//
+// This file is part of NexusZero Protocol.
+//
+// NexusZero Protocol is dual-licensed:
+// 1. AGPLv3 for open-source use: https://www.gnu.org/licenses/agpl-3.0.html
+// 2. Commercial license: Contact legal@nexuszero.io
+//
+// Patent Pending - Contains proprietary innovations. See PATENT_CLAIMS.md.
+//
+// SECURITY WARNING: This software has not been independently audited.
+// DO NOT use in production without proper security review.
+
+================================================================================
+PYTHON FILES (.py)
+================================================================================
+
+# Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+#
+# This file is part of NexusZero Protocol.
+#
+# NexusZero Protocol is dual-licensed:
+# 1. AGPLv3 for open-source use: https://www.gnu.org/licenses/agpl-3.0.html
+# 2. Commercial license: Contact legal@nexuszero.io
+#
+# Patent Pending - Contains proprietary innovations. See PATENT_CLAIMS.md.
+
+================================================================================
+TYPESCRIPT/JAVASCRIPT FILES (.ts, .js, .tsx, .jsx)
+================================================================================
+
+/**
+ * Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
  *
- * Licensed under AGPLv3. For commercial licensing, please contact [email]
+ * This file is part of NexusZero Protocol.
+ *
+ * NexusZero Protocol is dual-licensed:
+ * 1. AGPLv3 for open-source use: https://www.gnu.org/licenses/agpl-3.0.html
+ * 2. Commercial license: Contact legal@nexuszero.io
+ *
+ * Patent Pending - Contains proprietary innovations. See PATENT_CLAIMS.md.
  */
+
+================================================================================
+SOLIDITY FILES (.sol)
+================================================================================
+
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+//
+// This file is part of NexusZero Protocol.
+//
+// NexusZero Protocol is dual-licensed:
+// 1. AGPLv3 for open-source use: https://www.gnu.org/licenses/agpl-3.0.html
+// 2. Commercial license: Contact legal@nexuszero.io
+//
+// Patent Pending - Contains proprietary innovations.
+
+================================================================================
+MARKDOWN DOCUMENTATION (.md)
+================================================================================
+
+<!--
+Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+
+This documentation is part of NexusZero Protocol.
+
+NexusZero Protocol™, NexusZero™, and Privacy Morphing™ are trademarks of
+NexusZero Protocol.
+
+Licensed under AGPLv3. Commercial licenses available at legal@nexuszero.io.
+
+Patent Pending.
+-->
+
+================================================================================
+CONFIGURATION FILES (YAML, TOML, JSON with comments)
+================================================================================
+
+# Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+# Licensed under AGPLv3. Commercial licenses: legal@nexuszero.io
+
+================================================================================
+SHELL SCRIPTS (.sh, .bash)
+================================================================================
+
+#!/bin/bash
+# Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+#
+# This file is part of NexusZero Protocol.
+#
+# NexusZero Protocol is dual-licensed:
+# 1. AGPLv3 for open-source use: https://www.gnu.org/licenses/agpl-3.0.html
+# 2. Commercial license: Contact legal@nexuszero.io
+
+================================================================================
+POWERSHELL SCRIPTS (.ps1)
+================================================================================
+
+# Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+#
+# This file is part of NexusZero Protocol.
+#
+# NexusZero Protocol is dual-licensed:
+# 1. AGPLv3 for open-source use: https://www.gnu.org/licenses/agpl-3.0.html
+# 2. Commercial license: Contact legal@nexuszero.io
+
+================================================================================
+DOCKERFILE
+================================================================================
+
+# Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+# Licensed under AGPLv3. Commercial licenses: legal@nexuszero.io
+# Patent Pending.
+
+================================================================================
+CSS/SCSS FILES (.css, .scss)
+================================================================================
+
+/**
+ * Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+ * Licensed under AGPLv3. Commercial licenses: legal@nexuszero.io
+ */
+
+================================================================================
+HTML FILES (.html)
+================================================================================
+
+<!--
+  Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
+  Licensed under AGPLv3. Commercial licenses: legal@nexuszero.io
+-->
+
+================================================================================
+
+Last Updated: December 2, 2025
+Version: 1.0.0

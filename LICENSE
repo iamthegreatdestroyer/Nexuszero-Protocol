@@ -1,7 +1,111 @@
-MIT License
+# NexusZero Protocol™ - Dual License Agreement
 
-Copyright (c) 2025 Steve (iamthegreatdestroyer)
+Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction...
+PATENT PENDING - Portions of this software are covered by pending patent applications.
+
+This software is licensed under a DUAL LICENSE model:
+
+================================================================================
+OPTION 1: GNU AFFERO GENERAL PUBLIC LICENSE Version 3 (AGPLv3)
+================================================================================
+
+For open-source, personal, educational, and non-commercial use, this software
+is licensed under the GNU Affero General Public License version 3 (AGPLv3).
+
+The full text of the AGPLv3 license is available at:
+https://www.gnu.org/licenses/agpl-3.0.html
+
+Key Terms of AGPLv3:
+
+- You may use, modify, and distribute this software freely
+- If you modify and distribute, you MUST release your source code under AGPLv3
+- If you run a modified version as a network service, you MUST provide source
+- You must preserve all copyright and patent notices
+- There is NO WARRANTY; use at your own risk
+
+================================================================================
+OPTION 2: COMMERCIAL LICENSE
+================================================================================
+
+For commercial use, proprietary applications, or use cases that cannot comply
+with AGPLv3 requirements, a commercial license is available.
+
+Commercial License Benefits:
+
+- Use in proprietary/closed-source applications
+- No requirement to release source code
+- Priority support and updates
+- Indemnification options available
+- Custom terms negotiable
+
+To obtain a commercial license, contact:
+
+- Email: legal@nexuszero.io
+- Website: https://nexuszero.io/licensing
+
+================================================================================
+PATENT GRANT
+================================================================================
+
+Subject to the terms and conditions of either license option above, NexusZero
+Protocol hereby grants you a perpetual, worldwide, non-exclusive, no-charge,
+royalty-free, irrevocable patent license to make, have made, use, offer to sell,
+sell, import, and otherwise transfer the Work, where such license applies only
+to those patent claims licensable by NexusZero Protocol that are necessarily
+infringed by the Work.
+
+This patent grant terminates automatically if you:
+
+1. Institute patent litigation against NexusZero Protocol or any contributor
+2. Fail to comply with the terms of the applicable license
+3. Use the patented technology outside the scope of the license granted
+
+================================================================================
+TRADEMARK NOTICE
+================================================================================
+
+NexusZero Protocol™, NexusZero™, NXZ™, and Privacy Morphing™ are trademarks
+of NexusZero Protocol. Use of these trademarks requires written permission
+except for nominative fair use. See legal/trademarks/TRADEMARK_GUIDELINES.md.
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+This software may include third-party open-source components with their own
+licenses. See THIRD_PARTY_LICENSES.md for details on these components and
+their respective licenses.
+
+================================================================================
+DISCLAIMER OF WARRANTY
+================================================================================
+
+THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+================================================================================
+SECURITY NOTICE
+================================================================================
+
+This software contains cryptographic implementations that have NOT been
+independently audited. DO NOT use in production without proper security review.
+See SECURITY.md for responsible disclosure procedures.
+
+================================================================================
+
+For questions about licensing:
+
+- Email: legal@nexuszero.io
+- Website: https://nexuszero.io/licensing
+
+NexusZero Protocol
+https://nexuszero.io
+
+© 2025 NexusZero Protocol. All Rights Reserved.
+Patent Pending.

@@ -2,9 +2,11 @@
 name = "nexuszero-transaction-service"
 version = "0.1.0"
 edition = "2021"
-authors = ["NexusZero Protocol Team"]
+authors = ["NexusZero Protocol Team <team@nexuszero.io>"]
 description = "Transaction handling service with Adaptive Privacy Morphing support"
-license = "MIT OR Apache-2.0"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
+homepage = "https://nexuszero.io"
 
 [dependencies]
 # Async runtime
