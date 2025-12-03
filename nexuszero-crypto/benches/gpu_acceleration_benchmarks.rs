@@ -4,20 +4,29 @@
 //! GPU-accelerated modular arithmetic operations.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+
+#[cfg(feature = "gpu")]
 use nexuszero_crypto::utils::{
-    montgomery_modmul, montgomery_modpow,
     gpu_acceleration_available, init_gpu_acceleration,
     gpu_montgomery_mul_batch, gpu_modular_exponentiation,
     gpu_batch_modular_multiplication,
 };
+
+use nexuszero_crypto::utils::{
+    montgomery_modmul, montgomery_modpow,
+};
 use num_bigint::BigUint;
 use num_traits::identities::{Zero, One};
 use rand::Rng;
+
+#[cfg(feature = "gpu")]
 use std::sync::Once;
 
 /// Initialize GPU acceleration once for all benchmarks
+#[cfg(feature = "gpu")]
 static GPU_INIT: Once = Once::new();
 
+#[cfg(feature = "gpu")]
 fn ensure_gpu_initialized() {
     GPU_INIT.call_once(|| {
         // Initialize GPU acceleration if available
@@ -31,7 +40,9 @@ fn ensure_gpu_initialized() {
 
 /// Benchmark CPU vs GPU Montgomery multiplication
 fn bench_montgomery_multiplication(c: &mut Criterion) {
+    #[cfg(feature = "gpu")]
     ensure_gpu_initialized();
+    
     let mut group = c.benchmark_group("montgomery_multiplication");
 
     // Test data
@@ -45,7 +56,8 @@ fn bench_montgomery_multiplication(c: &mut Criterion) {
         });
     });
 
-    // Only benchmark GPU if available
+    // Only benchmark GPU if feature is enabled and available
+    #[cfg(feature = "gpu")]
     if gpu_acceleration_available() {
         let a_u32 = a.to_u32_digits();
         let b_u32 = b.to_u32_digits();
@@ -85,7 +97,9 @@ fn bench_montgomery_multiplication(c: &mut Criterion) {
 
 /// Benchmark CPU vs GPU modular exponentiation
 fn bench_modular_exponentiation(c: &mut Criterion) {
+    #[cfg(feature = "gpu")]
     ensure_gpu_initialized();
+    
     let mut group = c.benchmark_group("modular_exponentiation");
 
     // Test data - smaller for reasonable benchmark times
@@ -99,7 +113,8 @@ fn bench_modular_exponentiation(c: &mut Criterion) {
         });
     });
 
-    // Only benchmark GPU if available
+    // Only benchmark GPU if feature is enabled and available
+    #[cfg(feature = "gpu")]
     if gpu_acceleration_available() {
         let base_u32 = base.to_u32_digits()[0];
         let mod_u32 = modulus.to_u32_digits()[0];
@@ -126,7 +141,9 @@ fn bench_modular_exponentiation(c: &mut Criterion) {
 
 /// Benchmark batch modular multiplication performance
 fn bench_batch_modular_multiplication(c: &mut Criterion) {
+    #[cfg(feature = "gpu")]
     ensure_gpu_initialized();
+    
     let mut group = c.benchmark_group("batch_modular_multiplication");
 
     // Generate test data
@@ -151,7 +168,11 @@ fn bench_batch_modular_multiplication(c: &mut Criterion) {
                     let b_big = BigUint::from(b);
                     let m_big = BigUint::from(m);
                     let result = montgomery_modmul(&a_big, &b_big, &m_big);
-                    result.to_u32_digits()[0]
+                    if result.to_u32_digits().is_empty() {
+                        0
+                    } else {
+                        result.to_u32_digits()[0]
+                    }
                 })
                 .collect();
             black_box(results);
@@ -159,6 +180,7 @@ fn bench_batch_modular_multiplication(c: &mut Criterion) {
     });
 
     // GPU benchmark
+    #[cfg(feature = "gpu")]
     if gpu_acceleration_available() {
         group.bench_function("gpu_batch_modmul", |bencher| {
             let runtime = tokio::runtime::Builder::new_current_thread()
@@ -180,70 +202,8 @@ fn bench_batch_modular_multiplication(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark large batch sizes for GPU parallelization benefits
-fn bench_large_batch_performance(c: &mut Criterion) {
-    ensure_gpu_initialized();
-    let mut group = c.benchmark_group("large_batch_performance");
-
-    // Test different batch sizes
-    let batch_sizes = [256, 1024, 4096, 16384];
-
-    for &batch_size in &batch_sizes {
-        let mut rng = rand::thread_rng();
-        let a_values: Vec<u32> = (0..batch_size).map(|_| rng.gen()).collect();
-        let b_values: Vec<u32> = (0..batch_size).map(|_| rng.gen()).collect();
-        let moduli: Vec<u32> = (0..batch_size).map(|_| rng.gen::<u32>() | 1).collect();
-
-        group.throughput(criterion::Throughput::Elements(batch_size as u64));
-
-        // CPU benchmark
-        group.bench_with_input(
-            format!("cpu_batch_{}", batch_size),
-            &batch_size,
-            |bencher, _| {
-                bencher.iter(|| {
-                    let results: Vec<u32> = a_values.iter().zip(b_values.iter()).zip(moduli.iter())
-                        .map(|((&a, &b), &m)| {
-                            let a_big = BigUint::from(a);
-                            let b_big = BigUint::from(b);
-                            let m_big = BigUint::from(m);
-                            let result = montgomery_modmul(&a_big, &b_big, &m_big);
-                            result.to_u32_digits()[0]
-                        })
-                        .collect();
-                    black_box(results);
-                });
-            }
-        );
-
-        // GPU benchmark
-        if gpu_acceleration_available() {
-            group.bench_with_input(
-                format!("gpu_batch_{}", batch_size),
-                &batch_size,
-                |bencher, _| {
-                    let runtime = tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .unwrap();
-                    bencher.iter(|| {
-                        runtime.block_on(async {
-                            black_box(gpu_batch_modular_multiplication(
-                                &a_values,
-                                &b_values,
-                                &moduli,
-                            ).await.unwrap());
-                        });
-                    });
-                }
-            );
-        }
-    }
-
-    group.finish();
-}
-
 /// Helper function to compute Montgomery modular inverse
+#[allow(dead_code)]
 fn montgomery_mod_inverse(r: &BigUint, modulus: &BigUint) -> BigUint {
     // For R = 2^k, R^-1 mod modulus can be computed efficiently
     // This is a simplified implementation for benchmarking
@@ -271,8 +231,7 @@ criterion_group!(
     targets =
         bench_montgomery_multiplication,
         bench_modular_exponentiation,
-        bench_batch_modular_multiplication,
-        bench_large_batch_performance
+        bench_batch_modular_multiplication
 );
 
 criterion_main!(gpu_benchmarks);

@@ -98,6 +98,8 @@ pub mod types;
 pub mod recursive;
 #[cfg(feature = "nova")]
 pub mod gpu;
+#[cfg(feature = "nova")]
+pub mod integration;
 
 #[cfg(feature = "nova")]
 pub use r1cs::{R1CSConverter, R1CSConstraintSystem, R1CSInstance, R1CSWitness, R1CSVariable, LinearCombination, R1CSConstraint};
@@ -113,6 +115,12 @@ pub use types::{NovaError, NovaResult, NovaSecurityLevel, CurveType, NovaMetrics
 pub use recursive::{RecursiveProver, RecursiveConfig, RecursiveProof, IVCChain, RecursiveStep, RecursiveVerificationResult};
 #[cfg(feature = "nova")]
 pub use gpu::{NovaGPU, GPUConfig, GPUMetrics, GPUAccelerationManager, ScalarPoint, NTTDomain, MSMResult, NTTResult, CommitmentResult};
+#[cfg(feature = "nova")]
+pub use integration::{
+    NovaSystem, NovaSystemConfig, ProofRequest, ProofResult, CircuitType, HashChainType,
+    VerificationRequest, VerificationResult, VerificationStatus,
+    ProofTiming, ProofMetrics, SystemMetrics, BatchProver, StreamProver,
+};
 
 /// Module version for compatibility checking
 pub const NOVA_MODULE_VERSION: &str = "0.1.0";
