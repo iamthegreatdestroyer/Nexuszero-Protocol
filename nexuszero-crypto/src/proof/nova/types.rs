@@ -15,6 +15,7 @@
 
 use std::fmt;
 use thiserror::Error;
+use serde::{Serialize, Deserialize};
 
 // Re-export pasta curve types when nova feature is enabled
 #[cfg(feature = "nova")]
@@ -147,6 +148,10 @@ pub enum NovaError {
     /// Invalid state
     #[error("Invalid state: {0}")]
     InvalidState(String),
+
+    /// Hardware/GPU acceleration error
+    #[error("Hardware error: {0}")]
+    HardwareError(String),
 }
 
 /// Result type for Nova operations
@@ -245,8 +250,6 @@ impl Default for CircuitParams {
         }
     }
 }
-
-use serde::{Serialize, Deserialize};
 
 /// Metrics for Nova proof generation and verification
 #[derive(Debug, Clone, Default)]
