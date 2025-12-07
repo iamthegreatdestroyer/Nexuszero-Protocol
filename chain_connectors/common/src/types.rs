@@ -360,4 +360,310 @@ mod tests {
         assert_eq!(meta.proof_type, "groth16");
         assert!(meta.nullifier.is_none());
     }
+
+    // ===== HARDENING TESTS =====
+
+    #[test]
+    fn test_chain_id_all_evm_chains() {
+        // Test all EVM chains
+        let evm_chains = [
+            (ChainId::Ethereum, 1u64),
+            (ChainId::Polygon, 137),
+            (ChainId::Arbitrum, 42161),
+            (ChainId::Optimism, 10),
+            (ChainId::Base, 8453),
+            (ChainId::Avalanche, 43114),
+            (ChainId::BnbChain, 56),
+        ];
+        
+        for (chain, expected_id) in evm_chains {
+            assert!(chain.is_evm(), "Chain {:?} should be EVM", chain);
+            assert_eq!(chain.evm_chain_id(), Some(expected_id), "Chain {:?} has wrong ID", chain);
+        }
+    }
+
+    #[test]
+    fn test_chain_id_non_evm_chains() {
+        let non_evm_chains = [ChainId::Bitcoin, ChainId::Solana, ChainId::Cosmos];
+        
+        for chain in non_evm_chains {
+            assert!(!chain.is_evm(), "Chain {:?} should not be EVM", chain);
+            assert!(chain.evm_chain_id().is_none(), "Chain {:?} should have no EVM ID", chain);
+        }
+    }
+
+    #[test]
+    fn test_chain_id_custom() {
+        let custom_chain = ChainId::Custom(12345);
+        assert!(custom_chain.is_evm());
+        assert_eq!(custom_chain.evm_chain_id(), Some(12345));
+    }
+
+    #[test]
+    fn test_chain_id_native_symbols() {
+        assert_eq!(ChainId::Ethereum.native_symbol(), "ETH");
+        assert_eq!(ChainId::Bitcoin.native_symbol(), "BTC");
+        assert_eq!(ChainId::Solana.native_symbol(), "SOL");
+        assert_eq!(ChainId::Polygon.native_symbol(), "MATIC");
+        assert_eq!(ChainId::Cosmos.native_symbol(), "ATOM");
+        assert_eq!(ChainId::Avalanche.native_symbol(), "AVAX");
+        assert_eq!(ChainId::BnbChain.native_symbol(), "BNB");
+        assert_eq!(ChainId::Custom(999).native_symbol(), "NATIVE");
+    }
+
+    #[test]
+    fn test_chain_id_decimals() {
+        assert_eq!(ChainId::Bitcoin.decimals(), 8);
+        assert_eq!(ChainId::Solana.decimals(), 9);
+        assert_eq!(ChainId::Ethereum.decimals(), 18);
+        assert_eq!(ChainId::Polygon.decimals(), 18);
+        assert_eq!(ChainId::Cosmos.decimals(), 18);
+    }
+
+    #[test]
+    fn test_proof_metadata_with_nullifier() {
+        let meta = ProofMetadata::new(5, "plonk", [0u8; 32], [1u8; 32])
+            .with_nullifier([42u8; 32]);
+        
+        assert_eq!(meta.privacy_level, 5);
+        assert_eq!(meta.proof_type, "plonk");
+        assert!(meta.nullifier.is_some());
+        assert_eq!(meta.nullifier.unwrap(), [42u8; 32]);
+    }
+
+    #[test]
+    fn test_proof_metadata_timestamp_auto_set() {
+        let before = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        
+        let meta = ProofMetadata::new(1, "bulletproofs", [0u8; 32], [1u8; 32]);
+        
+        let after = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        
+        assert!(meta.timestamp >= before && meta.timestamp <= after);
+    }
+
+    #[test]
+    fn test_proof_metadata_all_privacy_levels() {
+        for level in 0..=5 {
+            let meta = ProofMetadata::new(level, "groth16", [0u8; 32], [1u8; 32]);
+            assert_eq!(meta.privacy_level, level);
+        }
+    }
+
+    #[test]
+    fn test_transaction_receipt_tx_hash_hex() {
+        let receipt = TransactionReceipt {
+            tx_hash: [0xab; 32],
+            block_number: 12345,
+            block_hash: Some([0xcd; 32]),
+            gas_used: 21000,
+            status: true,
+            logs: vec![],
+            effective_gas_price: Some(1_000_000_000),
+            transaction_index: 5,
+        };
+        
+        let hex = receipt.tx_hash_hex();
+        assert_eq!(hex.len(), 64);
+        assert!(hex.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_transaction_status_all_variants() {
+        let statuses = [
+            TransactionStatus::Pending,
+            TransactionStatus::Confirmed,
+            TransactionStatus::Failed,
+            TransactionStatus::Dropped,
+            TransactionStatus::Unknown,
+        ];
+        
+        // Pending and Unknown are not final
+        assert!(!TransactionStatus::Pending.is_final());
+        assert!(!TransactionStatus::Unknown.is_final());
+        
+        // Confirmed, Failed, Dropped are final
+        assert!(TransactionStatus::Confirmed.is_final());
+        assert!(TransactionStatus::Failed.is_final());
+        assert!(TransactionStatus::Dropped.is_final());
+    }
+
+    #[test]
+    fn test_chain_operation_submit_proof() {
+        let op = ChainOperation::SubmitProof {
+            proof_size: 1024,
+            privacy_level: 3,
+        };
+        
+        match op {
+            ChainOperation::SubmitProof { proof_size, privacy_level } => {
+                assert_eq!(proof_size, 1024);
+                assert_eq!(privacy_level, 3);
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_chain_operation_all_variants() {
+        let ops = vec![
+            ChainOperation::SubmitProof { proof_size: 100, privacy_level: 1 },
+            ChainOperation::VerifyProof { proof_id: [0u8; 32] },
+            ChainOperation::Transfer { amount: 1000, recipient: vec![1, 2, 3] },
+            ChainOperation::BridgeInitiate { target_chain: ChainId::Polygon, amount: 5000 },
+            ChainOperation::BridgeComplete { transfer_id: [1u8; 32] },
+            ChainOperation::Deploy { bytecode_size: 2048 },
+            ChainOperation::ContractCall { calldata_size: 256 },
+        ];
+        
+        assert_eq!(ops.len(), 7);
+    }
+
+    #[test]
+    fn test_fee_estimate_confidence_levels() {
+        let estimate = FeeEstimate {
+            gas_units: 21000,
+            gas_price: 20.0,
+            priority_fee: Some(2.0),
+            total_fee_native: 0.00042,
+            total_fee_usd: Some(1.05),
+            confidence: FeeConfidence::High,
+        };
+        
+        assert_eq!(estimate.confidence, FeeConfidence::High);
+        assert!(estimate.priority_fee.is_some());
+        assert!(estimate.total_fee_usd.is_some());
+    }
+
+    #[test]
+    fn test_chain_address_creation() {
+        let addr = ChainAddress::new(vec![0x12, 0x34, 0x56], ChainId::Ethereum);
+        assert_eq!(addr.bytes, vec![0x12, 0x34, 0x56]);
+        assert_eq!(addr.chain, ChainId::Ethereum);
+        assert!(addr.display.is_none());
+    }
+
+    #[test]
+    fn test_chain_address_with_display() {
+        let addr = ChainAddress::new(vec![0x12, 0x34], ChainId::Bitcoin)
+            .with_display("bc1qtest...");
+        
+        assert!(addr.display.is_some());
+        assert_eq!(addr.display.unwrap(), "bc1qtest...");
+    }
+
+    #[test]
+    fn test_chain_address_to_hex() {
+        let addr = ChainAddress::new(vec![0xde, 0xad, 0xbe, 0xef], ChainId::Ethereum);
+        assert_eq!(addr.to_hex(), "deadbeef");
+    }
+
+    #[test]
+    fn test_block_info_creation() {
+        let block = BlockInfo {
+            number: 1_000_000,
+            hash: [0xaa; 32],
+            parent_hash: [0xbb; 32],
+            timestamp: 1609459200,
+            transaction_count: 150,
+        };
+        
+        assert_eq!(block.number, 1_000_000);
+        assert_ne!(block.hash, block.parent_hash);
+        assert!(block.transaction_count > 0);
+    }
+
+    #[test]
+    fn test_event_log_structure() {
+        let log = EventLog {
+            address: vec![0x12; 20],
+            topics: vec![[0xab; 32], [0xcd; 32]],
+            data: vec![1, 2, 3, 4],
+            log_index: 0,
+        };
+        
+        assert_eq!(log.address.len(), 20);
+        assert_eq!(log.topics.len(), 2);
+        assert_eq!(log.data.len(), 4);
+    }
+
+    #[test]
+    fn test_chain_id_serde_roundtrip() {
+        let chains = [
+            ChainId::Ethereum,
+            ChainId::Bitcoin,
+            ChainId::Custom(42),
+        ];
+        
+        for chain in chains {
+            let json = serde_json::to_string(&chain).unwrap();
+            let parsed: ChainId = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, chain);
+        }
+    }
+
+    #[test]
+    fn test_proof_metadata_serde_roundtrip() {
+        let meta = ProofMetadata::new(3, "groth16", [1u8; 32], [2u8; 32])
+            .with_nullifier([3u8; 32]);
+        
+        let json = serde_json::to_string(&meta).unwrap();
+        let parsed: ProofMetadata = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(parsed.privacy_level, meta.privacy_level);
+        assert_eq!(parsed.proof_type, meta.proof_type);
+        assert_eq!(parsed.nullifier, meta.nullifier);
+    }
+
+    #[test]
+    fn test_transaction_receipt_serde_roundtrip() {
+        let receipt = TransactionReceipt {
+            tx_hash: [0x11; 32],
+            block_number: 999,
+            block_hash: Some([0x22; 32]),
+            gas_used: 50000,
+            status: true,
+            logs: vec![],
+            effective_gas_price: Some(10_000_000_000),
+            transaction_index: 10,
+        };
+        
+        let json = serde_json::to_string(&receipt).unwrap();
+        let parsed: TransactionReceipt = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(parsed.tx_hash, receipt.tx_hash);
+        assert_eq!(parsed.status, receipt.status);
+    }
+
+    #[test]
+    fn test_fee_confidence_serde() {
+        for conf in [FeeConfidence::Low, FeeConfidence::Medium, FeeConfidence::High] {
+            let json = serde_json::to_string(&conf).unwrap();
+            let parsed: FeeConfidence = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, conf);
+        }
+    }
+
+    #[test]
+    fn test_transaction_status_serde() {
+        let statuses = [
+            TransactionStatus::Pending,
+            TransactionStatus::Confirmed,
+            TransactionStatus::Failed,
+            TransactionStatus::Dropped,
+            TransactionStatus::Unknown,
+        ];
+        
+        for status in statuses {
+            let json = serde_json::to_string(&status).unwrap();
+            let parsed: TransactionStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, status);
+        }
+    }
 }

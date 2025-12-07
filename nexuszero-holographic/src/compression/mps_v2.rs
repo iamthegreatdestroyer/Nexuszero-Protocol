@@ -1068,4 +1068,361 @@ mod tests {
             assert!(compressed.stats.compressed_bytes > 0);
         }
     }
+
+    // ========================================================================
+    // PRODUCTION HARDENING TESTS - Phase 1.2.1
+    // ========================================================================
+
+    #[test]
+    fn test_concurrent_compression_stress() {
+        use std::sync::Arc;
+        use std::thread;
+
+        // Create varied input data
+        let test_data: Vec<Arc<Vec<u8>>> = (0..8)
+            .map(|i| {
+                let data: Vec<u8> = (0..128)
+                    .map(|j| ((i * 17 + j * 13) % 256) as u8)
+                    .collect();
+                Arc::new(data)
+            })
+            .collect();
+
+        let handles: Vec<_> = test_data
+            .into_iter()
+            .map(|data| {
+                thread::spawn(move || {
+                    let config = CompressionConfig::default();
+                    for _ in 0..5 {
+                        let compressed = CompressedTensorTrain::compress(&data, config.clone());
+                        assert!(compressed.is_ok(), "Compression failed in thread");
+                        
+                        if let Ok(c) = compressed {
+                            let decompressed = c.decompress();
+                            assert!(decompressed.is_ok(), "Decompression failed in thread");
+                        }
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().expect("Thread panicked");
+        }
+    }
+
+    #[test]
+    fn test_edge_case_single_byte() {
+        let data: Vec<u8> = vec![42];
+        let config = CompressionConfig::default();
+
+        let compressed = CompressedTensorTrain::compress(&data, config);
+        assert!(compressed.is_ok(), "Single byte compression should succeed");
+
+        let c = compressed.unwrap();
+        let decompressed = c.decompress();
+        assert!(decompressed.is_ok(), "Single byte decompression should succeed");
+        assert_eq!(decompressed.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_edge_case_all_zeros() {
+        let data: Vec<u8> = vec![0; 1024];
+        let config = CompressionConfig::default();
+
+        let compressed = CompressedTensorTrain::compress(&data, config).unwrap();
+        let decompressed = compressed.decompress().unwrap();
+
+        assert_eq!(decompressed.len(), data.len());
+        // All zeros should decompress to mostly zeros (within precision)
+        let non_zero_count = decompressed.iter().filter(|&&b| b != 0).count();
+        assert!(
+            non_zero_count < data.len() / 10,
+            "Too many non-zeros: {}",
+            non_zero_count
+        );
+    }
+
+    #[test]
+    fn test_edge_case_all_ones() {
+        let data: Vec<u8> = vec![255; 512];
+        let config = CompressionConfig::default();
+
+        let compressed = CompressedTensorTrain::compress(&data, config).unwrap();
+        let decompressed = compressed.decompress().unwrap();
+
+        assert_eq!(decompressed.len(), data.len());
+        // Should decompress to values close to 255
+        let avg: f64 = decompressed.iter().map(|&b| b as f64).sum::<f64>() / decompressed.len() as f64;
+        assert!(avg > 200.0, "Average should be near 255, got {}", avg);
+    }
+
+    #[test]
+    fn test_edge_case_alternating_pattern() {
+        let data: Vec<u8> = (0..256).map(|i| if i % 2 == 0 { 0 } else { 255 }).collect();
+        let config = CompressionConfig::default();
+
+        let compressed = CompressedTensorTrain::compress(&data, config).unwrap();
+        let decompressed = compressed.decompress().unwrap();
+
+        assert_eq!(decompressed.len(), data.len());
+    }
+
+    #[test]
+    fn test_boundary_block_sizes() {
+        // Test boundary conditions around block size
+        for size in [1, 7, 8, 9, 63, 64, 65, 127, 128, 129, 255, 256, 257] {
+            let data: Vec<u8> = (0..size).map(|i| (i % 256) as u8).collect();
+            let config = CompressionConfig::default();
+
+            let result = CompressedTensorTrain::compress(&data, config);
+            assert!(
+                result.is_ok(),
+                "Failed for size {}: {:?}",
+                size,
+                result.err()
+            );
+
+            let compressed = result.unwrap();
+            let decompressed = compressed.decompress();
+            assert!(
+                decompressed.is_ok(),
+                "Decompression failed for size {}",
+                size
+            );
+            assert_eq!(
+                decompressed.unwrap().len(),
+                size,
+                "Size mismatch for input size {}",
+                size
+            );
+        }
+    }
+
+    #[test]
+    fn test_precision_error_bounds() {
+        // Test that each precision level stays within documented error bounds
+        let data: Vec<u8> = (0u8..=255).collect();
+
+        let precision_errors: [(StoragePrecision, f64); 4] = [
+            (StoragePrecision::F64, 0.01),  // Essentially lossless
+            (StoragePrecision::F32, 1.0),   // ~1 level error
+            (StoragePrecision::F16, 5.0),   // ~5 level error
+            (StoragePrecision::I8, 15.0),   // ~15 level error (8-bit quantization)
+        ];
+
+        for (precision, max_avg_error) in precision_errors {
+            let config = CompressionConfig {
+                precision,
+                hybrid_mode: false,
+                ..Default::default()
+            };
+
+            let compressed = CompressedTensorTrain::compress(&data, config).unwrap();
+            let decompressed = compressed.decompress().unwrap();
+
+            let avg_error: f64 = data
+                .iter()
+                .zip(decompressed.iter())
+                .map(|(&a, &b)| ((a as f64) - (b as f64)).abs())
+                .sum::<f64>()
+                / data.len() as f64;
+
+            assert!(
+                avg_error <= max_avg_error,
+                "Precision {:?}: avg error {} exceeds max {}",
+                precision,
+                avg_error,
+                max_avg_error
+            );
+        }
+    }
+
+    #[test]
+    fn test_stats_invariants() {
+        let data: Vec<u8> = (0..512).map(|i| (i % 256) as u8).collect();
+        let config = CompressionConfig::default();
+
+        let compressed = CompressedTensorTrain::compress(&data, config).unwrap();
+        let stats = compressed.stats();
+
+        // Stats invariants
+        assert_eq!(stats.original_bytes, data.len());
+        assert!(stats.compressed_bytes > 0);
+        assert!(stats.num_sites > 0);
+        assert!(stats.avg_bond_dim > 0.0);
+        assert!(stats.max_bond_dim > 0);
+        assert!(stats.reconstruction_error_estimate >= 0.0);
+        assert!(stats.reconstruction_error_estimate <= 1.0);
+
+        // Compression ratio should be positive
+        assert!(stats.compression_ratio() > 0.0);
+        assert!(stats.expansion_ratio() > 0.0);
+    }
+
+    #[test]
+    fn test_serialization_roundtrip_stress() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let data: Vec<u8> = (0..256).map(|i| (i % 256) as u8).collect();
+        let config = CompressionConfig::default();
+        let compressed = Arc::new(CompressedTensorTrain::compress(&data, config).unwrap());
+
+        // Concurrent serialization/deserialization
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let c = Arc::clone(&compressed);
+                thread::spawn(move || {
+                    for _ in 0..10 {
+                        // Binary serialization
+                        let bytes = c.to_bytes().expect("Serialization failed");
+                        let recovered = CompressedTensorTrain::from_bytes(&bytes)
+                            .expect("Deserialization failed");
+                        assert_eq!(recovered.original_length, c.original_length);
+
+                        // LZ4 serialization
+                        let lz4_bytes = c.to_bytes_lz4().expect("LZ4 serialization failed");
+                        let lz4_recovered = CompressedTensorTrain::from_bytes_lz4(&lz4_bytes)
+                            .expect("LZ4 deserialization failed");
+                        assert_eq!(lz4_recovered.original_length, c.original_length);
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().expect("Thread panicked");
+        }
+    }
+
+    #[test]
+    fn test_corrupted_data_handling() {
+        // Test handling of corrupted serialized data
+        let garbage: Vec<u8> = vec![0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x11, 0x22, 0x33];
+        
+        let result = CompressedTensorTrain::from_bytes(&garbage);
+        assert!(result.is_err(), "Should fail on garbage data");
+
+        let result_lz4 = CompressedTensorTrain::from_bytes_lz4(&garbage);
+        assert!(result_lz4.is_err(), "Should fail on garbage LZ4 data");
+    }
+
+    #[test]
+    fn test_analyze_compression_potential_invariants() {
+        // Zero entropy data
+        let zeros: Vec<u8> = vec![0; 1000];
+        let analysis = analyze_compression_potential(&zeros);
+        assert!(analysis.entropy < 0.1, "Zero data should have near-zero entropy");
+        assert!(analysis.has_structure);
+
+        // High entropy data
+        let high_entropy: Vec<u8> = (0..1000).map(|i| ((i * 17 + 91) % 256) as u8).collect();
+        let analysis = analyze_compression_potential(&high_entropy);
+        assert!(analysis.entropy > 5.0, "Varied data should have high entropy");
+
+        // Analysis invariants
+        assert!(analysis.entropy >= 0.0);
+        assert!(analysis.entropy <= 8.0); // Max bits per byte
+        assert!(analysis.pattern_ratio >= 0.0);
+        assert!(analysis.pattern_ratio <= 1.0);
+        assert!(analysis.theoretical_limit >= 0.0);
+    }
+
+    #[test]
+    fn test_quantized_tensor_edge_cases() {
+        // Empty tensor
+        let empty = Array3::<f64>::zeros((0, 0, 0));
+        let quantized = QuantizedTensorV2::from_array3(&empty, StoragePrecision::F32);
+        assert!(quantized.data.is_empty());
+
+        // Single element tensor
+        let single = Array3::from_elem((1, 1, 1), 42.0);
+        for precision in [
+            StoragePrecision::F64,
+            StoragePrecision::F32,
+            StoragePrecision::F16,
+            StoragePrecision::I8,
+        ] {
+            let quantized = QuantizedTensorV2::from_array3(&single, precision);
+            let recovered = quantized.to_array3();
+            assert_eq!(recovered.shape(), single.shape());
+        }
+
+        // Very large values
+        let large = Array3::from_elem((2, 2, 2), 1e10);
+        let quantized = QuantizedTensorV2::from_array3(&large, StoragePrecision::F64);
+        let recovered = quantized.to_array3();
+        for (&orig, &rec) in large.iter().zip(recovered.iter()) {
+            assert!(
+                (orig - rec).abs() / orig < 1e-10,
+                "Large value precision loss"
+            );
+        }
+
+        // Very small values
+        let small = Array3::from_elem((2, 2, 2), 1e-10);
+        let quantized = QuantizedTensorV2::from_array3(&small, StoragePrecision::F64);
+        let recovered = quantized.to_array3();
+        for (&orig, &rec) in small.iter().zip(recovered.iter()) {
+            assert!(
+                (orig - rec).abs() < 1e-15,
+                "Small value precision loss"
+            );
+        }
+    }
+
+    #[test]
+    fn test_memory_pressure_simulation() {
+        // Simulate memory pressure with multiple compressions
+        let mut handles = Vec::new();
+
+        for batch in 0..3 {
+            let data: Vec<u8> = (0..1024).map(|i| ((i + batch * 100) % 256) as u8).collect();
+            let config = CompressionConfig::fast();
+
+            let compressed = CompressedTensorTrain::compress(&data, config).unwrap();
+            let bytes = compressed.to_bytes_lz4().unwrap();
+            handles.push((compressed, bytes));
+        }
+
+        // Verify all can decompress
+        for (compressed, bytes) in handles {
+            let from_bytes = CompressedTensorTrain::from_bytes_lz4(&bytes).unwrap();
+            let _ = compressed.decompress().unwrap();
+            let _ = from_bytes.decompress().unwrap();
+        }
+    }
+
+    #[test]
+    fn test_high_level_api() {
+        let original: Vec<u8> = (0..512).map(|i| (i % 256) as u8).collect();
+
+        // compress_proof_data / decompress_proof_data
+        let compressed = compress_proof_data(&original).unwrap();
+        let decompressed = decompress_proof_data(&compressed).unwrap();
+
+        assert_eq!(decompressed.len(), original.len());
+    }
+
+    #[test]
+    fn test_deterministic_decompression() {
+        // SVD has sign ambiguity (eigenvectors can be ±1 scaled), so the compressed
+        // bytes may differ slightly. But the DECOMPRESSED result should be consistent.
+        let data: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let config = CompressionConfig::lossless();
+
+        let compressed1 = CompressedTensorTrain::compress(&data, config.clone()).unwrap();
+        let compressed2 = CompressedTensorTrain::compress(&data, config).unwrap();
+
+        let decompressed1 = compressed1.decompress().unwrap();
+        let decompressed2 = compressed2.decompress().unwrap();
+
+        // Decompressed results should be identical
+        assert_eq!(decompressed1, decompressed2, "Decompression should be deterministic");
+        
+        // Stats should match
+        assert_eq!(compressed1.original_length, compressed2.original_length);
+        assert_eq!(compressed1.stats.num_sites, compressed2.stats.num_sites);
+    }
 }

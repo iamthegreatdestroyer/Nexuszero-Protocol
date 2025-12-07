@@ -442,4 +442,255 @@ mod tests {
         assert_eq!(cache.len(), 1);
         assert_eq!(cache.total(), 20_000);
     }
+
+    // ===== HARDENING TESTS =====
+
+    #[test]
+    fn test_utxo_creation() {
+        let txid = Txid::from_byte_array([1u8; 32]);
+        let outpoint = OutPoint::new(txid, 0);
+        let tx_out = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new_p2tr_tweaked(
+                bitcoin::key::TweakedPublicKey::dangerous_assume_tweaked(
+                    bitcoin::secp256k1::XOnlyPublicKey::from_slice(&[2u8; 32]).unwrap()
+                )
+            ),
+        };
+        
+        let utxo = Utxo::new(outpoint, &tx_out, 6);
+        
+        assert_eq!(utxo.value, 50_000);
+        assert_eq!(utxo.confirmations, 6);
+        assert!(utxo.is_taproot);
+        assert!(!utxo.has_proof);
+    }
+
+    #[test]
+    fn test_utxo_with_proof() {
+        let utxo = mock_utxo(10_000, 5).with_proof([0xab; 32]);
+        
+        assert!(utxo.has_proof);
+        assert_eq!(utxo.proof_hash.unwrap(), [0xab; 32]);
+    }
+
+    #[test]
+    fn test_utxo_amount() {
+        let utxo = mock_utxo(100_000_000, 10);
+        let amount = utxo.amount();
+        
+        assert_eq!(amount, Amount::from_sat(100_000_000));
+        assert_eq!(amount.to_btc(), 1.0);
+    }
+
+    #[test]
+    fn test_selection_strategy_variants() {
+        let strategies = [
+            SelectionStrategy::OldestFirst,
+            SelectionStrategy::LargestFirst,
+            SelectionStrategy::SmallestFirst,
+            SelectionStrategy::MinimizeInputs,
+            SelectionStrategy::MaximizePrivacy,
+            SelectionStrategy::BranchAndBound,
+        ];
+        
+        // Verify all strategies are distinct
+        assert_ne!(strategies[0], strategies[1]);
+        assert_eq!(SelectionStrategy::LargestFirst, SelectionStrategy::LargestFirst);
+    }
+
+    #[test]
+    fn test_utxo_selector_with_min_confirmations() {
+        let utxos = vec![
+            mock_utxo(100_000, 1),  // 1 confirmation
+            mock_utxo(100_000, 6),  // 6 confirmations
+            mock_utxo(100_000, 10), // 10 confirmations
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::LargestFirst)
+            .with_min_confirmations(6);
+        
+        let selection = selector.select(50_000).unwrap();
+        
+        // Should only use UTXOs with >= 6 confirmations
+        for utxo in &selection.selected {
+            assert!(utxo.confirmations >= 6);
+        }
+    }
+
+    #[test]
+    fn test_utxo_selector_with_fee_rate() {
+        let utxos = vec![
+            mock_utxo(100_000, 10),
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::LargestFirst)
+            .with_fee_rate(10.0);
+        
+        let selection = selector.select(50_000).unwrap();
+        
+        // Higher fee rate should mean higher estimated fee
+        assert!(selection.estimated_fee > 0);
+    }
+
+    #[test]
+    fn test_utxo_selection_valid() {
+        let utxos = vec![
+            mock_utxo(100_000, 10),
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::LargestFirst);
+        let selection = selector.select(50_000).unwrap();
+        
+        assert!(selection.is_valid());
+        assert!(selection.total_value >= selection.target_amount);
+    }
+
+    #[test]
+    fn test_utxo_selection_change_calculation() {
+        let utxos = vec![
+            mock_utxo(100_000, 10),
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::LargestFirst);
+        let selection = selector.select(50_000).unwrap();
+        
+        // Change = total - target - fee
+        let expected_change = selection.total_value.saturating_sub(
+            selection.target_amount + selection.estimated_fee
+        );
+        assert_eq!(selection.change, expected_change);
+    }
+
+    #[test]
+    fn test_utxo_cache_empty() {
+        let cache = UtxoCache::new();
+        
+        assert_eq!(cache.len(), 0);
+        assert_eq!(cache.total(), 0);
+        assert!(cache.is_empty());
+    }
+
+    #[test]
+    fn test_utxo_cache_all() {
+        let mut cache = UtxoCache::new();
+        
+        cache.add(mock_utxo(10_000, 5));
+        cache.add(mock_utxo(20_000, 3));
+        cache.add(mock_utxo(30_000, 7));
+        
+        let all = cache.all();
+        assert_eq!(all.len(), 3);
+        
+        let total: u64 = all.iter().map(|u| u.value).sum();
+        assert_eq!(total, 60_000);
+    }
+
+    #[test]
+    fn test_utxo_cache_get() {
+        let mut cache = UtxoCache::new();
+        
+        let utxo = mock_utxo(10_000, 5);
+        let outpoint = utxo.outpoint;
+        
+        cache.add(utxo);
+        
+        let retrieved = cache.get(&outpoint);
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().value, 10_000);
+    }
+
+    #[test]
+    fn test_utxo_cache_remove_nonexistent() {
+        let mut cache = UtxoCache::new();
+        let txid = Txid::from_byte_array([99u8; 32]);
+        let outpoint = OutPoint::new(txid, 0);
+        
+        // Removing non-existent should not panic
+        cache.remove(&outpoint);
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn test_utxo_selection_oldest_first() {
+        let utxos = vec![
+            mock_utxo(30_000, 2),   // newest
+            mock_utxo(30_000, 100), // oldest
+            mock_utxo(30_000, 50),  // middle
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::OldestFirst);
+        let selection = selector.select(25_000).unwrap();
+        
+        // Should pick the one with most confirmations first
+        assert_eq!(selection.selected[0].confirmations, 100);
+    }
+
+    #[test]
+    fn test_utxo_selection_smallest_first() {
+        let utxos = vec![
+            mock_utxo(50_000, 10),
+            mock_utxo(10_000, 10),
+            mock_utxo(30_000, 10),
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::SmallestFirst);
+        let selection = selector.select(8_000).unwrap();
+        
+        // Should pick smallest first
+        assert_eq!(selection.selected[0].value, 10_000);
+    }
+
+    #[test]
+    fn test_utxo_cache_total_large_values() {
+        let mut cache = UtxoCache::new();
+        
+        // Add large Bitcoin amounts
+        cache.add(mock_utxo(21_000_000_00000000, 10)); // 21 million BTC
+        
+        assert_eq!(cache.total(), 21_000_000_00000000);
+    }
+
+    #[test]
+    fn test_utxo_selection_no_confirmed_utxos() {
+        let utxos = vec![
+            mock_utxo(100_000, 0), // unconfirmed
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::LargestFirst)
+            .with_min_confirmations(1);
+        
+        let result = selector.select(50_000);
+        
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_utxo_serde_roundtrip() {
+        let utxo = mock_utxo(50_000, 6).with_proof([0xde; 32]);
+        
+        let json = serde_json::to_string(&utxo).unwrap();
+        let parsed: Utxo = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(parsed.value, utxo.value);
+        assert_eq!(parsed.confirmations, utxo.confirmations);
+        assert_eq!(parsed.has_proof, utxo.has_proof);
+        assert_eq!(parsed.proof_hash, utxo.proof_hash);
+    }
+
+    #[test]
+    fn test_utxo_selection_multiple_inputs_needed() {
+        let utxos = vec![
+            mock_utxo(30_000, 10),
+            mock_utxo(30_000, 10),
+            mock_utxo(30_000, 10),
+        ];
+
+        let selector = UtxoSelector::new(utxos, SelectionStrategy::LargestFirst);
+        let selection = selector.select(80_000).unwrap();
+        
+        // Should need all 3 UTXOs
+        assert_eq!(selection.selected.len(), 3);
+        assert!(selection.is_valid());
+    }
 }

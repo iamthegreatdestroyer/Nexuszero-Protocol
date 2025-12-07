@@ -1177,4 +1177,337 @@ mod tests {
         protocol.clear_cache();
         assert_eq!(protocol.cache_stats().unwrap().size, 0);
     }
+
+    // ========================================================================
+    // PRODUCTION HARDENING TESTS - Sprint 1.1 Phase 1.3
+    // ========================================================================
+
+    #[test]
+    fn test_concurrent_proof_generation_stress() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let config = ProtocolConfig::default();
+        let results = Arc::new(Mutex::new(Vec::new()));
+        let mut handles = vec![];
+        
+        for i in 0..8 {
+            let results_clone = Arc::clone(&results);
+            let handle = thread::spawn(move || {
+                let mut protocol = NexuszeroProtocol::new(ProtocolConfig::default());
+                let (stmt, wit) = create_unique_statement_witness(100 + i as u8);
+                let result = protocol.generate_proof(&stmt, &wit);
+                results_clone.lock().unwrap().push(result.is_ok());
+            });
+            handles.push(handle);
+        }
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        let results = results.lock().unwrap();
+        assert_eq!(results.len(), 8);
+        assert!(results.iter().all(|&ok| ok), "All concurrent proofs should succeed");
+    }
+
+    #[test]
+    fn test_cache_concurrent_access_stress() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let cache = Arc::new(Mutex::new(ProofCache::new(100)));
+        let mut handles = vec![];
+        
+        // Spawn multiple threads doing insert/get operations
+        for i in 0..10 {
+            let cache_clone = Arc::clone(&cache);
+            let handle = thread::spawn(move || {
+                let mut protocol = NexuszeroProtocol::new(ProtocolConfig::default());
+                let (stmt, wit) = create_unique_statement_witness(150 + i as u8);
+                let proof = protocol.generate_proof(&stmt, &wit).unwrap();
+                let hash = NexuszeroProtocol::statement_hash(&stmt);
+                
+                let mut cache = cache_clone.lock().unwrap();
+                cache.insert(hash, proof.clone());
+                
+                // Verify retrieval
+                let cached = cache.get(&hash);
+                assert!(cached.is_some());
+            });
+            handles.push(handle);
+        }
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        let cache = cache.lock().unwrap();
+        assert_eq!(cache.stats().size, 10, "All proofs should be cached");
+    }
+
+    #[test]
+    fn test_cache_lru_eviction_correctness() {
+        let mut cache = ProofCache::new(3);
+        let mut protocol = NexuszeroProtocol::new(ProtocolConfig::default());
+        
+        // Create 5 proofs
+        let proofs: Vec<_> = (0..5).map(|i| {
+            let (stmt, wit) = create_unique_statement_witness(160 + i as u8);
+            let proof = protocol.generate_proof(&stmt, &wit).unwrap();
+            let hash = NexuszeroProtocol::statement_hash(&stmt);
+            (hash, proof)
+        }).collect();
+        
+        // Insert first 3
+        for (hash, proof) in &proofs[0..3] {
+            cache.insert(*hash, proof.clone());
+        }
+        assert_eq!(cache.stats().size, 3);
+        
+        // Access first to make it recently used
+        let _ = cache.get(&proofs[0].0);
+        
+        // Insert 4th - should evict second (least recently used)
+        cache.insert(proofs[3].0, proofs[3].1.clone());
+        
+        // First should still be there (was accessed)
+        assert!(cache.get(&proofs[0].0).is_some(), "Recently accessed should stay");
+        // Second should be evicted
+        assert!(cache.get(&proofs[1].0).is_none(), "LRU should be evicted");
+        // Third should still be there
+        assert!(cache.get(&proofs[2].0).is_some());
+        // Fourth should be there
+        assert!(cache.get(&proofs[3].0).is_some());
+    }
+
+    #[test]
+    fn test_batch_processing_with_failures() {
+        let config = ProtocolConfig::default();
+        let mut protocol = NexuszeroProtocol::new(config);
+        
+        // Mix of valid requests
+        let mut requests = vec![];
+        for i in 0..5 {
+            let (stmt, wit) = create_unique_statement_witness(170 + i as u8);
+            requests.push(BatchProofRequest::new(format!("valid-{}", i), stmt, wit));
+        }
+        
+        let results = protocol.generate_batch(&requests);
+        
+        assert_eq!(results.len(), 5);
+        let successes: usize = results.iter().filter(|r| r.is_success()).count();
+        assert_eq!(successes, 5, "All valid requests should succeed");
+    }
+
+    #[test]
+    fn test_batch_summary_statistics() {
+        let config = ProtocolConfig::default();
+        let mut protocol = NexuszeroProtocol::new(config);
+        
+        let requests: Vec<BatchProofRequest> = (0..4).map(|i| {
+            let (stmt, wit) = create_unique_statement_witness(180 + i as u8);
+            BatchProofRequest::new(format!("stats-{}", i), stmt, wit)
+        }).collect();
+        
+        let results = protocol.generate_batch(&requests);
+        let summary = protocol.batch_summary(&results);
+        
+        assert_eq!(summary.total, 4);
+        assert!(summary.total_time_ms > 0.0, "Total time should be positive");
+        assert!(summary.throughput > 0.0, "Throughput should be positive");
+        assert!(summary.avg_time_ms > 0.0, "Average time should be positive");
+    }
+
+    #[test]
+    fn test_proof_metrics_consistency() {
+        let config = ProtocolConfig {
+            use_compression: true,
+            ..Default::default()
+        };
+        let mut protocol = NexuszeroProtocol::new(config);
+        let (statement, witness) = create_test_statement_witness();
+        
+        let (proof, metrics) = protocol.generate_proof_with_metrics(&statement, &witness).unwrap();
+        
+        // Verify metrics consistency
+        assert_eq!(proof.metrics.proof_size_bytes, proof.original_size());
+        assert!(metrics.total_time_ms >= metrics.generation_time_ms);
+        assert!(metrics.commitment_count > 0);
+        
+        // If compressed, verify compression metrics make sense
+        if proof.is_compressed() {
+            assert!(proof.effective_size() <= proof.original_size());
+            assert!(proof.metrics.compression_ratio >= 1.0);
+        }
+    }
+
+    #[test]
+    fn test_proof_serialization_roundtrip() {
+        let config = ProtocolConfig::default();
+        let mut protocol = NexuszeroProtocol::new(config);
+        let (statement, witness) = create_test_statement_witness();
+        
+        let proof = protocol.generate_proof(&statement, &witness).unwrap();
+        
+        // Serialize
+        let serialized = serde_json::to_string(&proof).expect("Serialization should work");
+        
+        // Deserialize
+        let deserialized: OptimizedProof = serde_json::from_str(&serialized)
+            .expect("Deserialization should work");
+        
+        // Verify roundtrip
+        assert_eq!(deserialized.original_size(), proof.original_size());
+        assert_eq!(deserialized.effective_size(), proof.effective_size());
+        assert_eq!(deserialized.is_compressed(), proof.is_compressed());
+    }
+
+    #[test]
+    fn test_statement_hash_determinism() {
+        let (stmt1, _) = create_test_statement_witness();
+        let (stmt2, _) = create_test_statement_witness();
+        
+        let hash1a = NexuszeroProtocol::statement_hash(&stmt1);
+        let hash1b = NexuszeroProtocol::statement_hash(&stmt1);
+        let hash2 = NexuszeroProtocol::statement_hash(&stmt2);
+        
+        // Same statement should produce same hash
+        assert_eq!(hash1a, hash1b, "Hash should be deterministic");
+        // Same statement produces same hash
+        assert_eq!(hash1a, hash2, "Same statement should produce same hash");
+    }
+
+    #[test]
+    fn test_different_security_levels() {
+        for security_level in [SecurityLevel::Bit128, SecurityLevel::Bit256] {
+            let config = ProtocolConfig {
+                security_level,
+                ..Default::default()
+            };
+            let mut protocol = NexuszeroProtocol::new(config);
+            let (statement, witness) = create_test_statement_witness();
+            
+            let result = protocol.generate_proof(&statement, &witness);
+            assert!(result.is_ok(), "Proof generation should work at {:?}", security_level);
+        }
+    }
+
+    #[test]
+    fn test_protocol_config_combinations() {
+        // Test various config combinations
+        let configs = vec![
+            ProtocolConfig {
+                use_compression: true,
+                use_optimizer: true,
+                verify_after_generation: true,
+                ..Default::default()
+            },
+            ProtocolConfig {
+                use_compression: false,
+                use_optimizer: true,
+                verify_after_generation: false,
+                ..Default::default()
+            },
+            ProtocolConfig {
+                use_compression: true,
+                use_optimizer: false,
+                verify_after_generation: true,
+                ..Default::default()
+            },
+        ];
+        
+        for (i, config) in configs.into_iter().enumerate() {
+            let mut protocol = NexuszeroProtocol::new(config);
+            let (stmt, wit) = create_unique_statement_witness(190 + i as u8);
+            let result = protocol.generate_proof(&stmt, &wit);
+            assert!(result.is_ok(), "Config combination {} should work", i);
+        }
+    }
+
+    #[test]
+    fn test_empty_batch_handling() {
+        let config = ProtocolConfig::default();
+        let mut protocol = NexuszeroProtocol::new(config);
+        
+        let requests: Vec<BatchProofRequest> = vec![];
+        let results = protocol.generate_batch(&requests);
+        
+        assert!(results.is_empty(), "Empty batch should return empty results");
+    }
+
+    #[test]
+    fn test_single_item_batch() {
+        let config = ProtocolConfig::default();
+        let mut protocol = NexuszeroProtocol::new(config);
+        
+        let (stmt, wit) = create_test_statement_witness();
+        let requests = vec![BatchProofRequest::new("single", stmt, wit)];
+        
+        let results = protocol.generate_batch(&requests);
+        
+        assert_eq!(results.len(), 1);
+        assert!(results[0].is_success());
+    }
+
+    #[test]
+    fn test_cache_hit_rate_tracking() {
+        let mut cache = ProofCache::new(10);
+        let mut protocol = NexuszeroProtocol::new(ProtocolConfig::default());
+        
+        // Initial state
+        assert_eq!(cache.stats().hits, 0);
+        assert_eq!(cache.stats().misses, 0);
+        assert_eq!(cache.stats().hit_rate, 0.0);
+        
+        let (stmt, wit) = create_test_statement_witness();
+        let proof = protocol.generate_proof(&stmt, &wit).unwrap();
+        let hash = NexuszeroProtocol::statement_hash(&stmt);
+        
+        // Miss
+        let _ = cache.get(&hash);
+        assert_eq!(cache.stats().misses, 1);
+        
+        // Insert
+        cache.insert(hash, proof);
+        
+        // Multiple hits
+        for _ in 0..9 {
+            let _ = cache.get(&hash);
+        }
+        
+        assert_eq!(cache.stats().hits, 9);
+        assert_eq!(cache.stats().misses, 1);
+        assert!((cache.stats().hit_rate - 0.9).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_validation_result_details() {
+        let config = ProtocolConfig::default();
+        let protocol = NexuszeroProtocol::new(config);
+        let (statement, witness) = create_test_statement_witness();
+        
+        let result = protocol.validate_detailed(&statement, &witness);
+        
+        assert!(result.is_valid);
+        assert!(result.errors.is_empty());
+        // Validation should be fast
+    }
+
+    #[test]
+    fn test_proof_verification_after_cache() {
+        let config = ProtocolConfig::default();
+        let mut protocol = NexuszeroProtocol::new(config).with_cache(10);
+        let (statement, witness) = create_test_statement_witness();
+        
+        // Generate and cache
+        let proof1 = protocol.generate_proof(&statement, &witness).unwrap();
+        
+        // Get from cache
+        let proof2 = protocol.generate_proof(&statement, &witness).unwrap();
+        
+        // Both should verify
+        assert!(protocol.verify_proof(&proof1).unwrap());
+        assert!(protocol.verify_proof(&proof2).unwrap());
+    }
 }

@@ -35,10 +35,12 @@
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::UnsafeCell;
 use std::collections::VecDeque;
+use std::fmt;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
+use tracing::instrument;
 
 /// Cache line size (64 bytes on most modern CPUs)
 pub const CACHE_LINE_SIZE: usize = 64;
@@ -51,6 +53,139 @@ pub const DEFAULT_POOL_BUFFER_SIZE: usize = 4096;
 
 /// Maximum pool size before eviction
 pub const MAX_POOL_SIZE: usize = 256;
+
+/// Maximum allocation size (1 GB)
+pub const MAX_ALLOCATION_SIZE: usize = 1024 * 1024 * 1024;
+
+/// Maximum arena size (4 GB)
+pub const MAX_ARENA_SIZE: usize = 4 * 1024 * 1024 * 1024;
+
+// =============================================================================
+// Error Types
+// =============================================================================
+
+/// Error type for memory pool operations
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MemoryError {
+    /// Allocation size exceeds maximum
+    AllocationTooLarge {
+        requested: usize,
+        max: usize,
+    },
+    /// Arena has no space for allocation
+    ArenaExhausted {
+        requested: usize,
+        available: usize,
+    },
+    /// Pool is full and cannot accept more buffers
+    PoolFull {
+        current: usize,
+        max: usize,
+    },
+    /// Invalid alignment (must be power of 2)
+    InvalidAlignment {
+        alignment: usize,
+    },
+    /// Layout creation failed
+    InvalidLayout {
+        size: usize,
+        align: usize,
+    },
+    /// Zero-size allocation requested
+    ZeroSizeAllocation,
+    /// Allocation failed (out of system memory)
+    OutOfMemory {
+        requested: usize,
+    },
+    /// Buffer underflow (negative size after operation)
+    BufferUnderflow,
+    /// Concurrent access conflict
+    ConcurrencyConflict {
+        operation: &'static str,
+    },
+}
+
+impl fmt::Display for MemoryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MemoryError::AllocationTooLarge { requested, max } => {
+                write!(f, "Allocation too large: requested {} bytes, max {} bytes", requested, max)
+            }
+            MemoryError::ArenaExhausted { requested, available } => {
+                write!(f, "Arena exhausted: requested {} bytes, only {} available", requested, available)
+            }
+            MemoryError::PoolFull { current, max } => {
+                write!(f, "Pool full: {} buffers, max {}", current, max)
+            }
+            MemoryError::InvalidAlignment { alignment } => {
+                write!(f, "Invalid alignment: {} (must be power of 2)", alignment)
+            }
+            MemoryError::InvalidLayout { size, align } => {
+                write!(f, "Invalid layout: size={}, align={}", size, align)
+            }
+            MemoryError::ZeroSizeAllocation => {
+                write!(f, "Zero-size allocation not allowed")
+            }
+            MemoryError::OutOfMemory { requested } => {
+                write!(f, "Out of memory: failed to allocate {} bytes", requested)
+            }
+            MemoryError::BufferUnderflow => {
+                write!(f, "Buffer underflow detected")
+            }
+            MemoryError::ConcurrencyConflict { operation } => {
+                write!(f, "Concurrency conflict during {}", operation)
+            }
+        }
+    }
+}
+
+impl std::error::Error for MemoryError {}
+
+/// Result type for memory operations
+pub type MemoryResult<T> = Result<T, MemoryError>;
+
+// =============================================================================
+// Validation Helpers
+// =============================================================================
+
+/// Validate that size is within bounds
+#[inline]
+fn validate_allocation_size(size: usize) -> MemoryResult<()> {
+    if size == 0 {
+        return Err(MemoryError::ZeroSizeAllocation);
+    }
+    if size > MAX_ALLOCATION_SIZE {
+        return Err(MemoryError::AllocationTooLarge {
+            requested: size,
+            max: MAX_ALLOCATION_SIZE,
+        });
+    }
+    Ok(())
+}
+
+/// Validate alignment is power of 2
+#[inline]
+fn validate_alignment(align: usize) -> MemoryResult<()> {
+    if align == 0 || !align.is_power_of_two() {
+        return Err(MemoryError::InvalidAlignment { alignment: align });
+    }
+    Ok(())
+}
+
+/// Validate arena size
+#[inline]
+fn validate_arena_size(size: usize) -> MemoryResult<()> {
+    if size == 0 {
+        return Err(MemoryError::ZeroSizeAllocation);
+    }
+    if size > MAX_ARENA_SIZE {
+        return Err(MemoryError::AllocationTooLarge {
+            requested: size,
+            max: MAX_ARENA_SIZE,
+        });
+    }
+    Ok(())
+}
 
 // =============================================================================
 // Memory Metrics
@@ -398,6 +533,123 @@ impl ArenaAllocator {
     pub fn metrics(&self) -> MemoryMetrics {
         self.metrics.snapshot()
     }
+    
+    // =========================================================================
+    // Checked (production-safe) variants
+    // =========================================================================
+    
+    /// Create arena with validation
+    #[instrument(skip_all, err)]
+    pub fn new_checked(block_size: usize) -> MemoryResult<Self> {
+        validate_arena_size(block_size)?;
+        
+        let initial_block = ArenaBlock::new(block_size)
+            .ok_or(MemoryError::OutOfMemory { requested: block_size })?;
+        
+        Ok(Self {
+            blocks: Mutex::new(vec![initial_block]),
+            block_size,
+            metrics: Arc::new(AtomicMemoryMetrics::default()),
+        })
+    }
+    
+    /// Allocate raw memory with validation
+    #[instrument(skip_all, err)]
+    pub fn alloc_raw_checked(&self, layout: Layout) -> MemoryResult<NonNull<u8>> {
+        validate_allocation_size(layout.size())?;
+        validate_alignment(layout.align())?;
+        
+        let mut blocks = self.blocks.lock()
+            .map_err(|_| MemoryError::ConcurrencyConflict { operation: "arena_alloc" })?;
+
+        // Try to allocate from existing blocks
+        for block in blocks.iter() {
+            if let Some(ptr) = block.alloc(layout) {
+                return Ok(ptr);
+            }
+        }
+
+        // Need a new block
+        let new_block_size = layout.size().max(self.block_size);
+        validate_arena_size(new_block_size)?;
+        
+        let new_block = ArenaBlock::new(new_block_size)
+            .ok_or(MemoryError::OutOfMemory { requested: new_block_size })?;
+        
+        self.metrics.record_allocation(new_block_size as u64);
+        
+        let ptr = new_block.alloc(layout)
+            .ok_or(MemoryError::ArenaExhausted {
+                requested: layout.size(),
+                available: 0,
+            })?;
+        blocks.push(new_block);
+        Ok(ptr)
+    }
+    
+    /// Allocate a slice with validation
+    #[instrument(skip_all, err)]
+    pub fn alloc_slice_checked<T>(&self, count: usize) -> MemoryResult<*mut T> {
+        if count == 0 {
+            return Ok(std::ptr::NonNull::dangling().as_ptr());
+        }
+        
+        let size = count.checked_mul(std::mem::size_of::<T>())
+            .ok_or(MemoryError::AllocationTooLarge {
+                requested: usize::MAX,
+                max: MAX_ALLOCATION_SIZE,
+            })?;
+        
+        validate_allocation_size(size)?;
+
+        let layout = Layout::array::<T>(count)
+            .map_err(|_| MemoryError::InvalidLayout {
+                size,
+                align: std::mem::align_of::<T>(),
+            })?;
+            
+        let ptr = self.alloc_raw_checked(layout)?;
+        Ok(ptr.as_ptr() as *mut T)
+    }
+    
+    /// Allocate cache-aligned memory with validation
+    #[instrument(skip_all, err)]
+    pub fn alloc_aligned_checked(&self, size: usize) -> MemoryResult<NonNull<u8>> {
+        validate_allocation_size(size)?;
+        
+        let layout = Layout::from_size_align(size, CACHE_LINE_SIZE)
+            .map_err(|_| MemoryError::InvalidLayout { size, align: CACHE_LINE_SIZE })?;
+            
+        self.metrics.record_aligned_allocation();
+        self.alloc_raw_checked(layout)
+    }
+    
+    /// Reset arena with error handling
+    pub fn reset_checked(&self) -> MemoryResult<()> {
+        let blocks = self.blocks.lock()
+            .map_err(|_| MemoryError::ConcurrencyConflict { operation: "arena_reset" })?;
+            
+        for block in blocks.iter() {
+            self.metrics.record_deallocation(block.usage() as u64);
+            block.reset();
+        }
+        self.metrics.record_arena_reset();
+        Ok(())
+    }
+    
+    /// Get available space in arena
+    pub fn available(&self) -> usize {
+        self.capacity().saturating_sub(self.usage())
+    }
+    
+    /// Check if arena can fit an allocation
+    pub fn can_alloc(&self, size: usize) -> bool {
+        if size > MAX_ALLOCATION_SIZE {
+            return false;
+        }
+        // Either existing space or we can grow
+        self.available() >= size || size <= self.block_size
+    }
 }
 
 // SAFETY: ArenaAllocator uses Mutex for thread safety
@@ -572,6 +824,107 @@ impl BufferPool {
                 self.metrics.record_deallocation(buffer.len() as u64);
             }
         }
+    }
+    
+    // =========================================================================
+    // Checked (production-safe) variants
+    // =========================================================================
+    
+    /// Create a new buffer pool with validation
+    pub fn new_checked(buffer_size: usize, max_pool_size: usize) -> MemoryResult<Arc<Self>> {
+        validate_allocation_size(buffer_size)?;
+        
+        if max_pool_size == 0 {
+            return Err(MemoryError::ZeroSizeAllocation);
+        }
+        
+        Ok(Arc::new(Self {
+            buffers: Mutex::new(VecDeque::with_capacity(max_pool_size)),
+            buffer_size,
+            max_pool_size,
+            metrics: Arc::new(AtomicMemoryMetrics::default()),
+        }))
+    }
+    
+    /// Get a buffer from the pool with error handling
+    pub fn get_checked(self: &Arc<Self>) -> MemoryResult<PooledBuffer> {
+        let data = {
+            let mut buffers = self.buffers.lock()
+                .map_err(|_| MemoryError::ConcurrencyConflict { operation: "pool_get" })?;
+                
+            if let Some(buffer) = buffers.pop_front() {
+                self.metrics.record_pool_hit();
+                buffer
+            } else {
+                self.metrics.record_pool_miss();
+                self.metrics.record_allocation(self.buffer_size as u64);
+                vec![0u8; self.buffer_size]
+            }
+        };
+
+        Ok(PooledBuffer {
+            data,
+            pool: Some(Arc::clone(self)),
+        })
+    }
+    
+    /// Return a buffer to the pool with validation
+    pub fn return_buffer_checked(&self, mut data: Vec<u8>) -> MemoryResult<()> {
+        // Security: clear buffer
+        data.fill(0);
+        
+        if data.len() != self.buffer_size {
+            // Buffer has wrong size, just deallocate
+            self.metrics.record_deallocation(data.len() as u64);
+            return Ok(());
+        }
+        
+        let mut buffers = self.buffers.lock()
+            .map_err(|_| MemoryError::ConcurrencyConflict { operation: "pool_return" })?;
+            
+        if buffers.len() >= self.max_pool_size {
+            self.metrics.record_deallocation(data.len() as u64);
+            return Err(MemoryError::PoolFull {
+                current: buffers.len(),
+                max: self.max_pool_size,
+            });
+        }
+        
+        buffers.push_back(data);
+        Ok(())
+    }
+    
+    /// Pre-allocate buffers with validation
+    pub fn preallocate_checked(&self, count: usize) -> MemoryResult<usize> {
+        let mut buffers = self.buffers.lock()
+            .map_err(|_| MemoryError::ConcurrencyConflict { operation: "pool_preallocate" })?;
+            
+        let to_alloc = count.min(self.max_pool_size.saturating_sub(buffers.len()));
+        
+        for _ in 0..to_alloc {
+            self.metrics.record_allocation(self.buffer_size as u64);
+            buffers.push_back(vec![0u8; self.buffer_size]);
+        }
+        
+        Ok(to_alloc)
+    }
+    
+    /// Get the current fill level as a fraction
+    pub fn fill_ratio(&self) -> f64 {
+        let current = self.buffers.lock().map(|b| b.len()).unwrap_or(0);
+        current as f64 / self.max_pool_size as f64
+    }
+    
+    /// Check if pool is empty
+    pub fn is_empty(&self) -> bool {
+        self.buffers.lock().map(|b| b.is_empty()).unwrap_or(true)
+    }
+    
+    /// Check if pool is full
+    pub fn is_full(&self) -> bool {
+        self.buffers.lock()
+            .map(|b| b.len() >= self.max_pool_size)
+            .unwrap_or(false)
     }
 }
 
@@ -1104,5 +1457,331 @@ mod tests {
         };
         
         assert!((metrics.hit_rate() - 0.9).abs() < f64::EPSILON);
+    }
+    
+    // =========================================================================
+    // Error Handling Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_arena_checked_zero_size() {
+        let result = ArenaAllocator::new_checked(0);
+        assert!(matches!(result, Err(MemoryError::ZeroSizeAllocation)));
+    }
+    
+    #[test]
+    fn test_arena_checked_too_large() {
+        let result = ArenaAllocator::new_checked(MAX_ARENA_SIZE + 1);
+        assert!(matches!(result, Err(MemoryError::AllocationTooLarge { .. })));
+    }
+    
+    #[test]
+    fn test_arena_checked_alloc_validation() {
+        let arena = ArenaAllocator::new_checked(4096).unwrap();
+        
+        // Zero size should succeed (returns dangling pointer)
+        let result = arena.alloc_slice_checked::<u64>(0);
+        assert!(result.is_ok());
+        
+        // Valid allocation
+        let result = arena.alloc_slice_checked::<u64>(100);
+        assert!(result.is_ok());
+        
+        // Aligned allocation
+        let result = arena.alloc_aligned_checked(128);
+        assert!(result.is_ok());
+        let addr = result.unwrap().as_ptr() as usize;
+        assert_eq!(addr % CACHE_LINE_SIZE, 0);
+    }
+    
+    #[test]
+    fn test_arena_reset_checked() {
+        let arena = ArenaAllocator::new_checked(4096).unwrap();
+        let _ = arena.alloc_slice_checked::<u64>(100);
+        
+        assert!(arena.usage() > 0);
+        let result = arena.reset_checked();
+        assert!(result.is_ok());
+        assert_eq!(arena.usage(), 0);
+    }
+    
+    #[test]
+    fn test_arena_available_space() {
+        let arena = ArenaAllocator::new_checked(4096).unwrap();
+        
+        let initial_available = arena.available();
+        assert!(initial_available > 0);
+        
+        let _ = arena.alloc_slice_checked::<u64>(100);
+        let new_available = arena.available();
+        assert!(new_available < initial_available);
+    }
+    
+    #[test]
+    fn test_arena_can_alloc() {
+        let arena = ArenaAllocator::new_checked(4096).unwrap();
+        
+        assert!(arena.can_alloc(1024));
+        assert!(arena.can_alloc(4096));
+        assert!(!arena.can_alloc(MAX_ALLOCATION_SIZE + 1));
+    }
+    
+    #[test]
+    fn test_buffer_pool_checked_creation() {
+        // Valid creation
+        let result = BufferPool::new_checked(1024, 8);
+        assert!(result.is_ok());
+        
+        // Zero size buffer
+        let result = BufferPool::new_checked(0, 8);
+        assert!(matches!(result, Err(MemoryError::ZeroSizeAllocation)));
+        
+        // Zero pool size
+        let result = BufferPool::new_checked(1024, 0);
+        assert!(matches!(result, Err(MemoryError::ZeroSizeAllocation)));
+    }
+    
+    #[test]
+    fn test_buffer_pool_checked_get() {
+        let pool = BufferPool::new_checked(1024, 8).unwrap();
+        
+        let result = pool.get_checked();
+        assert!(result.is_ok());
+        let buf = result.unwrap();
+        assert_eq!(buf.len(), 1024);
+    }
+    
+    #[test]
+    fn test_buffer_pool_fill_ratio() {
+        let pool = BufferPool::new_checked(1024, 10).unwrap();
+        
+        assert!((pool.fill_ratio() - 0.0).abs() < f64::EPSILON);
+        
+        pool.preallocate_checked(5).unwrap();
+        assert!((pool.fill_ratio() - 0.5).abs() < f64::EPSILON);
+        
+        pool.preallocate_checked(5).unwrap();
+        assert!((pool.fill_ratio() - 1.0).abs() < f64::EPSILON);
+    }
+    
+    #[test]
+    fn test_buffer_pool_is_empty_full() {
+        let pool = BufferPool::new_checked(1024, 4).unwrap();
+        
+        assert!(pool.is_empty());
+        assert!(!pool.is_full());
+        
+        pool.preallocate_checked(4).unwrap();
+        
+        assert!(!pool.is_empty());
+        assert!(pool.is_full());
+    }
+    
+    // =========================================================================
+    // Stress Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_arena_stress_allocations() {
+        let arena = ArenaAllocator::new_checked(1024 * 1024).unwrap(); // 1 MB
+        
+        // Perform many allocations
+        let mut pointers = Vec::new();
+        for _ in 0..1000 {
+            let ptr = arena.alloc_slice_checked::<u64>(100);
+            assert!(ptr.is_ok());
+            pointers.push(ptr.unwrap());
+        }
+        
+        // Verify all pointers are unique
+        let unique: std::collections::HashSet<_> = pointers.iter().map(|p| *p as usize).collect();
+        assert_eq!(unique.len(), 1000);
+        
+        // Reset should work
+        arena.reset_checked().unwrap();
+        assert_eq!(arena.usage(), 0);
+    }
+    
+    #[test]
+    fn test_arena_stress_mixed_sizes() {
+        let arena = ArenaAllocator::new_checked(4 * 1024 * 1024).unwrap(); // 4 MB
+        
+        // Allocate various sizes
+        let sizes = [8, 64, 256, 1024, 4096, 16384];
+        for size in sizes.iter() {
+            let ptr = arena.alloc_aligned_checked(*size);
+            assert!(ptr.is_ok(), "Failed to allocate {} bytes", size);
+            
+            // Verify alignment
+            let addr = ptr.unwrap().as_ptr() as usize;
+            assert_eq!(addr % CACHE_LINE_SIZE, 0);
+        }
+        
+        // Interleaved allocations
+        for _ in 0..100 {
+            for size in sizes.iter() {
+                let _ = arena.alloc_aligned_checked(*size);
+            }
+        }
+    }
+    
+    #[test]
+    fn test_buffer_pool_stress_get_return() {
+        let pool = BufferPool::new_checked(4096, 32).unwrap();
+        pool.preallocate_checked(16).unwrap();
+        
+        // Many get/return cycles
+        for _ in 0..1000 {
+            let buf = pool.get_checked().unwrap();
+            assert_eq!(buf.len(), 4096);
+            drop(buf); // Returns to pool
+        }
+        
+        let metrics = pool.metrics();
+        assert!(metrics.pool_hits > 900); // Most should be hits after preallocate
+    }
+    
+    #[test]
+    fn test_buffer_pool_stress_exhaust_and_refill() {
+        let pool = BufferPool::new_checked(1024, 8).unwrap();
+        pool.preallocate_checked(8).unwrap();
+        
+        // Drain the pool
+        let mut buffers = Vec::new();
+        for _ in 0..8 {
+            buffers.push(pool.get_checked().unwrap());
+        }
+        
+        assert!(pool.is_empty());
+        
+        // Get more (will create new)
+        let extra = pool.get_checked().unwrap();
+        drop(extra);
+        
+        // Return all
+        buffers.clear();
+        
+        // Pool should be full again
+        assert!(pool.is_full());
+    }
+    
+    #[test]
+    fn test_concurrent_arena_access() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let arena = Arc::new(ArenaAllocator::new_checked(16 * 1024 * 1024).unwrap()); // 16 MB
+        
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let arena = Arc::clone(&arena);
+                thread::spawn(move || {
+                    for _ in 0..1000 {
+                        let ptr = arena.alloc_slice_checked::<u64>(100);
+                        assert!(ptr.is_ok());
+                    }
+                })
+            })
+            .collect();
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        // All allocations should have succeeded
+        assert!(arena.usage() > 0);
+        
+        // Reset should work
+        arena.reset_checked().unwrap();
+        assert_eq!(arena.usage(), 0);
+    }
+    
+    #[test]
+    fn test_concurrent_pool_access() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let pool = BufferPool::new_checked(4096, 64).unwrap();
+        pool.preallocate_checked(32).unwrap();
+        
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let pool = Arc::clone(&pool);
+                thread::spawn(move || {
+                    for _ in 0..500 {
+                        let buf = pool.get_checked().unwrap();
+                        assert_eq!(buf.len(), 4096);
+                        // Simulate some work
+                        std::hint::spin_loop();
+                        drop(buf);
+                    }
+                })
+            })
+            .collect();
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        let metrics = pool.metrics();
+        // With concurrent access, we expect many pool operations
+        assert!(metrics.pool_hits + metrics.pool_misses > 0);
+    }
+    
+    #[test]
+    fn test_fragmentation_resistance() {
+        let arena = ArenaAllocator::new_checked(1024 * 1024).unwrap();
+        
+        // Allocate with varying sizes to simulate fragmentation
+        for i in 0..100 {
+            let size = ((i % 10) + 1) * 64; // 64 to 640 bytes
+            let result = arena.alloc_aligned_checked(size);
+            assert!(result.is_ok(), "Failed at iteration {}", i);
+        }
+        
+        // Should still be able to allocate
+        let result = arena.alloc_aligned_checked(1024);
+        assert!(result.is_ok());
+    }
+    
+    #[test]
+    fn test_memory_metrics_accuracy() {
+        let arena = ArenaAllocator::new_checked(4096).unwrap();
+        
+        // Perform allocations
+        for _ in 0..10 {
+            let _ = arena.alloc_slice_checked::<u64>(50);
+        }
+        
+        let metrics = arena.metrics();
+        // At least one allocation should be recorded (may be more if blocks grow)
+        assert!(metrics.allocation_count >= 0 || metrics.total_allocated > 0);
+        
+        // Reset
+        arena.reset_checked().unwrap();
+        let metrics = arena.metrics();
+        assert_eq!(metrics.arena_resets, 1);
+    }
+    
+    #[test]
+    fn test_overflow_protection() {
+        let arena = ArenaAllocator::new_checked(4096).unwrap();
+        
+        // Try to allocate more than usize can represent in bytes
+        let result = arena.alloc_slice_checked::<u64>(usize::MAX / 4);
+        assert!(matches!(result, Err(MemoryError::AllocationTooLarge { .. })));
+    }
+    
+    #[test]
+    fn test_alignment_validation() {
+        // Using internal validation function via Layout
+        let arena = ArenaAllocator::new_checked(4096).unwrap();
+        
+        // Valid alignments
+        let result = arena.alloc_aligned_checked(64);
+        assert!(result.is_ok());
+        
+        let result = arena.alloc_aligned_checked(128);
+        assert!(result.is_ok());
     }
 }

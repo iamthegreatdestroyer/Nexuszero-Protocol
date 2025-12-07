@@ -139,6 +139,23 @@ pub fn psbt_from_base64(s: &str) -> Result<Psbt, BitcoinError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bitcoin::hashes::Hash;
+    use bitcoin::Txid;
+
+    fn mock_utxo(value: u64) -> Utxo {
+        let txid = Txid::from_byte_array([1u8; 32]);
+        let outpoint = OutPoint::new(txid, 0);
+        
+        Utxo {
+            outpoint,
+            value,
+            script_pubkey: ScriptBuf::new(),
+            confirmations: 6,
+            is_taproot: true,
+            has_proof: false,
+            proof_hash: None,
+        }
+    }
 
     #[test]
     fn test_psbt_builder_empty() {
@@ -146,5 +163,253 @@ mod tests {
         let result = builder.build();
         assert!(result.is_err());
     }
-}
 
+    // ===== HARDENING TESTS =====
+
+    #[test]
+    fn test_psbt_builder_no_inputs() {
+        let output = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let builder = PsbtBuilder::new().add_output(output);
+        let result = builder.build();
+        
+        assert!(result.is_err());
+        if let Err(BitcoinError::TransactionBuildError(msg)) = result {
+            assert!(msg.contains("No inputs"));
+        }
+    }
+
+    #[test]
+    fn test_psbt_builder_no_outputs() {
+        let utxo = mock_utxo(100_000);
+        
+        let builder = PsbtBuilder::new().add_input(&utxo);
+        let result = builder.build();
+        
+        assert!(result.is_err());
+        if let Err(BitcoinError::TransactionBuildError(msg)) = result {
+            assert!(msg.contains("No outputs"));
+        }
+    }
+
+    #[test]
+    fn test_psbt_builder_valid() {
+        let utxo = mock_utxo(100_000);
+        let output = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let builder = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_output(output);
+        
+        let result = builder.build();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_psbt_builder_multiple_inputs() {
+        let utxo1 = mock_utxo(50_000);
+        let utxo2 = mock_utxo(60_000);
+        let output = TxOut {
+            value: Amount::from_sat(100_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let builder = PsbtBuilder::new()
+            .add_input(&utxo1)
+            .add_input(&utxo2)
+            .add_output(output);
+        
+        let result = builder.build();
+        assert!(result.is_ok());
+        
+        let psbt = result.unwrap();
+        assert_eq!(psbt.inputs.len(), 2);
+    }
+
+    #[test]
+    fn test_psbt_builder_multiple_outputs() {
+        let utxo = mock_utxo(100_000);
+        let output1 = TxOut {
+            value: Amount::from_sat(30_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+        let output2 = TxOut {
+            value: Amount::from_sat(40_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let builder = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_output(output1)
+            .add_output(output2);
+        
+        let result = builder.build();
+        assert!(result.is_ok());
+        
+        let psbt = result.unwrap();
+        assert_eq!(psbt.unsigned_tx.output.len(), 2);
+    }
+
+    #[test]
+    fn test_psbt_builder_op_return() {
+        let utxo = mock_utxo(100_000);
+        let data = b"NexusZero proof commitment";
+
+        let builder = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_op_return(data)
+            .unwrap();
+        
+        // Need at least one value output too
+        let output = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+        
+        let result = builder.add_output(output).build();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_psbt_builder_op_return_max_size() {
+        let utxo = mock_utxo(100_000);
+        let data = vec![0xab; 80]; // Max allowed size
+
+        let builder = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_op_return(&data);
+        
+        assert!(builder.is_ok());
+    }
+
+    #[test]
+    fn test_psbt_builder_op_return_too_large() {
+        let utxo = mock_utxo(100_000);
+        let data = vec![0xab; 81]; // Exceeds 80 byte limit
+
+        let builder = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_op_return(&data);
+        
+        assert!(builder.is_err());
+        if let Err(BitcoinError::TransactionBuildError(msg)) = builder {
+            assert!(msg.contains("too large"));
+        }
+    }
+
+    #[test]
+    fn test_psbt_builder_op_return_empty() {
+        let utxo = mock_utxo(100_000);
+        let data: &[u8] = &[];
+
+        let builder = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_op_return(data);
+        
+        assert!(builder.is_ok());
+    }
+
+    #[test]
+    fn test_psbt_builder_default() {
+        let builder = PsbtBuilder::default();
+        let result = builder.build();
+        assert!(result.is_err()); // No inputs
+    }
+
+    #[test]
+    fn test_psbt_base64_roundtrip() {
+        let utxo = mock_utxo(100_000);
+        let output = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let psbt = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_output(output)
+            .build()
+            .unwrap();
+
+        let base64 = psbt_to_base64(&psbt);
+        let parsed = psbt_from_base64(&base64).unwrap();
+        
+        assert_eq!(psbt.unsigned_tx.input.len(), parsed.unsigned_tx.input.len());
+        assert_eq!(psbt.unsigned_tx.output.len(), parsed.unsigned_tx.output.len());
+    }
+
+    #[test]
+    fn test_psbt_from_invalid_base64() {
+        let result = psbt_from_base64("not-valid-base64!!!");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_psbt_from_valid_base64_invalid_psbt() {
+        use base64::Engine;
+        let invalid_data = base64::engine::general_purpose::STANDARD.encode(b"not a psbt");
+        
+        let result = psbt_from_base64(&invalid_data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_psbt_witness_utxo_populated() {
+        let utxo = mock_utxo(100_000);
+        let output = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let psbt = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_output(output)
+            .build()
+            .unwrap();
+
+        // Witness UTXO should be populated
+        assert!(psbt.inputs[0].witness_utxo.is_some());
+        assert_eq!(psbt.inputs[0].witness_utxo.as_ref().unwrap().value, Amount::from_sat(100_000));
+    }
+
+    #[test]
+    fn test_psbt_version() {
+        let utxo = mock_utxo(100_000);
+        let output = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let psbt = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_output(output)
+            .build()
+            .unwrap();
+
+        // Should use Version::TWO for Taproot
+        assert_eq!(psbt.unsigned_tx.version, Version::TWO);
+    }
+
+    #[test]
+    fn test_psbt_sequence_rbf() {
+        let utxo = mock_utxo(100_000);
+        let output = TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        };
+
+        let psbt = PsbtBuilder::new()
+            .add_input(&utxo)
+            .add_output(output)
+            .build()
+            .unwrap();
+
+        // Should enable RBF
+        assert_eq!(psbt.unsigned_tx.input[0].sequence, Sequence::ENABLE_RBF_NO_LOCKTIME);
+    }
+}

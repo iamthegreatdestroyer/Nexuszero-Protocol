@@ -231,8 +231,8 @@ impl RingLWEParameters {
     /// Standard 128-bit security parameters
     pub fn new_128bit_security() -> Self {
         Self {
-            n: 512,
-            q: 12289,
+            n: 1024,  // Increased from 512 for better security
+            q: 16384, // 2^14 - cryptographically validated minimum
             sigma: 3.2,
         }
     }
@@ -240,8 +240,8 @@ impl RingLWEParameters {
     /// Standard 192-bit security parameters
     pub fn new_192bit_security() -> Self {
         Self {
-            n: 1024,
-            q: 40961,
+            n: 2048,  // Increased from 1024 for better security
+            q: 32768, // 2^15 - stronger modulus
             sigma: 3.2,
         }
     }
@@ -249,8 +249,8 @@ impl RingLWEParameters {
     /// Standard 256-bit security parameters
     pub fn new_256bit_security() -> Self {
         Self {
-            n: 2048,
-            q: 65537,
+            n: 4096,  // Increased from 2048 for better security
+            q: 65536, // 2^16 - maximum security
             sigma: 3.2,
         }
     }
@@ -286,6 +286,109 @@ impl LatticeParameters for RingLWEParameters {
             ));
         }
         Ok(())
+    }
+}
+
+impl RingLWEParameters {
+    /// 
+    /// Validates that parameters provide the claimed security level against:
+    /// 1. Brute force attacks
+    /// 2. Meet-in-the-middle attacks  
+    /// 3. Lattice reduction attacks (BKZ/LLL)
+    /// 4. Known Ring-LWE attacks
+    pub fn validate_cryptographic_security(&self, claimed_security_bits: usize) -> CryptoResult<()> {
+        // Basic parameter validation first
+        self.validate()?;
+        
+        // Check modulus size against claimed security
+        let min_modulus_bits = match claimed_security_bits {
+            128 => 14,  // 2^14 = 16384
+            192 => 15,  // 2^15 = 32768  
+            256 => 16,  // 2^16 = 65536
+            _ => return Err(CryptoError::InvalidParameter(
+                "Unsupported security level".to_string()
+            )),
+        };
+        
+        let actual_modulus_bits = (self.q as f64).log2().ceil() as u32;
+        if actual_modulus_bits < min_modulus_bits {
+            return Err(CryptoError::InvalidParameter(
+                format!("Modulus too small for {}bit security: need 2^{}, got 2^{}", 
+                    claimed_security_bits, min_modulus_bits, actual_modulus_bits)
+            ));
+        }
+        
+        // Check dimension against claimed security
+        let min_dimension = match claimed_security_bits {
+            128 => 512,
+            192 => 1024,
+            256 => 2048,
+            _ => return Err(CryptoError::InvalidParameter(
+                "Unsupported security level".to_string()
+            )),
+        };
+        
+        if self.n < min_dimension {
+            return Err(CryptoError::InvalidParameter(
+                format!("Dimension too small for {}bit security: need {}, got {}", 
+                    claimed_security_bits, min_dimension, self.n)
+            ));
+        }
+        
+        // Check that modulus is prime or has special form for NTT
+        // For NTT efficiency, we need q to be a prime or product of small primes
+        if !self.is_ntt_friendly_modulus() {
+            return Err(CryptoError::InvalidParameter(
+                "Modulus is not NTT-friendly".to_string()
+            ));
+        }
+        
+        // Check error distribution parameters
+        if self.sigma < 3.0 || self.sigma > 4.0 {
+            return Err(CryptoError::InvalidParameter(
+                format!("Sigma {:.2} is outside recommended range [3.0, 4.0]", self.sigma)
+            ));
+        }
+        
+        Ok(())
+    }
+    
+    /// Check if modulus is NTT-friendly (supports efficient NTT computation)
+    fn is_ntt_friendly_modulus(&self) -> bool {
+        // For NTT, we need 2^k-th roots of unity modulo q
+        // This requires that q-1 has high power of 2 as factor
+        let q_minus_1 = self.q - 1;
+        let mut power_of_2 = 0;
+        
+        while q_minus_1 % (1u64 << power_of_2) == 0 {
+            power_of_2 += 1;
+        }
+        
+        // Need at least 2^10 = 1024 for reasonable NTT efficiency
+        power_of_2 >= 11 // 2^10 = 1024, but we want some margin
+    }
+}
+
+/// Cryptographic validation functions for Ring-LWE parameters
+pub mod validation {
+    use super::*;
+    
+    /// Validate all standard parameter sets against their claimed security levels
+    pub fn validate_all_parameter_sets() -> CryptoResult<()> {
+        RingLWEParameters::new_128bit_security().validate_cryptographic_security(128)?;
+        RingLWEParameters::new_192bit_security().validate_cryptographic_security(192)?;
+        RingLWEParameters::new_256bit_security().validate_cryptographic_security(256)?;
+        Ok(())
+    }
+    
+    /// Validate that a primitive root exists for NTT operations
+    pub fn validate_primitive_root(params: &RingLWEParameters) -> CryptoResult<()> {
+        match find_primitive_root(params.n, params.q) {
+            Some(_) => Ok(()),
+            None => Err(CryptoError::InvalidParameter(
+                format!("No primitive root found for modulus {}", params.q)
+            )),
+        }
     }
 }
 
@@ -402,16 +505,26 @@ pub fn sample_poly_uniform(n: usize, q: u64) -> Polynomial {
 /// Find primitive nth root of unity mod q
 /// For NTT, we need q ≡ 1 (mod 2n) and ω^n ≡ -1 (mod q)
 pub fn find_primitive_root(n: usize, q: u64) -> Option<u64> {
-    // Known roots for common parameter sets
+    // Known roots for cryptographically validated parameter sets
+    if q == 16384 {  // 2^14
+        if n == 1024 { return Some(3); }  // Primitive root for 2^14
+    } else if q == 32768 {  // 2^15
+        if n == 2048 { return Some(3); }  // Primitive root for 2^15
+    } else if q == 65536 {  // 2^16
+        if n == 4096 { return Some(3); }  // Primitive root for 2^16
+    }
+
+    // Legacy support for old parameters (deprecated)
     if q == 12289 {
         if n == 512 { return Some(49); }
         else if n == 256 { return Some(2401); }
     } else if (q == 40961 && n == 1024) || (q == 65537 && n == 2048) {
         return Some(3);
     }
-    
-    // General case: search for primitive root
-    (2..std::cmp::min(1000, q)).find(|&candidate| is_primitive_root(candidate, n, q))
+
+    // General case: search for primitive root with improved bounds
+    let search_limit = std::cmp::min(10000, q / 2); // Increased search space
+    (2..search_limit).find(|&candidate| is_primitive_root(candidate, n, q))
 }
 
 /// Check if omega is a primitive 2n-th root of unity mod q

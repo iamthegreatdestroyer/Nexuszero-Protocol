@@ -29,6 +29,7 @@ rand = { workspace = true }
 # Real NexusZero modules for E2E integration
 nexuszero-crypto = { path = "../../nexuszero-crypto" }
 nexuszero-holographic = { path = "../../nexuszero-holographic" }
+chain-connectors-common = { path = "../../chain_connectors/common" }
 
 # Additional dependencies for integration
 rayon = "1.10"
@@ -38,6 +39,18 @@ lz4_flex = { version = "0.11", default-features = false, features = ["frame", "s
 [dev-dependencies]
 # Additional test dependencies
 criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "e2e_pipeline_bench"
+harness = false
+
+[[bench]]
+name = "cross_chain_bench"
+harness = false
+
+[[bench]]
+name = "memory_profiling_bench"
+harness = false
 
 [features]
 default = []

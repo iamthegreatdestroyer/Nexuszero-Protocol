@@ -697,7 +697,7 @@ mod fuzzing_edge_cases {
         // Proof with empty commitments
         let empty_commit_proof = Proof {
             commitments: vec![],
-            challenge: Challenge { value: [0u8; 32] },
+            challenge: Challenge { value: vec![0u8; 32] },
             responses: vec![Response { value: vec![1, 2, 3] }],
             metadata: ProofMetadata { version: 1, timestamp: 0, size: 0 },
             bulletproof: None,
@@ -708,7 +708,7 @@ mod fuzzing_edge_cases {
         // Proof with empty responses
         let empty_response_proof = Proof {
             commitments: vec![Commitment { value: vec![1, 2, 3] }],
-            challenge: Challenge { value: [0u8; 32] },
+            challenge: Challenge { value: vec![0u8; 32] },
             responses: vec![],
             metadata: ProofMetadata { version: 1, timestamp: 0, size: 0 },
             bulletproof: None,
@@ -719,7 +719,7 @@ mod fuzzing_edge_cases {
         // Proof with oversized commitment
         let oversized_commit_proof = Proof {
             commitments: vec![Commitment { value: vec![0u8; 2000] }],
-            challenge: Challenge { value: [0u8; 32] },
+            challenge: Challenge { value: vec![0u8; 32] },
             responses: vec![Response { value: vec![1, 2, 3] }],
             metadata: ProofMetadata { version: 1, timestamp: 0, size: 0 },
             bulletproof: None,

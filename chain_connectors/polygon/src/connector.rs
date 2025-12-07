@@ -425,4 +425,187 @@ mod tests {
         assert_eq!(connector.chain_name(), "Polygon");
         assert!(matches!(connector.chain_id(), ChainId::Polygon));
     }
+
+    // ===== HARDENING TESTS =====
+
+    #[test]
+    fn test_connector_creation_mainnet() {
+        let config = PolygonConfig::mainnet();
+        let connector = PolygonConnector::new(config);
+        assert!(connector.is_ok());
+    }
+
+    #[test]
+    fn test_connector_creation_mumbai() {
+        let config = PolygonConfig::mumbai();
+        let connector = PolygonConnector::new(config);
+        assert!(connector.is_ok());
+    }
+
+    #[test]
+    fn test_connector_with_contracts() {
+        let config = PolygonConfig::mainnet()
+            .with_verifier_contract("0x1234567890123456789012345678901234567890")
+            .with_bridge_contract("0xabcdef0123456789012345678901234567890123");
+        
+        let connector = PolygonConnector::new(config).unwrap();
+        assert!(connector.verifier_address().is_some());
+        assert!(connector.bridge_address().is_some());
+    }
+
+    #[test]
+    fn test_decode_address_with_prefix() {
+        let result = PolygonConnector::decode_address("0x1234567890abcdef");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 8);
+    }
+
+    #[test]
+    fn test_decode_address_without_prefix() {
+        let result = PolygonConnector::decode_address("1234567890abcdef");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_decode_address_invalid() {
+        let result = PolygonConnector::decode_address("0xGGGG");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_encode_address() {
+        let bytes = vec![0x12, 0x34, 0x56, 0x78];
+        let encoded = PolygonConnector::encode_address(&bytes);
+        assert_eq!(encoded, "0x12345678");
+    }
+
+    #[test]
+    fn test_parse_hex_u64_with_prefix() {
+        assert_eq!(PolygonConnector::parse_hex_u64("0x0").unwrap(), 0);
+        assert_eq!(PolygonConnector::parse_hex_u64("0x1").unwrap(), 1);
+        assert_eq!(PolygonConnector::parse_hex_u64("0xa").unwrap(), 10);
+        assert_eq!(PolygonConnector::parse_hex_u64("0xff").unwrap(), 255);
+        assert_eq!(PolygonConnector::parse_hex_u64("0x100").unwrap(), 256);
+    }
+
+    #[test]
+    fn test_parse_hex_u64_without_prefix() {
+        assert_eq!(PolygonConnector::parse_hex_u64("0").unwrap(), 0);
+        assert_eq!(PolygonConnector::parse_hex_u64("1").unwrap(), 1);
+        assert_eq!(PolygonConnector::parse_hex_u64("a").unwrap(), 10);
+        assert_eq!(PolygonConnector::parse_hex_u64("ff").unwrap(), 255);
+    }
+
+    #[test]
+    fn test_parse_hex_u128_with_prefix() {
+        assert_eq!(PolygonConnector::parse_hex_u128("0x0").unwrap(), 0);
+        assert_eq!(PolygonConnector::parse_hex_u128("0xffffffff").unwrap(), 0xffffffff);
+    }
+
+    #[test]
+    fn test_parse_hex_u128_large_values() {
+        let result = PolygonConnector::parse_hex_u128("0xffffffffffffffff");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), u64::MAX as u128);
+    }
+
+    #[test]
+    fn test_chain_name() {
+        let config = PolygonConfig::mainnet();
+        let connector = PolygonConnector::new(config).unwrap();
+        assert_eq!(connector.chain_name(), "Polygon");
+    }
+
+    #[test]
+    fn test_chain_id() {
+        let config = PolygonConfig::mainnet();
+        let connector = PolygonConnector::new(config).unwrap();
+        assert!(matches!(connector.chain_id(), ChainId::Polygon));
+    }
+
+    #[test]
+    fn test_verifier_address_none() {
+        let config = PolygonConfig::mainnet();
+        let connector = PolygonConnector::new(config).unwrap();
+        assert!(connector.verifier_address().is_none());
+    }
+
+    #[test]
+    fn test_bridge_address_none() {
+        let config = PolygonConfig::mainnet();
+        let connector = PolygonConnector::new(config).unwrap();
+        assert!(connector.bridge_address().is_none());
+    }
+
+    #[test]
+    fn test_verifier_address_some() {
+        let config = PolygonConfig::mainnet()
+            .with_verifier_contract("0x1234567890123456789012345678901234567890");
+        let connector = PolygonConnector::new(config).unwrap();
+        
+        let addr = connector.verifier_address();
+        assert!(addr.is_some());
+        assert_eq!(addr.unwrap().len(), 20);
+    }
+
+    #[test]
+    fn test_bridge_address_some() {
+        let config = PolygonConfig::mainnet()
+            .with_bridge_contract("0xabcdef0123456789012345678901234567890123");
+        let connector = PolygonConnector::new(config).unwrap();
+        
+        let addr = connector.bridge_address();
+        assert!(addr.is_some());
+        assert_eq!(addr.unwrap().len(), 20);
+    }
+
+    #[test]
+    fn test_invalid_verifier_address() {
+        let config = PolygonConfig::mainnet()
+            .with_verifier_contract("invalid_hex");
+        let connector = PolygonConnector::new(config);
+        assert!(connector.is_err());
+    }
+
+    #[test]
+    fn test_invalid_bridge_address() {
+        let config = PolygonConfig::mainnet()
+            .with_bridge_contract("invalid_hex");
+        let connector = PolygonConnector::new(config);
+        assert!(connector.is_err());
+    }
+
+    #[test]
+    fn test_json_rpc_request_serialization() {
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0",
+            method: "eth_blockNumber".to_string(),
+            params: serde_json::json!([]),
+            id: 1,
+        };
+        
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains("jsonrpc"));
+        assert!(json.contains("eth_blockNumber"));
+    }
+
+    #[test]
+    fn test_hex_parsing_edge_cases() {
+        // Zero values
+        assert_eq!(PolygonConnector::parse_hex_u64("0").unwrap(), 0);
+        assert_eq!(PolygonConnector::parse_hex_u64("0x0").unwrap(), 0);
+        
+        // Max u64
+        let max_u64_hex = format!("0x{:x}", u64::MAX);
+        assert_eq!(PolygonConnector::parse_hex_u64(&max_u64_hex).unwrap(), u64::MAX);
+    }
+
+    #[test]
+    fn test_address_roundtrip() {
+        let original = "0x1234567890123456789012345678901234567890";
+        let decoded = PolygonConnector::decode_address(original).unwrap();
+        let encoded = PolygonConnector::encode_address(&decoded);
+        
+        assert_eq!(original.to_lowercase(), encoded.to_lowercase());
+    }
 }

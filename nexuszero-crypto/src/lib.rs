@@ -167,6 +167,42 @@ pub trait ProofSystem {
     fn verify(statement: &Self::Statement, proof: &Self::Proof) -> CryptoResult<()>;
 }
 
+/// Cryptographic parameter validation functions
+/// 
+/// These functions validate that all cryptographic parameters are secure
+/// and should be called at application startup.
+pub mod validation {
+    use crate::CryptoResult;
+    
+    /// Validate all cryptographic parameters at startup
+    /// 
+    /// This function performs comprehensive validation of:
+    /// - Ring-LWE parameters against claimed security levels
+    /// - Bulletproofs generators and moduli
+    /// - Fiat-Shamir domain separation
+    /// - Primitive roots for NTT operations
+    /// 
+    /// Should be called once at application startup.
+    pub fn validate_cryptographic_parameters() -> CryptoResult<()> {
+        // Validate Ring-LWE parameters
+        crate::lattice::ring_lwe::validation::validate_all_parameter_sets()?;
+        
+        // Validate Bulletproofs parameters
+        crate::proof::bulletproofs::validate_cryptographic_parameters()?;
+        
+        // Validate primitive roots for all parameter sets
+        let params_128 = crate::lattice::RingLWEParameters::new_128bit_security();
+        let params_192 = crate::lattice::RingLWEParameters::new_192bit_security();
+        let params_256 = crate::lattice::RingLWEParameters::new_256bit_security();
+        
+        crate::lattice::ring_lwe::validation::validate_primitive_root(&params_128)?;
+        crate::lattice::ring_lwe::validation::validate_primitive_root(&params_192)?;
+        crate::lattice::ring_lwe::validation::validate_primitive_root(&params_256)?;
+        
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // No items from parent required by this basic smoke test

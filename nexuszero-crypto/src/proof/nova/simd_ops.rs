@@ -54,12 +54,58 @@
 
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use thiserror::Error;
+use tracing::{debug, warn, instrument};
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
+
+// ============================================================================
+// Production Error Types
+// ============================================================================
+
+/// Errors that can occur during SIMD field operations
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum SimdError {
+    /// Vector length mismatch between operands
+    #[error("Vector length mismatch: left has {left} elements, right has {right} elements")]
+    LengthMismatch { left: usize, right: usize },
+    
+    /// Empty vector provided where non-empty required
+    #[error("Empty vector provided for operation: {operation}")]
+    EmptyVector { operation: &'static str },
+    
+    /// Invalid modulus (zero or one)
+    #[error("Invalid modulus {modulus}: must be greater than 1")]
+    InvalidModulus { modulus: u64 },
+    
+    /// Matrix dimensions mismatch
+    #[error("Matrix dimensions mismatch: matrix has {matrix_len} elements but expected {rows} x {cols} = {expected}")]
+    MatrixDimensionMismatch {
+        matrix_len: usize,
+        rows: usize,
+        cols: usize,
+        expected: usize,
+    },
+    
+    /// Vector length doesn't match matrix columns
+    #[error("Vector length {vector_len} doesn't match matrix columns {cols}")]
+    VectorColumnsMismatch { vector_len: usize, cols: usize },
+    
+    /// Element not invertible in the field
+    #[error("Element {element} is not invertible modulo {modulus}")]
+    NotInvertible { element: u64, modulus: u64 },
+    
+    /// SIMD capability not available on this platform
+    #[error("SIMD capability {capability:?} not available on this platform")]
+    CapabilityNotAvailable { capability: SimdCapability },
+}
+
+/// Result type for SIMD operations
+pub type SimdResult<T> = Result<T, SimdError>;
 
 /// SIMD capability detection result
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,13 +140,32 @@ impl SimdCapability {
             SimdCapability::Avx512 => "Intel AVX-512",
         }
     }
+
+    /// Check if this capability is available on the current platform
+    pub fn is_available(&self) -> bool {
+        match self {
+            SimdCapability::Scalar => true, // Always available
+            #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+            SimdCapability::Avx2 => is_x86_feature_detected!("avx2"),
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            SimdCapability::Avx512 => {
+                is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl")
+            }
+            #[cfg(all(target_arch = "aarch64", feature = "neon"))]
+            SimdCapability::Neon => true, // NEON is always available on aarch64
+            #[allow(unreachable_patterns)]
+            _ => false,
+        }
+    }
 }
 
 /// Detect the best available SIMD capability at runtime
+#[instrument(level = "debug")]
 pub fn detect_simd_support() -> SimdCapability {
     #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     {
         if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl") {
+            debug!("Detected AVX-512 support");
             return SimdCapability::Avx512;
         }
     }
@@ -108,17 +173,75 @@ pub fn detect_simd_support() -> SimdCapability {
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
         if is_x86_feature_detected!("avx2") {
+            debug!("Detected AVX2 support");
             return SimdCapability::Avx2;
         }
     }
 
     #[cfg(all(target_arch = "aarch64", feature = "neon"))]
     {
+        debug!("Detected ARM NEON support");
         // NEON is always available on aarch64
         return SimdCapability::Neon;
     }
 
+    debug!("Using scalar fallback - no SIMD support detected");
     SimdCapability::Scalar
+}
+
+// ============================================================================
+// Input Validation Helpers
+// ============================================================================
+
+/// Validate that two vectors have the same length
+#[inline]
+fn validate_vector_lengths(a: &[u64], b: &[u64]) -> SimdResult<()> {
+    if a.len() != b.len() {
+        return Err(SimdError::LengthMismatch {
+            left: a.len(),
+            right: b.len(),
+        });
+    }
+    Ok(())
+}
+
+/// Validate that a vector is non-empty
+#[inline]
+fn validate_non_empty(v: &[u64], operation: &'static str) -> SimdResult<()> {
+    if v.is_empty() {
+        return Err(SimdError::EmptyVector { operation });
+    }
+    Ok(())
+}
+
+/// Validate that modulus is valid (> 1)
+#[inline]
+fn validate_modulus(modulus: u64) -> SimdResult<()> {
+    if modulus <= 1 {
+        return Err(SimdError::InvalidModulus { modulus });
+    }
+    Ok(())
+}
+
+/// Validate matrix dimensions
+#[inline]
+fn validate_matrix_dimensions(matrix: &[u64], vector: &[u64], rows: usize, cols: usize) -> SimdResult<()> {
+    let expected = rows * cols;
+    if matrix.len() != expected {
+        return Err(SimdError::MatrixDimensionMismatch {
+            matrix_len: matrix.len(),
+            rows,
+            cols,
+            expected,
+        });
+    }
+    if vector.len() != cols {
+        return Err(SimdError::VectorColumnsMismatch {
+            vector_len: vector.len(),
+            cols,
+        });
+    }
+    Ok(())
 }
 
 /// SIMD-optimized field operations
@@ -134,18 +257,54 @@ pub struct SimdFieldOps {
 impl SimdFieldOps {
     /// Create with auto-detected SIMD capability
     pub fn auto_detect() -> Self {
+        let capability = detect_simd_support();
+        debug!("SimdFieldOps initialized with capability: {:?}", capability);
         Self {
-            capability: detect_simd_support(),
+            capability,
             add_ops: AtomicUsize::new(0),
             mul_ops: AtomicUsize::new(0),
             reduce_ops: AtomicUsize::new(0),
         }
     }
 
-    /// Create with specific SIMD capability (for testing)
-    pub fn with_capability(capability: SimdCapability) -> Self {
+    /// Create with specific SIMD capability (for testing or forced fallback)
+    /// 
+    /// # Errors
+    /// Returns `SimdError::CapabilityNotAvailable` if the requested capability
+    /// is not available on the current platform.
+    pub fn with_capability(capability: SimdCapability) -> SimdResult<Self> {
+        if !capability.is_available() {
+            warn!(
+                "Requested SIMD capability {:?} not available, falling back to scalar",
+                capability
+            );
+            return Err(SimdError::CapabilityNotAvailable { capability });
+        }
+        Ok(Self {
+            capability,
+            add_ops: AtomicUsize::new(0),
+            mul_ops: AtomicUsize::new(0),
+            reduce_ops: AtomicUsize::new(0),
+        })
+    }
+
+    /// Create with specific capability, allowing unavailable capabilities (for testing)
+    /// This bypasses the availability check and should only be used in tests
+    #[cfg(test)]
+    pub fn with_capability_unchecked(capability: SimdCapability) -> Self {
         Self {
             capability,
+            add_ops: AtomicUsize::new(0),
+            mul_ops: AtomicUsize::new(0),
+            reduce_ops: AtomicUsize::new(0),
+        }
+    }
+
+    /// Force fallback to scalar operations (useful for debugging or comparison)
+    pub fn force_scalar() -> Self {
+        debug!("SimdFieldOps forced to scalar mode");
+        Self {
+            capability: SimdCapability::Scalar,
             add_ops: AtomicUsize::new(0),
             mul_ops: AtomicUsize::new(0),
             reduce_ops: AtomicUsize::new(0),
@@ -179,10 +338,50 @@ impl SimdFieldOps {
     // ========================================================================
 
     /// Vectorized modular addition: result[i] = (a[i] + b[i]) mod p
+    ///
+    /// # Errors
+    /// - `SimdError::LengthMismatch` if vectors have different lengths
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    ///
+    /// # Examples
+    /// ```rust,ignore
+    /// let ops = SimdFieldOps::auto_detect();
+    /// let a = vec![1u64, 2, 3, 4];
+    /// let b = vec![5u64, 6, 7, 8];
+    /// let result = ops.vector_add_checked(&a, &b, 100)?;
+    /// assert_eq!(result, vec![6, 8, 10, 12]);
+    /// ```
+    #[instrument(level = "trace", skip(self, a, b))]
+    pub fn vector_add_checked(&self, a: &[u64], b: &[u64], modulus: u64) -> SimdResult<Vec<u64>> {
+        validate_vector_lengths(a, b)?;
+        validate_modulus(modulus)?;
+        
+        // Handle empty vectors gracefully
+        if a.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        self.add_ops.fetch_add(a.len(), Ordering::Relaxed);
+        Ok(self.vector_add_internal(a, b, modulus))
+    }
+
+    /// Vectorized modular addition (unchecked version for performance-critical paths)
+    /// 
+    /// # Panics
+    /// Panics in debug mode if vector lengths don't match
+    #[inline]
     pub fn vector_add(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
+        if a.is_empty() {
+            return Vec::new();
+        }
         self.add_ops.fetch_add(a.len(), Ordering::Relaxed);
+        self.vector_add_internal(a, b, modulus)
+    }
 
+    /// Internal implementation of vector addition (no validation)
+    #[inline]
+    fn vector_add_internal(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         match self.capability {
             #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
             SimdCapability::Avx2 => unsafe { self.vector_add_avx2(a, b, modulus) },
@@ -330,11 +529,37 @@ impl SimdFieldOps {
     // ========================================================================
 
     /// Vectorized modular subtraction: result[i] = (a[i] - b[i]) mod p
+    ///
+    /// # Errors
+    /// - `SimdError::LengthMismatch` if vectors have different lengths
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "trace", skip(self, a, b))]
+    pub fn vector_sub_checked(&self, a: &[u64], b: &[u64], modulus: u64) -> SimdResult<Vec<u64>> {
+        validate_vector_lengths(a, b)?;
+        validate_modulus(modulus)?;
+        
+        if a.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        self.add_ops.fetch_add(a.len(), Ordering::Relaxed);
+        Ok(self.vector_sub_internal(a, b, modulus))
+    }
+
+    /// Vectorized modular subtraction (unchecked version)
+    #[inline]
     pub fn vector_sub(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
+        if a.is_empty() {
+            return Vec::new();
+        }
         self.add_ops.fetch_add(a.len(), Ordering::Relaxed);
+        self.vector_sub_internal(a, b, modulus)
+    }
 
-        // Use scalar implementation for now - SIMD subtraction is similar to addition
+    /// Internal implementation of vector subtraction
+    #[inline]
+    fn vector_sub_internal(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         a.iter()
             .zip(b.iter())
             .map(|(&x, &y)| {
@@ -352,11 +577,37 @@ impl SimdFieldOps {
     // ========================================================================
 
     /// Vectorized modular multiplication: result[i] = (a[i] * b[i]) mod p
-    /// Uses Montgomery multiplication for efficiency
+    ///
+    /// # Errors
+    /// - `SimdError::LengthMismatch` if vectors have different lengths
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "trace", skip(self, a, b))]
+    pub fn vector_mul_checked(&self, a: &[u64], b: &[u64], modulus: u64) -> SimdResult<Vec<u64>> {
+        validate_vector_lengths(a, b)?;
+        validate_modulus(modulus)?;
+        
+        if a.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
+        Ok(self.vector_mul_internal(a, b, modulus))
+    }
+
+    /// Vectorized modular multiplication (unchecked version for performance)
+    #[inline]
     pub fn vector_mul(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
+        if a.is_empty() {
+            return Vec::new();
+        }
         self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
+        self.vector_mul_internal(a, b, modulus)
+    }
 
+    /// Internal implementation of vector multiplication
+    #[inline]
+    fn vector_mul_internal(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         // For modular multiplication, we need 128-bit intermediate results
         // SIMD optimization is limited here, but we can still parallelize
         a.iter()
@@ -369,9 +620,34 @@ impl SimdFieldOps {
     }
 
     /// Vectorized modular scalar multiplication: result[i] = (a[i] * scalar) mod p
-    pub fn vector_scalar_mul(&self, a: &[u64], scalar: u64, modulus: u64) -> Vec<u64> {
+    ///
+    /// # Errors
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "trace", skip(self, a))]
+    pub fn vector_scalar_mul_checked(&self, a: &[u64], scalar: u64, modulus: u64) -> SimdResult<Vec<u64>> {
+        validate_modulus(modulus)?;
+        
+        if a.is_empty() {
+            return Ok(Vec::new());
+        }
+        
         self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
+        Ok(self.vector_scalar_mul_internal(a, scalar, modulus))
+    }
 
+    /// Vectorized scalar multiplication (unchecked version)
+    #[inline]
+    pub fn vector_scalar_mul(&self, a: &[u64], scalar: u64, modulus: u64) -> Vec<u64> {
+        if a.is_empty() {
+            return Vec::new();
+        }
+        self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
+        self.vector_scalar_mul_internal(a, scalar, modulus)
+    }
+
+    /// Internal implementation of scalar multiplication
+    #[inline]
+    fn vector_scalar_mul_internal(&self, a: &[u64], scalar: u64, modulus: u64) -> Vec<u64> {
         a.iter()
             .map(|&x| {
                 let product = (x as u128) * (scalar as u128);
@@ -385,39 +661,89 @@ impl SimdFieldOps {
     // ========================================================================
 
     /// Parallel vectorized addition for large arrays
+    ///
+    /// # Errors
+    /// - `SimdError::LengthMismatch` if vectors have different lengths
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, a, b), fields(len = a.len()))]
+    pub fn parallel_vector_add_checked(&self, a: &[u64], b: &[u64], modulus: u64) -> SimdResult<Vec<u64>> {
+        validate_vector_lengths(a, b)?;
+        validate_modulus(modulus)?;
+        
+        if a.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        self.add_ops.fetch_add(a.len(), Ordering::Relaxed);
+        Ok(self.parallel_vector_add_internal(a, b, modulus))
+    }
+
+    /// Parallel vectorized addition (unchecked version)
     pub fn parallel_vector_add(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
+        if a.is_empty() {
+            return Vec::new();
+        }
         self.add_ops.fetch_add(a.len(), Ordering::Relaxed);
+        self.parallel_vector_add_internal(a, b, modulus)
+    }
 
+    /// Internal implementation of parallel vector addition
+    fn parallel_vector_add_internal(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         let chunk_size = std::cmp::max(1024, self.capability.vector_width() * 256);
         
         if a.len() < chunk_size {
-            return self.vector_add(a, b, modulus);
+            return self.vector_add_internal(a, b, modulus);
         }
 
         a.par_chunks(chunk_size)
             .zip(b.par_chunks(chunk_size))
             .flat_map(|(chunk_a, chunk_b)| {
-                self.vector_add(chunk_a, chunk_b, modulus)
+                self.vector_add_internal(chunk_a, chunk_b, modulus)
             })
             .collect()
     }
 
-    /// Parallel vectorized multiplication for large arrays
+    /// Parallel vectorized multiplication (checked version)
+    ///
+    /// # Errors
+    /// - `SimdError::LengthMismatch` if vectors have different lengths
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, a, b), fields(len = a.len()))]
+    pub fn parallel_vector_mul_checked(&self, a: &[u64], b: &[u64], modulus: u64) -> SimdResult<Vec<u64>> {
+        validate_vector_lengths(a, b)?;
+        validate_modulus(modulus)?;
+        
+        if a.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
+        Ok(self.parallel_vector_mul_internal(a, b, modulus))
+    }
+
+    /// Parallel vectorized multiplication (unchecked)
     pub fn parallel_vector_mul(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
+        if a.is_empty() {
+            return Vec::new();
+        }
         self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
+        self.parallel_vector_mul_internal(a, b, modulus)
+    }
 
+    /// Internal implementation of parallel vector multiplication
+    fn parallel_vector_mul_internal(&self, a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
         let chunk_size = std::cmp::max(1024, self.capability.vector_width() * 256);
         
         if a.len() < chunk_size {
-            return self.vector_mul(a, b, modulus);
+            return self.vector_mul_internal(a, b, modulus);
         }
 
         a.par_chunks(chunk_size)
             .zip(b.par_chunks(chunk_size))
             .flat_map(|(chunk_a, chunk_b)| {
-                self.vector_mul(chunk_a, chunk_b, modulus)
+                self.vector_mul_internal(chunk_a, chunk_b, modulus)
             })
             .collect()
     }
@@ -427,19 +753,63 @@ impl SimdFieldOps {
     // ========================================================================
 
     /// Compute modular inner product: sum(a[i] * b[i]) mod p
-    pub fn inner_product(&self, a: &[u64], b: &[u64], modulus: u64) -> u64 {
-        debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
+    ///
+    /// # Errors
+    /// - `SimdError::LengthMismatch` if vectors have different lengths
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    /// - `SimdError::EmptyVector` if vectors are empty
+    #[instrument(level = "trace", skip(self, a, b))]
+    pub fn inner_product_checked(&self, a: &[u64], b: &[u64], modulus: u64) -> SimdResult<u64> {
+        validate_vector_lengths(a, b)?;
+        validate_modulus(modulus)?;
+        validate_non_empty(a, "inner_product")?;
+        
         self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
         self.reduce_ops.fetch_add(1, Ordering::Relaxed);
 
-        let products = self.vector_mul(a, b, modulus);
-        self.vector_sum(&products, modulus)
+        let products = self.vector_mul_internal(a, b, modulus);
+        Ok(self.vector_sum_internal(&products, modulus))
+    }
+
+    /// Compute modular inner product (unchecked version)
+    pub fn inner_product(&self, a: &[u64], b: &[u64], modulus: u64) -> u64 {
+        debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
+        if a.is_empty() {
+            return 0;
+        }
+        self.mul_ops.fetch_add(a.len(), Ordering::Relaxed);
+        self.reduce_ops.fetch_add(1, Ordering::Relaxed);
+
+        let products = self.vector_mul_internal(a, b, modulus);
+        self.vector_sum_internal(&products, modulus)
     }
 
     /// Parallel inner product for large vectors
+    ///
+    /// # Errors
+    /// - `SimdError::LengthMismatch` if vectors have different lengths
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    /// - `SimdError::EmptyVector` if vectors are empty
+    #[instrument(level = "debug", skip(self, a, b), fields(len = a.len()))]
+    pub fn parallel_inner_product_checked(&self, a: &[u64], b: &[u64], modulus: u64) -> SimdResult<u64> {
+        validate_vector_lengths(a, b)?;
+        validate_modulus(modulus)?;
+        validate_non_empty(a, "parallel_inner_product")?;
+        
+        Ok(self.parallel_inner_product_internal(a, b, modulus))
+    }
+
+    /// Parallel inner product (unchecked version)
     pub fn parallel_inner_product(&self, a: &[u64], b: &[u64], modulus: u64) -> u64 {
         debug_assert_eq!(a.len(), b.len(), "Vector lengths must match");
-        
+        if a.is_empty() {
+            return 0;
+        }
+        self.parallel_inner_product_internal(a, b, modulus)
+    }
+
+    /// Internal implementation of parallel inner product
+    fn parallel_inner_product_internal(&self, a: &[u64], b: &[u64], modulus: u64) -> u64 {
         let chunk_size = 4096;
         
         if a.len() < chunk_size {
@@ -455,13 +825,18 @@ impl SimdFieldOps {
             .collect();
 
         // Sum partial results
-        self.vector_sum(&partial_sums, modulus)
+        self.vector_sum_internal(&partial_sums, modulus)
     }
 
     /// Compute modular sum of vector elements
     pub fn vector_sum(&self, a: &[u64], modulus: u64) -> u64 {
         self.reduce_ops.fetch_add(1, Ordering::Relaxed);
+        self.vector_sum_internal(a, modulus)
+    }
 
+    /// Internal implementation of vector sum
+    #[inline]
+    fn vector_sum_internal(&self, a: &[u64], modulus: u64) -> u64 {
         a.iter().fold(0u64, |acc, &x| {
             let sum = acc.wrapping_add(x);
             if sum >= modulus { sum - modulus } else { sum }
@@ -474,6 +849,32 @@ impl SimdFieldOps {
 
     /// Batch butterfly operation for NTT
     /// Computes: (a + b*w, a - b*w) for each pair
+    ///
+    /// # Errors
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    /// - Returns error if values.len() != twiddle_factors.len() * 2
+    #[instrument(level = "trace", skip(self, values, twiddle_factors))]
+    pub fn batch_butterfly_checked(
+        &self,
+        values: &mut [u64],
+        twiddle_factors: &[u64],
+        modulus: u64,
+    ) -> SimdResult<()> {
+        validate_modulus(modulus)?;
+        
+        let expected_len = twiddle_factors.len() * 2;
+        if values.len() != expected_len {
+            return Err(SimdError::LengthMismatch {
+                left: values.len(),
+                right: expected_len,
+            });
+        }
+        
+        self.batch_butterfly_internal(values, twiddle_factors, modulus);
+        Ok(())
+    }
+
+    /// Batch butterfly operation (unchecked version)
     pub fn batch_butterfly(
         &self,
         values: &mut [u64],
@@ -481,6 +882,16 @@ impl SimdFieldOps {
         modulus: u64,
     ) {
         debug_assert_eq!(values.len(), twiddle_factors.len() * 2);
+        self.batch_butterfly_internal(values, twiddle_factors, modulus);
+    }
+
+    /// Internal implementation of batch butterfly
+    fn batch_butterfly_internal(
+        &self,
+        values: &mut [u64],
+        twiddle_factors: &[u64],
+        modulus: u64,
+    ) {
         self.mul_ops.fetch_add(twiddle_factors.len(), Ordering::Relaxed);
         self.add_ops.fetch_add(twiddle_factors.len() * 2, Ordering::Relaxed);
 
@@ -511,7 +922,7 @@ impl SimdFieldOps {
         let chunk_size = 1024;
         
         if n < chunk_size {
-            return self.batch_butterfly(values, twiddle_factors, modulus);
+            return self.batch_butterfly_internal(values, twiddle_factors, modulus);
         }
 
         // Split into chunks and process in parallel
@@ -539,6 +950,31 @@ impl SimdFieldOps {
 
     /// Matrix-vector multiplication: result = M * v (mod p)
     /// M is stored in row-major order
+    ///
+    /// # Errors
+    /// - `SimdError::MatrixDimensionMismatch` if matrix.len() != rows * cols
+    /// - `SimdError::VectorColumnsMismatch` if vector.len() != cols
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, matrix, vector))]
+    pub fn matrix_vector_mul_checked(
+        &self,
+        matrix: &[u64],
+        vector: &[u64],
+        rows: usize,
+        cols: usize,
+        modulus: u64,
+    ) -> SimdResult<Vec<u64>> {
+        validate_matrix_dimensions(matrix, vector, rows, cols)?;
+        validate_modulus(modulus)?;
+        
+        if rows == 0 || cols == 0 {
+            return Ok(Vec::new());
+        }
+        
+        Ok(self.matrix_vector_mul_internal(matrix, vector, rows, cols, modulus))
+    }
+
+    /// Matrix-vector multiplication (unchecked version)
     pub fn matrix_vector_mul(
         &self,
         matrix: &[u64],
@@ -549,7 +985,23 @@ impl SimdFieldOps {
     ) -> Vec<u64> {
         debug_assert_eq!(matrix.len(), rows * cols);
         debug_assert_eq!(vector.len(), cols);
+        
+        if rows == 0 || cols == 0 {
+            return Vec::new();
+        }
+        
+        self.matrix_vector_mul_internal(matrix, vector, rows, cols, modulus)
+    }
 
+    /// Internal implementation of matrix-vector multiplication
+    fn matrix_vector_mul_internal(
+        &self,
+        matrix: &[u64],
+        vector: &[u64],
+        rows: usize,
+        cols: usize,
+        modulus: u64,
+    ) -> Vec<u64> {
         (0..rows)
             .map(|i| {
                 let row_start = i * cols;
@@ -560,6 +1012,31 @@ impl SimdFieldOps {
     }
 
     /// Parallel matrix-vector multiplication for large matrices
+    ///
+    /// # Errors
+    /// - `SimdError::MatrixDimensionMismatch` if matrix.len() != rows * cols
+    /// - `SimdError::VectorColumnsMismatch` if vector.len() != cols
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, matrix, vector), fields(rows, cols))]
+    pub fn parallel_matrix_vector_mul_checked(
+        &self,
+        matrix: &[u64],
+        vector: &[u64],
+        rows: usize,
+        cols: usize,
+        modulus: u64,
+    ) -> SimdResult<Vec<u64>> {
+        validate_matrix_dimensions(matrix, vector, rows, cols)?;
+        validate_modulus(modulus)?;
+        
+        if rows == 0 || cols == 0 {
+            return Ok(Vec::new());
+        }
+        
+        Ok(self.parallel_matrix_vector_mul_internal(matrix, vector, rows, cols, modulus))
+    }
+
+    /// Parallel matrix-vector multiplication (unchecked version)
     pub fn parallel_matrix_vector_mul(
         &self,
         matrix: &[u64],
@@ -570,9 +1047,25 @@ impl SimdFieldOps {
     ) -> Vec<u64> {
         debug_assert_eq!(matrix.len(), rows * cols);
         debug_assert_eq!(vector.len(), cols);
+        
+        if rows == 0 || cols == 0 {
+            return Vec::new();
+        }
+        
+        self.parallel_matrix_vector_mul_internal(matrix, vector, rows, cols, modulus)
+    }
 
+    /// Internal implementation of parallel matrix-vector multiplication
+    fn parallel_matrix_vector_mul_internal(
+        &self,
+        matrix: &[u64],
+        vector: &[u64],
+        rows: usize,
+        cols: usize,
+        modulus: u64,
+    ) -> Vec<u64> {
         if rows < 64 {
-            return self.matrix_vector_mul(matrix, vector, rows, cols, modulus);
+            return self.matrix_vector_mul_internal(matrix, vector, rows, cols, modulus);
         }
 
         (0..rows)
@@ -591,11 +1084,36 @@ impl SimdFieldOps {
 
     /// Batch modular inverse using Montgomery's trick
     /// Computes inverses of all elements in a single pass
+    ///
+    /// # Errors
+    /// - `SimdError::NotInvertible` if any element is not invertible
+    /// - `SimdError::InvalidModulus` if modulus <= 1
+    /// - `SimdError::EmptyVector` if elements is empty
+    #[instrument(level = "debug", skip(self, elements))]
+    pub fn batch_inverse_checked(&self, elements: &[u64], modulus: u64) -> SimdResult<Vec<u64>> {
+        validate_modulus(modulus)?;
+        validate_non_empty(elements, "batch_inverse")?;
+        
+        // Check for zero elements
+        for &e in elements {
+            if e == 0 || e % modulus == 0 {
+                return Err(SimdError::NotInvertible { element: e, modulus });
+            }
+        }
+        
+        Ok(self.batch_inverse_internal(elements, modulus))
+    }
+
+    /// Batch modular inverse (unchecked version)
     pub fn batch_inverse(&self, elements: &[u64], modulus: u64) -> Vec<u64> {
         if elements.is_empty() {
             return vec![];
         }
+        self.batch_inverse_internal(elements, modulus)
+    }
 
+    /// Internal implementation of batch inverse
+    fn batch_inverse_internal(&self, elements: &[u64], modulus: u64) -> Vec<u64> {
         let n = elements.len();
         let mut prefix_products = vec![0u64; n];
         let mut inverses = vec![0u64; n];
@@ -693,7 +1211,7 @@ mod tests {
 
     #[test]
     fn test_vector_add_scalar() {
-        let ops = SimdFieldOps::with_capability(SimdCapability::Scalar);
+        let ops = SimdFieldOps::with_capability(SimdCapability::Scalar).unwrap();
         
         let a = vec![1u64, 2, 3, 4, 5];
         let b = vec![10u64, 20, 30, 40, 50];
@@ -839,5 +1357,289 @@ mod tests {
         let metrics = ops.metrics();
         assert_eq!(metrics.add_operations, 4);
         assert_eq!(metrics.mul_operations, 4);
+    }
+
+    // ========================================================================
+    // Tests for Checked Variants (Production Hardening)
+    // ========================================================================
+
+    #[test]
+    fn test_vector_add_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let a = vec![1u64, 2, 3, 4, 5];
+        let b = vec![10u64, 20, 30, 40, 50];
+        let result = ops.vector_add_checked(&a, &b, TEST_MODULUS).unwrap();
+        
+        assert_eq!(result, vec![11, 22, 33, 44, 55]);
+    }
+
+    #[test]
+    fn test_vector_add_checked_length_mismatch() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let a = vec![1u64, 2, 3];
+        let b = vec![10u64, 20];
+        let result = ops.vector_add_checked(&a, &b, TEST_MODULUS);
+        
+        assert!(matches!(result, Err(SimdError::LengthMismatch { .. })));
+    }
+
+    #[test]
+    fn test_vector_add_checked_empty() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let a: Vec<u64> = vec![];
+        let b: Vec<u64> = vec![];
+        let result = ops.vector_add_checked(&a, &b, TEST_MODULUS);
+        
+        // Empty vectors are valid input - they produce an empty result
+        // This is mathematically correct (adding two empty vectors gives an empty vector)
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_vector_add_checked_invalid_modulus() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let a = vec![1u64, 2, 3];
+        let b = vec![10u64, 20, 30];
+        let result = ops.vector_add_checked(&a, &b, 1);
+        
+        assert!(matches!(result, Err(SimdError::InvalidModulus { .. })));
+    }
+
+    #[test]
+    fn test_vector_sub_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 100u64;
+        let a = vec![50u64, 30, 10];
+        let b = vec![20u64, 30, 40];
+        let result = ops.vector_sub_checked(&a, &b, modulus).unwrap();
+        
+        assert_eq!(result, vec![30, 0, 70]);
+    }
+
+    #[test]
+    fn test_vector_mul_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 100u64;
+        let a = vec![5u64, 7, 9];
+        let b = vec![3u64, 4, 5];
+        let result = ops.vector_mul_checked(&a, &b, modulus).unwrap();
+        
+        assert_eq!(result, vec![15, 28, 45]);
+    }
+
+    #[test]
+    fn test_vector_scalar_mul_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 100u64;
+        let a = vec![5u64, 10, 15];
+        let scalar = 3u64;
+        let result = ops.vector_scalar_mul_checked(&a, scalar, modulus).unwrap();
+        
+        assert_eq!(result, vec![15, 30, 45]);
+    }
+
+    #[test]
+    fn test_inner_product_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 1000u64;
+        let a = vec![1u64, 2, 3, 4, 5];
+        let b = vec![10u64, 20, 30, 40, 50];
+        
+        let result = ops.inner_product_checked(&a, &b, modulus).unwrap();
+        assert_eq!(result, 550);
+    }
+
+    #[test]
+    fn test_batch_butterfly_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 97u64;
+        let mut values = vec![10u64, 20, 30, 40];
+        let twiddles = vec![3u64, 5];
+        
+        ops.batch_butterfly_checked(&mut values, &twiddles, modulus).unwrap();
+        
+        assert_eq!(values[0], 3);
+        assert_eq!(values[1], 26);
+    }
+
+    #[test]
+    fn test_batch_butterfly_checked_dimension_mismatch() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 97u64;
+        let mut values = vec![10u64, 20, 30, 40];
+        let twiddles = vec![3u64, 5, 7]; // Wrong size
+        
+        let result = ops.batch_butterfly_checked(&mut values, &twiddles, modulus);
+        assert!(matches!(result, Err(SimdError::LengthMismatch { .. })));
+    }
+
+    #[test]
+    fn test_matrix_vector_mul_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 1000u64;
+        let matrix = vec![1u64, 2, 3, 4, 5, 6];
+        let vector = vec![10u64, 20, 30];
+        
+        let result = ops.matrix_vector_mul_checked(&matrix, &vector, 2, 3, modulus).unwrap();
+        assert_eq!(result, vec![140, 320]);
+    }
+
+    #[test]
+    fn test_matrix_vector_mul_checked_matrix_mismatch() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 1000u64;
+        let matrix = vec![1u64, 2, 3, 4, 5]; // Wrong size for 2x3
+        let vector = vec![10u64, 20, 30];
+        
+        let result = ops.matrix_vector_mul_checked(&matrix, &vector, 2, 3, modulus);
+        assert!(matches!(result, Err(SimdError::MatrixDimensionMismatch { .. })));
+    }
+
+    #[test]
+    fn test_matrix_vector_mul_checked_vector_mismatch() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 1000u64;
+        let matrix = vec![1u64, 2, 3, 4, 5, 6];
+        let vector = vec![10u64, 20]; // Wrong size for cols=3
+        
+        let result = ops.matrix_vector_mul_checked(&matrix, &vector, 2, 3, modulus);
+        assert!(matches!(result, Err(SimdError::VectorColumnsMismatch { .. })));
+    }
+
+    #[test]
+    fn test_batch_inverse_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 97u64;
+        let elements = vec![3u64, 5, 7];
+        let inverses = ops.batch_inverse_checked(&elements, modulus).unwrap();
+        
+        for (e, inv) in elements.iter().zip(inverses.iter()) {
+            let product = ((*e as u128) * (*inv as u128) % (modulus as u128)) as u64;
+            assert_eq!(product, 1, "Inverse of {} should be correct", e);
+        }
+    }
+
+    #[test]
+    fn test_batch_inverse_checked_not_invertible() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 97u64;
+        let elements = vec![3u64, 0, 7]; // 0 is not invertible
+        
+        let result = ops.batch_inverse_checked(&elements, modulus);
+        assert!(matches!(result, Err(SimdError::NotInvertible { .. })));
+    }
+
+    #[test]
+    fn test_batch_inverse_checked_empty() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let modulus = 97u64;
+        let elements: Vec<u64> = vec![];
+        
+        let result = ops.batch_inverse_checked(&elements, modulus);
+        assert!(matches!(result, Err(SimdError::EmptyVector { .. })));
+    }
+
+    #[test]
+    fn test_parallel_vector_add_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let n = 10000;
+        let a: Vec<u64> = (0..n).map(|i| i as u64).collect();
+        let b: Vec<u64> = (0..n).map(|i| (n - i) as u64).collect();
+        
+        let result = ops.parallel_vector_add_checked(&a, &b, TEST_MODULUS).unwrap();
+        
+        assert_eq!(result.len(), n);
+        for &r in &result {
+            assert_eq!(r, n as u64);
+        }
+    }
+
+    #[test]
+    fn test_parallel_inner_product_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let n = 10000;
+        let a: Vec<u64> = (1..=n as u64).collect();
+        let b: Vec<u64> = vec![1u64; n];
+        
+        let result = ops.parallel_inner_product_checked(&a, &b, TEST_MODULUS).unwrap();
+        
+        // Sum of 1 to n = n*(n+1)/2
+        let expected = (n * (n + 1) / 2) as u64;
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parallel_matrix_vector_mul_checked_success() {
+        let ops = SimdFieldOps::auto_detect();
+        
+        let rows = 100;
+        let cols = 50;
+        let modulus = TEST_MODULUS;
+        
+        // Identity-like matrix (all 1s on diagonal conceptually)
+        let matrix: Vec<u64> = (0..rows*cols).map(|_| 1u64).collect();
+        let vector: Vec<u64> = (0..cols).map(|i| i as u64).collect();
+        
+        let result = ops.parallel_matrix_vector_mul_checked(&matrix, &vector, rows, cols, modulus).unwrap();
+        
+        assert_eq!(result.len(), rows);
+        // Each row sums to 0+1+2+...+(cols-1) = cols*(cols-1)/2
+        let expected_sum = (cols * (cols - 1) / 2) as u64;
+        for &r in &result {
+            assert_eq!(r, expected_sum);
+        }
+    }
+
+    #[test]
+    fn test_simd_capability_is_available() {
+        // This test verifies the is_available method works correctly
+        let detected = detect_simd_support();
+        
+        // Scalar should always be available
+        assert!(SimdCapability::Scalar.is_available());
+        
+        // The detected capability should be available
+        assert!(detected.is_available());
+    }
+
+    #[test]
+    fn test_with_capability_checked() {
+        // Test that with_capability returns error for unavailable capabilities
+        let result = SimdFieldOps::with_capability(SimdCapability::Scalar);
+        assert!(result.is_ok());
+        
+        // Note: AVX-512 may or may not be available depending on the machine
+        // This test just ensures the API works correctly
+    }
+
+    #[test]
+    fn test_force_scalar() {
+        let ops = SimdFieldOps::force_scalar();
+        assert_eq!(ops.capability, SimdCapability::Scalar);
+        
+        // Should still work correctly
+        let a = vec![1u64, 2, 3];
+        let b = vec![4u64, 5, 6];
+        let result = ops.vector_add(&a, &b, 1000);
+        assert_eq!(result, vec![5, 7, 9]);
     }
 }
