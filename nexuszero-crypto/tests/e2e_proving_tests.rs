@@ -618,7 +618,7 @@ mod validation_tests {
     fn test_proof_validation_empty_commitments() {
         let proof = Proof {
             commitments: vec![],
-            challenge: nexuszero_crypto::proof::proof::Challenge { value: [0u8; 32] },
+            challenge: nexuszero_crypto::proof::proof::Challenge { value: vec![0u8; 32] },
             responses: vec![nexuszero_crypto::proof::proof::Response { value: vec![1] }],
             metadata: nexuszero_crypto::proof::proof::ProofMetadata {
                 version: 1,
@@ -635,7 +635,7 @@ mod validation_tests {
     fn test_proof_validation_empty_responses() {
         let proof = Proof {
             commitments: vec![nexuszero_crypto::proof::proof::Commitment { value: vec![1] }],
-            challenge: nexuszero_crypto::proof::proof::Challenge { value: [0u8; 32] },
+            challenge: nexuszero_crypto::proof::proof::Challenge { value: vec![0u8; 32] },
             responses: vec![],
             metadata: nexuszero_crypto::proof::proof::ProofMetadata {
                 version: 1,

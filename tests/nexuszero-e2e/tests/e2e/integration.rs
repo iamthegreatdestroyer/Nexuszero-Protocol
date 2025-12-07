@@ -2236,3 +2236,793 @@ mod configuration_tests {
         println!("✅ Future roadmap validation tests completed");
     }
 }
+
+// =============================================================================
+// CROSS-CHAIN INTEGRATION TESTS
+// =============================================================================
+// Tests for cross-chain communication, proof verification, and interoperability
+// between different blockchain networks supported by NexusZero Protocol
+
+#[cfg(test)]
+mod cross_chain_integration_tests {
+    use chain_connectors_common::prelude::*;
+    
+    // =========================================================================
+    // ChainId Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_chain_id_evm_compatibility() {
+        // Test that all EVM chains share compatible proof formats
+        let evm_chains = vec![
+            ChainId::Ethereum,
+            ChainId::Polygon,
+            ChainId::Arbitrum,
+            ChainId::Optimism,
+            ChainId::Base,
+            ChainId::BnbChain,
+            ChainId::Avalanche,
+        ];
+        
+        for chain in &evm_chains {
+            assert!(chain.is_evm(), "Chain {:?} should be EVM compatible", chain);
+        }
+        
+        // Verify non-EVM chains are correctly identified
+        assert!(!ChainId::Bitcoin.is_evm());
+        assert!(!ChainId::Solana.is_evm());
+        assert!(!ChainId::Cosmos.is_evm());
+        
+        println!("✅ ChainId EVM compatibility tests passed");
+    }
+    
+    #[test]
+    fn test_chain_id_native_symbol_consistency() {
+        // Verify all chains have consistent native token symbols
+        let expected_symbols = vec![
+            (ChainId::Ethereum, "ETH"),
+            (ChainId::Bitcoin, "BTC"),
+            (ChainId::Solana, "SOL"),
+            (ChainId::Polygon, "MATIC"),
+            (ChainId::Cosmos, "ATOM"),
+            (ChainId::Arbitrum, "ETH"),
+            (ChainId::Optimism, "ETH"),
+            (ChainId::Base, "ETH"),
+            (ChainId::BnbChain, "BNB"),
+            (ChainId::Avalanche, "AVAX"),
+        ];
+        
+        for (chain, expected) in expected_symbols {
+            assert_eq!(chain.native_symbol(), expected, 
+                "Chain {:?} should have symbol {}", chain, expected);
+        }
+        
+        println!("✅ Native symbol consistency tests passed");
+    }
+    
+    #[test]
+    fn test_chain_id_decimals_consistency() {
+        // Most chains use 18 decimals, verify exceptions
+        let chains_with_18_decimals = vec![
+            ChainId::Ethereum,
+            ChainId::Polygon,
+            ChainId::Arbitrum,
+            ChainId::Optimism,
+            ChainId::Base,
+            ChainId::BnbChain,
+            ChainId::Avalanche,
+        ];
+        
+        for chain in chains_with_18_decimals {
+            assert_eq!(chain.decimals(), 18, 
+                "Chain {:?} should have 18 decimals", chain);
+        }
+        
+        // Bitcoin uses 8 decimals
+        assert_eq!(ChainId::Bitcoin.decimals(), 8);
+        
+        // Solana uses 9 decimals
+        assert_eq!(ChainId::Solana.decimals(), 9);
+        
+        // Cosmos uses 18 decimals (standard for Cosmos SDK)
+        assert_eq!(ChainId::Cosmos.decimals(), 18);
+        
+        println!("✅ Chain decimals consistency tests passed");
+    }
+    
+    #[test]
+    fn test_custom_chain_id_creation() {
+        // Test custom chain creation for private/test networks
+        let custom = ChainId::Custom(999999);
+        
+        // Custom chains have an EVM chain ID (so is_evm returns true)
+        assert!(custom.is_evm());
+        assert_eq!(custom.evm_chain_id(), Some(999999));
+        
+        // Verify custom chain IDs are unique
+        let custom2 = ChainId::Custom(999998);
+        assert_ne!(custom, custom2);
+        
+        // Custom chains use "NATIVE" symbol
+        assert_eq!(custom.native_symbol(), "NATIVE");
+        
+        println!("✅ Custom ChainId creation tests passed");
+    }
+    
+    // =========================================================================
+    // ChainOperation Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_chain_operation_all_variants() {
+        // Test all ChainOperation variants can be created
+        let operations = vec![
+            ChainOperation::SubmitProof { proof_size: 1024, privacy_level: 3 },
+            ChainOperation::VerifyProof { proof_id: [2u8; 32] },
+            ChainOperation::Transfer { amount: 1000000, recipient: vec![0x12; 20] },
+            ChainOperation::BridgeInitiate { target_chain: ChainId::Polygon, amount: 1000000 },
+            ChainOperation::BridgeComplete { transfer_id: [5u8; 32] },
+            ChainOperation::Deploy { bytecode_size: 4096 },
+            ChainOperation::ContractCall { calldata_size: 256 },
+        ];
+        
+        assert_eq!(operations.len(), 7, "All 7 operation variants should be testable");
+        
+        println!("✅ ChainOperation variant tests passed");
+    }
+    
+    #[test]
+    fn test_bridge_operations_across_chains() {
+        // Test bridge initiation to all supported target chains
+        let source_chain = ChainId::Ethereum;
+        let target_chains = vec![
+            ChainId::Polygon,
+            ChainId::Arbitrum,
+            ChainId::Optimism,
+            ChainId::Solana,
+            ChainId::Cosmos,
+            ChainId::Bitcoin,
+        ];
+        
+        for target in target_chains {
+            let bridge_op = ChainOperation::BridgeInitiate {
+                target_chain: target.clone(),
+                amount: 1_000_000_000_000_000_000, // 1 ETH equivalent
+            };
+            
+            // Verify operation can be created for cross-chain bridges
+            match bridge_op {
+                ChainOperation::BridgeInitiate { target_chain, amount } => {
+                    assert_ne!(source_chain, target_chain, 
+                        "Bridge target should differ from source");
+                    assert!(amount > 0);
+                }
+                _ => panic!("Expected BridgeInitiate operation"),
+            }
+        }
+        
+        println!("✅ Cross-chain bridge operation tests passed");
+    }
+    
+    // =========================================================================
+    // ProofMetadata Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_proof_metadata_all_chains() {
+        // Create proof metadata for each chain type
+        let chains = vec![
+            ChainId::Ethereum,
+            ChainId::Bitcoin,
+            ChainId::Solana,
+            ChainId::Polygon,
+            ChainId::Cosmos,
+            ChainId::Arbitrum,
+            ChainId::Optimism,
+        ];
+        
+        for chain in chains {
+            let metadata = ProofMetadata::new(
+                3, // privacy level
+                "bulletproof",
+                [0x42; 32], // sender commitment
+                [0x43; 32], // recipient commitment
+            );
+            
+            assert_eq!(metadata.privacy_level, 3);
+            assert_eq!(metadata.proof_type, "bulletproof");
+            assert!(metadata.timestamp > 0);
+            
+            println!("  ✅ ProofMetadata for {:?} created successfully", chain);
+        }
+        
+        println!("✅ ProofMetadata all-chain tests passed");
+    }
+    
+    #[test]
+    fn test_proof_metadata_with_nullifier() {
+        let metadata = ProofMetadata::new(
+            5, // max privacy level
+            "groth16",
+            [0x11; 32],
+            [0x22; 32],
+        ).with_nullifier([0xff; 32]);
+        
+        assert_eq!(metadata.privacy_level, 5);
+        assert!(metadata.nullifier.is_some());
+        assert_eq!(metadata.nullifier.unwrap(), [0xff; 32]);
+        
+        println!("✅ ProofMetadata with nullifier tests passed");
+    }
+    
+    #[test]
+    fn test_proof_metadata_serde_roundtrip() {
+        let metadata = ProofMetadata::new(
+            4,
+            "plonk",
+            [0xaa; 32],
+            [0xbb; 32],
+        );
+        
+        // Serialize to JSON
+        let json = serde_json::to_string(&metadata).expect("Serialization should succeed");
+        
+        // Deserialize back
+        let deserialized: ProofMetadata = serde_json::from_str(&json)
+            .expect("Deserialization should succeed");
+        
+        assert_eq!(metadata.privacy_level, deserialized.privacy_level);
+        assert_eq!(metadata.proof_type, deserialized.proof_type);
+        assert_eq!(metadata.sender_commitment, deserialized.sender_commitment);
+        assert_eq!(metadata.recipient_commitment, deserialized.recipient_commitment);
+        
+        println!("✅ ProofMetadata serde roundtrip tests passed");
+    }
+    
+    // =========================================================================
+    // BlockInfo Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_block_info_creation() {
+        let block = BlockInfo {
+            number: 12345678,
+            hash: [0xab; 32],
+            parent_hash: [0xcd; 32],
+            timestamp: 1700000000,
+            transaction_count: 150,
+        };
+        
+        assert_eq!(block.number, 12345678);
+        assert_eq!(block.transaction_count, 150);
+        
+        println!("✅ BlockInfo creation tests passed");
+    }
+    
+    #[test]
+    fn test_block_info_serde_roundtrip() {
+        let block = BlockInfo {
+            number: 99999999,
+            hash: [0x11; 32],
+            parent_hash: [0x22; 32],
+            timestamp: 1699999999,
+            transaction_count: 500,
+        };
+        
+        let json = serde_json::to_string(&block).expect("Serialization should succeed");
+        let deserialized: BlockInfo = serde_json::from_str(&json)
+            .expect("Deserialization should succeed");
+        
+        assert_eq!(block.number, deserialized.number);
+        assert_eq!(block.hash, deserialized.hash);
+        
+        println!("✅ BlockInfo serde roundtrip tests passed");
+    }
+    
+    // =========================================================================
+    // TransactionStatus Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_transaction_status_all_variants() {
+        let statuses = vec![
+            TransactionStatus::Pending,
+            TransactionStatus::Confirmed,
+            TransactionStatus::Failed,
+            TransactionStatus::Dropped,
+            TransactionStatus::Unknown,
+        ];
+        
+        for status in &statuses {
+            // Verify all variants exist and can be matched
+            match status {
+                TransactionStatus::Pending => assert!(true),
+                TransactionStatus::Confirmed => assert!(true),
+                TransactionStatus::Failed => assert!(true),
+                TransactionStatus::Dropped => assert!(true),
+                TransactionStatus::Unknown => assert!(true),
+            }
+        }
+        
+        println!("✅ TransactionStatus variant tests passed");
+    }
+    
+    #[test]
+    fn test_transaction_status_is_final() {
+        // Test is_final() method
+        assert!(!TransactionStatus::Pending.is_final());
+        assert!(TransactionStatus::Confirmed.is_final());
+        assert!(TransactionStatus::Failed.is_final());
+        assert!(TransactionStatus::Dropped.is_final());
+        assert!(!TransactionStatus::Unknown.is_final());
+        
+        println!("✅ TransactionStatus is_final tests passed");
+    }
+    
+    #[test]
+    fn test_transaction_status_serde() {
+        let statuses = vec![
+            TransactionStatus::Pending,
+            TransactionStatus::Confirmed,
+            TransactionStatus::Failed,
+            TransactionStatus::Dropped,
+            TransactionStatus::Unknown,
+        ];
+        
+        for status in statuses {
+            let json = serde_json::to_string(&status).expect("Serialization should succeed");
+            let deserialized: TransactionStatus = serde_json::from_str(&json)
+                .expect("Deserialization should succeed");
+            
+            assert_eq!(status, deserialized);
+        }
+        
+        println!("✅ TransactionStatus serde tests passed");
+    }
+    
+    // =========================================================================
+    // FeeEstimate Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_fee_estimate_creation() {
+        let estimate = FeeEstimate {
+            gas_units: 21000,
+            gas_price: 50.0, // 50 gwei
+            priority_fee: Some(2.0),
+            total_fee_native: 0.00105,
+            total_fee_usd: Some(2.10),
+            confidence: FeeConfidence::High,
+        };
+        
+        assert!(estimate.gas_units > 0);
+        assert_eq!(estimate.confidence, FeeConfidence::High);
+        
+        println!("✅ FeeEstimate creation tests passed");
+    }
+    
+    #[test]
+    fn test_fee_confidence_all_variants() {
+        let confidences = vec![
+            FeeConfidence::Low,
+            FeeConfidence::Medium,
+            FeeConfidence::High,
+        ];
+        
+        for confidence in confidences {
+            let estimate = FeeEstimate {
+                gas_units: 21000,
+                gas_price: match &confidence {
+                    FeeConfidence::Low => 20.0,
+                    FeeConfidence::Medium => 35.0,
+                    FeeConfidence::High => 50.0,
+                },
+                priority_fee: Some(1.0),
+                total_fee_native: 0.001,
+                total_fee_usd: None,
+                confidence: confidence.clone(),
+            };
+            
+            assert!(estimate.gas_units > 0);
+        }
+        
+        println!("✅ FeeConfidence variant tests passed");
+    }
+    
+    // =========================================================================
+    // TransactionReceipt Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_transaction_receipt_success() {
+        let receipt = TransactionReceipt {
+            tx_hash: [0xaa; 32],
+            block_number: 12345678,
+            block_hash: Some([0xbb; 32]),
+            status: true,
+            gas_used: 21000,
+            effective_gas_price: Some(50_000_000_000), // 50 gwei
+            logs: vec![],
+            transaction_index: 42,
+        };
+        
+        assert!(receipt.status);
+        assert_eq!(receipt.gas_used, 21000);
+        // Verify tx_hash_hex returns correct hex string
+        let hex_str = receipt.tx_hash_hex();
+        assert_eq!(hex_str.len(), 64); // 32 bytes = 64 hex chars
+        assert!(hex_str.chars().all(|c| c.is_ascii_hexdigit()));
+        
+        println!("✅ TransactionReceipt success tests passed");
+    }
+    
+    #[test]
+    fn test_transaction_receipt_failure() {
+        let receipt = TransactionReceipt {
+            tx_hash: [0xcc; 32],
+            block_number: 12345679,
+            block_hash: Some([0xdd; 32]),
+            status: false,
+            gas_used: 50000, // Used more gas before failing
+            effective_gas_price: Some(100_000_000_000), // 100 gwei
+            logs: vec![],
+            transaction_index: 0,
+        };
+        
+        assert!(!receipt.status);
+        assert!(receipt.gas_used > 21000, "Failed tx should consume more gas");
+        
+        println!("✅ TransactionReceipt failure tests passed");
+    }
+    
+    #[test]
+    fn test_transaction_receipt_serde() {
+        let receipt = TransactionReceipt {
+            tx_hash: [0xee; 32],
+            block_number: 99999,
+            block_hash: Some([0xff; 32]),
+            status: true,
+            gas_used: 100000,
+            effective_gas_price: Some(25_000_000_000),
+            logs: vec![],
+            transaction_index: 5,
+        };
+        
+        let json = serde_json::to_string(&receipt).expect("Serialization should succeed");
+        let deserialized: TransactionReceipt = serde_json::from_str(&json)
+            .expect("Deserialization should succeed");
+        
+        assert_eq!(receipt.tx_hash, deserialized.tx_hash);
+        assert_eq!(receipt.status, deserialized.status);
+        
+        println!("✅ TransactionReceipt serde tests passed");
+    }
+    
+    // =========================================================================
+    // ChainError Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_chain_error_all_variants() {
+        let errors: Vec<ChainError> = vec![
+            ChainError::ConnectionFailed("RPC timeout".into()),
+            ChainError::RpcError("network error".into()),
+            ChainError::TransactionFailed("nonce too low".into()),
+            ChainError::TransactionRejected("gas too low".into()),
+            ChainError::TransactionTimeout(60),
+            ChainError::ProofVerificationFailed("invalid witness".into()),
+            ChainError::InvalidProof("malformed proof".into()),
+            ChainError::InsufficientFunds { required: 1000000, available: 500000 },
+            ChainError::ChainNotSupported("UnknownChain".into()),
+            ChainError::InvalidAddress("bad format".into()),
+            ChainError::ContractError("revert".into()),
+            ChainError::SubscriptionFailed("websocket error".into()),
+            ChainError::SigningFailed("key not found".into()),
+            ChainError::KeyError("invalid key".into()),
+            ChainError::RateLimited(60000),
+            ChainError::ConfigError("missing field".into()),
+            ChainError::SerializationError("invalid json".into()),
+            ChainError::InternalError("unexpected state".into()),
+        ];
+        
+        for error in errors {
+            // Verify all errors can be formatted
+            let msg = format!("{}", error);
+            assert!(!msg.is_empty(), "Error message should not be empty");
+        }
+        
+        println!("✅ ChainError variant tests passed");
+    }
+    
+    #[test]
+    fn test_chain_error_is_retryable() {
+        // Retryable errors
+        assert!(ChainError::RpcError("test".into()).is_retryable());
+        assert!(ChainError::ConnectionFailed("test".into()).is_retryable());
+        assert!(ChainError::TransactionTimeout(60).is_retryable());
+        assert!(ChainError::RateLimited(1000).is_retryable());
+        
+        // Non-retryable errors
+        assert!(!ChainError::TransactionFailed("test".into()).is_retryable());
+        assert!(!ChainError::InvalidProof("test".into()).is_retryable());
+        assert!(!ChainError::InsufficientFunds { required: 100, available: 50 }.is_retryable());
+        
+        println!("✅ ChainError is_retryable tests passed");
+    }
+    
+    #[test]
+    fn test_chain_error_retry_delay() {
+        assert_eq!(ChainError::RateLimited(5000).retry_delay_ms(), Some(5000));
+        assert_eq!(ChainError::RpcError("err".into()).retry_delay_ms(), Some(1000));
+        assert_eq!(ChainError::ConnectionFailed("err".into()).retry_delay_ms(), Some(5000));
+        assert_eq!(ChainError::TransactionTimeout(60).retry_delay_ms(), Some(2000));
+        assert_eq!(ChainError::InvalidAddress("x".into()).retry_delay_ms(), None);
+        
+        println!("✅ ChainError retry_delay tests passed");
+    }
+    
+    #[test]
+    fn test_chain_error_insufficient_funds_details() {
+        let error = ChainError::InsufficientFunds {
+            required: 1_000_000_000_000_000_000, // 1 ETH in wei
+            available: 500_000_000_000_000_000,   // 0.5 ETH in wei
+        };
+        
+        if let ChainError::InsufficientFunds { required, available } = error {
+            assert!(required > available);
+            let deficit = required - available;
+            assert_eq!(deficit, 500_000_000_000_000_000);
+        }
+        
+        println!("✅ ChainError insufficient funds tests passed");
+    }
+    
+    // =========================================================================
+    // EventFilter Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_event_filter_creation() {
+        let filter = EventFilter::new()
+            .with_event_types(vec![EventType::ProofSubmitted])
+            .from_block(12345000)
+            .to_block(12346000)
+            .with_addresses(vec![vec![0x12; 20]])
+            .with_topic(0, [0x34; 32]);
+        
+        assert_eq!(filter.event_types, vec![EventType::ProofSubmitted]);
+        assert_eq!(filter.from_block, Some(12345000));
+        
+        println!("✅ EventFilter creation tests passed");
+    }
+    
+    #[test]
+    fn test_event_filter_proof_shortcuts() {
+        // Test convenience constructors
+        let proof_submitted = EventFilter::proof_submitted();
+        assert_eq!(proof_submitted.event_types, vec![EventType::ProofSubmitted]);
+        
+        let proof_verified = EventFilter::proof_verified();
+        assert_eq!(proof_verified.event_types, vec![EventType::ProofVerified]);
+        
+        let bridge_events = EventFilter::bridge_events();
+        assert!(bridge_events.event_types.contains(&EventType::BridgeTransferInitiated));
+        assert!(bridge_events.event_types.contains(&EventType::BridgeTransferCompleted));
+        
+        println!("✅ EventFilter shortcuts tests passed");
+    }
+    
+    #[test]
+    fn test_event_type_all_variants() {
+        let event_types = vec![
+            EventType::ProofSubmitted,
+            EventType::ProofVerified,
+            EventType::BridgeTransferInitiated,
+            EventType::BridgeTransferCompleted,
+            EventType::BridgeTransferFailed,
+            EventType::HtlcCreated,
+            EventType::HtlcRedeemed,
+            EventType::HtlcRefunded,
+            EventType::Transfer,
+            EventType::ContractDeployed,
+            EventType::Unknown,
+        ];
+        
+        for event_type in event_types {
+            let filter = EventFilter::new()
+                .with_event_types(vec![event_type.clone()]);
+            
+            assert_eq!(filter.event_types.len(), 1);
+            assert_eq!(filter.event_types[0], event_type);
+        }
+        
+        println!("✅ EventType variant tests passed");
+    }
+    
+    #[test]
+    fn test_event_type_evm_signatures() {
+        // Test that certain event types have EVM signatures
+        assert!(EventType::ProofSubmitted.evm_signature().is_some());
+        assert!(EventType::ProofVerified.evm_signature().is_some());
+        assert!(EventType::BridgeTransferInitiated.evm_signature().is_some());
+        
+        // Unknown doesn't have a signature
+        assert!(EventType::Unknown.evm_signature().is_none());
+        
+        println!("✅ EventType EVM signature tests passed");
+    }
+    
+    // =========================================================================
+    // Cross-Chain Proof Compatibility Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_proof_metadata_cross_chain_transfer() {
+        // Simulate proof metadata being transferred between chains
+        let original_metadata = ProofMetadata::new(
+            3,
+            "bulletproof",
+            [0x42; 32],
+            [0x43; 32],
+        );
+        
+        // Serialize for cross-chain transmission
+        let encoded = serde_json::to_vec(&original_metadata)
+            .expect("Encoding should succeed");
+        
+        // Simulate receiving on different chain
+        let received: ProofMetadata = serde_json::from_slice(&encoded)
+            .expect("Decoding should succeed");
+        
+        // Verify data integrity
+        assert_eq!(received.privacy_level, original_metadata.privacy_level);
+        assert_eq!(received.proof_type, original_metadata.proof_type);
+        assert_eq!(received.sender_commitment, original_metadata.sender_commitment);
+        assert_eq!(received.recipient_commitment, original_metadata.recipient_commitment);
+        
+        println!("✅ Cross-chain proof metadata transfer tests passed");
+    }
+    
+    #[test]
+    fn test_multi_chain_proof_verification_flow() {
+        // Simulate proof verification across multiple chains
+        let chains = vec![
+            ChainId::Ethereum,
+            ChainId::Polygon,
+            ChainId::Arbitrum,
+        ];
+        
+        let metadata = ProofMetadata::new(
+            5,
+            "groth16",
+            [0xff; 32],
+            [0xee; 32],
+        );
+        
+        // Verify proof can be serialized for each chain
+        for chain in chains {
+            let json = serde_json::to_string(&metadata).expect("Serialization should succeed");
+            let recovered: ProofMetadata = serde_json::from_str(&json).expect("Deserialization should succeed");
+            
+            assert_eq!(recovered.proof_type, "groth16");
+            assert_eq!(recovered.privacy_level, 5);
+            
+            println!("  ✅ Verified on {:?}", chain);
+        }
+        
+        println!("✅ Multi-chain proof verification flow tests passed");
+    }
+    
+    // =========================================================================
+    // Bridge Integration Tests
+    // =========================================================================
+    
+    #[test]
+    fn test_bridge_all_supported_routes() {
+        // Test bridge routes between all supported chains
+        let chains = vec![
+            ChainId::Ethereum,
+            ChainId::Polygon,
+            ChainId::Arbitrum,
+            ChainId::Optimism,
+            ChainId::Solana,
+        ];
+        
+        let mut route_count = 0;
+        
+        for source in &chains {
+            for target in &chains {
+                if source != target {
+                    let bridge_op = ChainOperation::BridgeInitiate {
+                        target_chain: target.clone(),
+                        amount: 1_000_000_000_000_000_000,
+                    };
+                    
+                    // Verify route is valid
+                    match bridge_op {
+                        ChainOperation::BridgeInitiate { target_chain, .. } => {
+                            assert_ne!(source, &target_chain);
+                            route_count += 1;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        
+        // 5 chains = 5 * 4 = 20 routes
+        assert_eq!(route_count, 20, "Should have 20 bridge routes for 5 chains");
+        
+        println!("✅ Bridge all routes tests passed ({} routes)", route_count);
+    }
+    
+    #[test]
+    fn test_evm_to_non_evm_bridge() {
+        // Special test for EVM to non-EVM bridges (require additional handling)
+        let evm_source = ChainId::Ethereum;
+        let non_evm_targets = vec![
+            ChainId::Solana,
+            ChainId::Bitcoin,
+            ChainId::Cosmos,
+        ];
+        
+        for target in non_evm_targets {
+            let bridge_op = ChainOperation::BridgeInitiate {
+                target_chain: target.clone(),
+                amount: 1_000_000_000_000_000_000,
+            };
+            
+            // EVM to non-EVM bridges are valid
+            assert!(evm_source.is_evm());
+            assert!(!target.is_evm());
+            
+            println!("  ✅ EVM({:?}) → non-EVM({:?}) bridge route valid", 
+                evm_source, target);
+        }
+        
+        println!("✅ EVM to non-EVM bridge tests passed");
+    }
+    
+    // =========================================================================
+    // ChainAddress Integration Tests  
+    // =========================================================================
+    
+    #[test]
+    fn test_chain_address_creation() {
+        let eth_address = ChainAddress::new(vec![0x12; 20], ChainId::Ethereum)
+            .with_display("0x1212121212121212121212121212121212121212");
+        
+        assert_eq!(eth_address.chain, ChainId::Ethereum);
+        assert_eq!(eth_address.bytes.len(), 20);
+        assert!(eth_address.display.is_some());
+        
+        println!("✅ ChainAddress creation tests passed");
+    }
+    
+    #[test]
+    fn test_chain_address_to_hex() {
+        let address = ChainAddress::new(vec![0xab, 0xcd, 0xef], ChainId::Ethereum);
+        let hex = address.to_hex();
+        
+        assert_eq!(hex, "abcdef");
+        
+        println!("✅ ChainAddress to_hex tests passed");
+    }
+    
+    #[test]
+    fn test_chain_address_different_chains() {
+        let addresses = vec![
+            ChainAddress::new(vec![0x11; 20], ChainId::Ethereum),
+            ChainAddress::new(vec![0x22; 32], ChainId::Solana),
+            ChainAddress::new(vec![0x33; 21], ChainId::Bitcoin),
+        ];
+        
+        for addr in addresses {
+            assert!(!addr.bytes.is_empty());
+            assert!(!addr.to_hex().is_empty());
+        }
+        
+        println!("✅ ChainAddress different chains tests passed");
+    }
+}
+

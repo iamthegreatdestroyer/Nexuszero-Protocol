@@ -1,6 +1,9 @@
 // Integration E2E Tests
 //
 // Tests interactions between multiple modules and services
+//
+// NOTE: Cross-chain integration tests are located in tests/nexuszero-e2e/tests/e2e/integration.rs
+// which has access to chain_connectors_common crate.
 
 use crate::e2e::utils::{Timer, TestMetrics};
 
@@ -75,6 +78,21 @@ mod module_integration_tests {
         assert!(true, "Chain connector integration test structure verified");
     }
 }
+
+// ============================================================================
+// CROSS-CHAIN INTEGRATION TESTS
+// ============================================================================
+// NOTE: Cross-chain integration tests that require chain_connectors_common are
+// located in tests/nexuszero-e2e/tests/e2e/integration.rs which has access to
+// that crate. The nexuszero-e2e test suite contains 30+ tests covering:
+//   - ChainId interoperability (EVM/non-EVM compatibility)
+//   - ChainOperation variants and fee estimation
+//   - ProofMetadata cross-chain transfer
+//   - BlockInfo, TransactionStatus, TransactionReceipt
+//   - ChainError variants
+//   - EventFilter and EventType
+//   - Cross-chain bridge operations
+// ============================================================================
 
 #[cfg(test)]
 mod service_mesh_tests {

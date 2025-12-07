@@ -201,4 +201,203 @@ mod tests {
         invalid.rpc_url = String::new();
         assert!(invalid.validate().is_err());
     }
+
+    // ===== HARDENING TESTS =====
+
+    #[test]
+    fn test_cluster_mainnet() {
+        let cluster = SolanaCluster::mainnet();
+        assert_eq!(cluster.as_str(), "mainnet-beta");
+    }
+
+    #[test]
+    fn test_cluster_testnet() {
+        let cluster = SolanaCluster::testnet();
+        assert_eq!(cluster.as_str(), "testnet");
+    }
+
+    #[test]
+    fn test_cluster_devnet() {
+        let cluster = SolanaCluster::devnet();
+        assert_eq!(cluster.as_str(), "devnet");
+    }
+
+    #[test]
+    fn test_cluster_default() {
+        let cluster = SolanaCluster::default();
+        assert_eq!(cluster.as_str(), "devnet");
+    }
+
+    #[test]
+    fn test_commitment_processed() {
+        let commitment = CommitmentLevel::processed();
+        assert_eq!(commitment.as_str(), "processed");
+    }
+
+    #[test]
+    fn test_commitment_confirmed() {
+        let commitment = CommitmentLevel::confirmed();
+        assert_eq!(commitment.as_str(), "confirmed");
+    }
+
+    #[test]
+    fn test_commitment_finalized() {
+        let commitment = CommitmentLevel::finalized();
+        assert_eq!(commitment.as_str(), "finalized");
+    }
+
+    #[test]
+    fn test_commitment_default() {
+        let commitment = CommitmentLevel::default();
+        assert_eq!(commitment.as_str(), "confirmed");
+    }
+
+    #[test]
+    fn test_testnet_config() {
+        let config = SolanaConfig::testnet();
+        
+        assert_eq!(config.cluster.as_str(), "testnet");
+        assert!(config.rpc_url.contains("testnet"));
+        assert!(config.ws_url.as_ref().unwrap().contains("testnet"));
+        assert_eq!(config.commitment.as_str(), "confirmed");
+        assert!(config.priority_fee_micro_lamports.is_none());
+        assert_eq!(config.timeout_seconds, 30);
+    }
+
+    #[test]
+    fn test_mainnet_config_values() {
+        let config = SolanaConfig::mainnet();
+        
+        assert_eq!(config.cluster.as_str(), "mainnet-beta");
+        assert_eq!(config.rpc_url, "https://api.mainnet-beta.solana.com");
+        assert_eq!(config.ws_url, Some("wss://api.mainnet-beta.solana.com".to_string()));
+        assert_eq!(config.commitment.as_str(), "finalized");
+        assert_eq!(config.priority_fee_micro_lamports, Some(10_000));
+        assert_eq!(config.timeout_seconds, 60);
+    }
+
+    #[test]
+    fn test_devnet_config_values() {
+        let config = SolanaConfig::devnet();
+        
+        assert_eq!(config.cluster.as_str(), "devnet");
+        assert_eq!(config.rpc_url, "https://api.devnet.solana.com");
+        assert!(config.priority_fee_micro_lamports.is_none());
+        assert_eq!(config.timeout_seconds, 30);
+    }
+
+    #[test]
+    fn test_from_rpc_url() {
+        let config = SolanaConfig::from_rpc_url(
+            "http://localhost:8899",
+            "ProgramId11111111111111111111111111111111111"
+        );
+        
+        assert_eq!(config.rpc_url, "http://localhost:8899");
+        assert_eq!(config.verifier_program_id, "ProgramId11111111111111111111111111111111111");
+        assert!(config.ws_url.is_none());
+    }
+
+    #[test]
+    fn test_with_verifier_program() {
+        let config = SolanaConfig::devnet()
+            .with_verifier_program("VerifierProgram11111111111111111111111111111");
+        
+        assert_eq!(config.verifier_program_id, "VerifierProgram11111111111111111111111111111");
+    }
+
+    #[test]
+    fn test_with_bridge_program() {
+        let config = SolanaConfig::devnet()
+            .with_bridge_program("BridgeProgram111111111111111111111111111111");
+        
+        assert_eq!(
+            config.bridge_program_id,
+            Some("BridgeProgram111111111111111111111111111111".to_string())
+        );
+    }
+
+    #[test]
+    fn test_builder_pattern() {
+        let config = SolanaConfig::devnet()
+            .with_verifier_program("VerifierProgram")
+            .with_bridge_program("BridgeProgram");
+        
+        assert_eq!(config.verifier_program_id, "VerifierProgram");
+        assert_eq!(config.bridge_program_id, Some("BridgeProgram".to_string()));
+    }
+
+    #[test]
+    fn test_default_config() {
+        let config = SolanaConfig::default();
+        
+        assert_eq!(config.cluster.as_str(), "devnet");
+    }
+
+    #[test]
+    fn test_config_serde_roundtrip() {
+        let config = SolanaConfig::mainnet()
+            .with_verifier_program("TestVerifier")
+            .with_bridge_program("TestBridge");
+        
+        let json = serde_json::to_string(&config).unwrap();
+        let parsed: SolanaConfig = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(parsed.rpc_url, config.rpc_url);
+        assert_eq!(parsed.verifier_program_id, config.verifier_program_id);
+        assert_eq!(parsed.bridge_program_id, config.bridge_program_id);
+    }
+
+    #[test]
+    fn test_config_clone() {
+        let config = SolanaConfig::mainnet();
+        let cloned = config.clone();
+        
+        assert_eq!(cloned.rpc_url, config.rpc_url);
+        assert_eq!(cloned.cluster.as_str(), config.cluster.as_str());
+    }
+
+    #[test]
+    fn test_cluster_clone() {
+        let cluster = SolanaCluster::mainnet();
+        let cloned = cluster.clone();
+        
+        assert_eq!(cloned.as_str(), cluster.as_str());
+    }
+
+    #[test]
+    fn test_commitment_clone() {
+        let commitment = CommitmentLevel::finalized();
+        let cloned = commitment.clone();
+        
+        assert_eq!(cloned.as_str(), commitment.as_str());
+    }
+
+    #[test]
+    fn test_validation_error_message() {
+        let mut invalid = SolanaConfig::devnet();
+        invalid.rpc_url = String::new();
+        
+        let result = invalid.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("RPC URL"));
+    }
+
+    #[test]
+    fn test_cluster_serde() {
+        let cluster = SolanaCluster::mainnet();
+        let json = serde_json::to_string(&cluster).unwrap();
+        let parsed: SolanaCluster = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(parsed.as_str(), cluster.as_str());
+    }
+
+    #[test]
+    fn test_commitment_serde() {
+        let commitment = CommitmentLevel::finalized();
+        let json = serde_json::to_string(&commitment).unwrap();
+        let parsed: CommitmentLevel = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(parsed.as_str(), commitment.as_str());
+    }
 }

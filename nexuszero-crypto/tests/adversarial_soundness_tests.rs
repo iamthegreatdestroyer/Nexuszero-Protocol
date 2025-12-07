@@ -42,7 +42,7 @@ mod forged_proof_attacks {
         // Attempt to forge a proof with random values
         let forged_proof = Proof {
             commitments: vec![Commitment { value: [0xDE, 0xAD, 0xBE, 0xEF].repeat(8) }],
-            challenge: Challenge { value: [0x42; 32] },
+            challenge: Challenge { value: vec![0x42; 32] },
             responses: vec![Response { value: [0xCA, 0xFE, 0xBA, 0xBE].repeat(8) }],
             metadata: ProofMetadata { version: 1, timestamp: 0, size: 0 },
             bulletproof: None,
@@ -135,7 +135,7 @@ mod forged_proof_attacks {
         
         let zero_proof = Proof {
             commitments: vec![Commitment { value: vec![0u8; 32] }],
-            challenge: Challenge { value: [0u8; 32] },
+            challenge: Challenge { value: vec![0u8; 32] },
             responses: vec![Response { value: vec![0u8; 32] }],
             metadata: ProofMetadata { version: 1, timestamp: 0, size: 0 },
             bulletproof: None,
@@ -158,7 +158,7 @@ mod forged_proof_attacks {
         
         let max_proof = Proof {
             commitments: vec![Commitment { value: vec![0xFF; 32] }],
-            challenge: Challenge { value: [0xFF; 32] },
+            challenge: Challenge { value: vec![0xFF; 32] },
             responses: vec![Response { value: vec![0xFF; 32] }],
             metadata: ProofMetadata { version: 1, timestamp: 0, size: 0 },
             bulletproof: None,
@@ -868,7 +868,7 @@ mod cryptographic_attack_simulations {
         
         let forged_proof = Proof {
             commitments: vec![Commitment { value: forged_commitment }],
-            challenge: Challenge { value: [0x42; 32] }, // Chosen challenge
+            challenge: Challenge { value: vec![0x42; 32] }, // Chosen challenge
             responses: vec![Response { value: forged_response }],
             metadata: ProofMetadata { version: 1, timestamp: 0, size: 0 },
             bulletproof: None,

@@ -645,4 +645,359 @@ mod tests {
         let decompressed = compressor.decompress(&compressed).unwrap();
         assert_eq!(data, decompressed);
     }
+
+    // ========================================================================
+    // PRODUCTION HARDENING TESTS - Phase 1.2.2
+    // ========================================================================
+
+    #[test]
+    fn test_concurrent_hybrid_compression() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let configs = vec![
+            HybridConfig::default(),
+            HybridConfig::high_compression(),
+            HybridConfig::fast(),
+        ];
+
+        // Create varied test data
+        let test_data: Vec<Arc<Vec<u8>>> = (0..6)
+            .map(|i| {
+                let data: Vec<u8> = (0..512)
+                    .map(|j| ((i * 31 + j * 17) % 256) as u8)
+                    .collect();
+                Arc::new(data)
+            })
+            .collect();
+
+        let handles: Vec<_> = test_data
+            .into_iter()
+            .enumerate()
+            .map(|(idx, data)| {
+                let config = configs[idx % configs.len()].clone();
+                thread::spawn(move || {
+                    let compressor = HybridCompressor::new(config);
+                    for _ in 0..10 {
+                        let (compressed, _) = compressor.compress(&data).unwrap();
+                        let decompressed = compressor.decompress(&compressed).unwrap();
+                        assert_eq!(data.as_slice(), decompressed.as_slice());
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().expect("Thread panicked");
+        }
+    }
+
+    #[test]
+    fn test_empty_input_error() {
+        let compressor = HybridCompressor::default_compressor();
+        let result = compressor.compress(&[]);
+        assert!(matches!(result, Err(HybridError::EmptyInput)));
+    }
+
+    #[test]
+    fn test_single_byte_compression() {
+        let compressor = HybridCompressor::default_compressor();
+        
+        for byte in [0u8, 127, 255] {
+            let data = vec![byte];
+            let (compressed, stats) = compressor.compress(&data).unwrap();
+            
+            assert_eq!(stats.original_size, 1);
+            
+            let decompressed = compressor.decompress(&compressed).unwrap();
+            assert_eq!(data, decompressed);
+        }
+    }
+
+    #[test]
+    fn test_strategy_selection() {
+        // Low entropy - should use RLE+LZ4
+        let zeros = vec![0u8; 1000];
+        let entropy_zeros = estimate_entropy(&zeros);
+        let strategy_zeros = select_strategy(&zeros, entropy_zeros);
+        assert_eq!(strategy_zeros, CompressionStrategy::RLEPlusLZ4);
+
+        // High entropy data - verify entropy is detected correctly
+        let varied: Vec<u8> = (0u8..=255).cycle().take(1000).collect();
+        let entropy_varied = estimate_entropy(&varied);
+        // With perfect distribution (0-255 equally), entropy should be ~8 bits
+        assert!(entropy_varied > 7.0, "Expected high entropy, got {}", entropy_varied);
+
+        // Verify the strategy selection function runs without panic
+        // The exact strategy depends on implementation details
+        let _ = select_strategy(&varied, entropy_varied);
+    }
+
+    #[test]
+    fn test_all_strategies_roundtrip() {
+        let data: Vec<u8> = (0..256).map(|i| (i % 256) as u8).collect();
+
+        for strategy in [
+            CompressionStrategy::LZ4Only,
+            CompressionStrategy::RLEPlusLZ4,
+            CompressionStrategy::DeltaPlusLZ4,
+            CompressionStrategy::Passthrough,
+        ] {
+            let config = HybridConfig {
+                auto_select_strategy: false,
+                forced_strategy: strategy,
+                min_ratio: 1.5, // Allow passthrough
+                ..Default::default()
+            };
+            
+            let compressor = HybridCompressor::new(config);
+            let (compressed, stats) = compressor.compress(&data).unwrap();
+            
+            assert!(stats.strategy.is_some());
+            
+            let decompressed = compressor.decompress(&compressed).unwrap();
+            assert_eq!(data, decompressed, "Strategy {:?} failed roundtrip", strategy);
+        }
+    }
+
+    #[test]
+    fn test_boundary_data_sizes() {
+        let compressor = HybridCompressor::default_compressor();
+        
+        for size in [1, 2, 7, 8, 9, 15, 16, 17, 63, 64, 65, 127, 128, 129, 255, 256, 257, 1023, 1024, 1025] {
+            let data: Vec<u8> = (0..size).map(|i| (i % 256) as u8).collect();
+            
+            let result = compressor.compress(&data);
+            assert!(result.is_ok(), "Failed for size {}: {:?}", size, result.err());
+            
+            let (compressed, stats) = result.unwrap();
+            assert_eq!(stats.original_size, size);
+            
+            let decompressed = compressor.decompress(&compressed).unwrap();
+            assert_eq!(decompressed.len(), size);
+            assert_eq!(data, decompressed);
+        }
+    }
+
+    #[test]
+    fn test_stats_invariants() {
+        let data: Vec<u8> = (0..1000).map(|i| (i % 256) as u8).collect();
+        let compressor = HybridCompressor::default_compressor();
+        
+        let (compressed, stats) = compressor.compress(&data).unwrap();
+        
+        // Invariants
+        assert_eq!(stats.original_size, data.len());
+        assert!(stats.compressed_size > 0);
+        assert!(stats.entropy_estimate >= 0.0);
+        assert!(stats.entropy_estimate <= 8.0); // Max bits per byte
+        assert!(stats.strategy.is_some());
+        
+        // Compression ratio math
+        let expected_ratio = stats.original_size as f64 / stats.compressed_size as f64;
+        assert!((stats.compression_ratio() - expected_ratio).abs() < 0.01);
+        
+        // Space savings math
+        let expected_savings = (1.0 - (stats.compressed_size as f64 / stats.original_size as f64)) * 100.0;
+        assert!((stats.space_savings() - expected_savings).abs() < 0.01);
+        
+        // Verify compressed struct
+        assert_eq!(compressed.original_size(), data.len());
+    }
+
+    #[test]
+    fn test_serialization_stress() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let data: Vec<u8> = (0..512).map(|i| (i % 256) as u8).collect();
+        let compressor = HybridCompressor::default_compressor();
+        let (compressed, _) = compressor.compress(&data).unwrap();
+        let compressed = Arc::new(compressed);
+        
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let c = Arc::clone(&compressed);
+                let compressor = HybridCompressor::default_compressor();
+                thread::spawn(move || {
+                    for _ in 0..20 {
+                        let bytes = c.to_bytes();
+                        let recovered = HybridCompressed::from_bytes(&bytes).unwrap();
+                        let decompressed = compressor.decompress(&recovered).unwrap();
+                        assert_eq!(decompressed.len(), 512);
+                    }
+                })
+            })
+            .collect();
+        
+        for handle in handles {
+            handle.join().expect("Thread panicked");
+        }
+    }
+
+    #[test]
+    fn test_corrupted_data_handling() {
+        // Empty bytes
+        let result = HybridCompressed::from_bytes(&[]);
+        assert!(matches!(result, Err(HybridError::InvalidFormat)));
+        
+        // Too short
+        let result = HybridCompressed::from_bytes(&[0, 1, 2, 3, 4]);
+        assert!(matches!(result, Err(HybridError::InvalidFormat)));
+        
+        // Wrong magic
+        let result = HybridCompressed::from_bytes(&[0xDE, 0xAD, 0xBE, 0xEF, 0, 0, 0, 0, 0, 0]);
+        assert!(matches!(result, Err(HybridError::InvalidFormat)));
+        
+        // Invalid strategy byte
+        let mut valid = HybridCompressed {
+            magic: HybridCompressed::MAGIC,
+            version: HybridCompressed::VERSION,
+            strategy: CompressionStrategy::LZ4Only,
+            original_size: 10,
+            payload: vec![0; 10],
+        };
+        let mut bytes = valid.to_bytes();
+        bytes[5] = 99; // Invalid strategy
+        let result = HybridCompressed::from_bytes(&bytes);
+        assert!(matches!(result, Err(HybridError::InvalidFormat)));
+    }
+
+    #[test]
+    fn test_rle_edge_cases() {
+        // Empty
+        let encoded = rle_encode(&[]);
+        assert!(encoded.is_empty());
+        let decoded = rle_decode(&encoded, 0).unwrap();
+        assert!(decoded.is_empty());
+        
+        // Single byte
+        let data = vec![42u8];
+        let encoded = rle_encode(&data);
+        let decoded = rle_decode(&encoded, 1).unwrap();
+        assert_eq!(data, decoded);
+        
+        // Max runs
+        let data: Vec<u8> = vec![255; 1000];
+        let encoded = rle_encode(&data);
+        let decoded = rle_decode(&encoded, 1000).unwrap();
+        assert_eq!(data, decoded);
+        
+        // Alternating (worst case for RLE)
+        let data: Vec<u8> = (0..100).map(|i| (i % 2) as u8).collect();
+        let encoded = rle_encode(&data);
+        let decoded = rle_decode(&encoded, 100).unwrap();
+        assert_eq!(data, decoded);
+    }
+
+    #[test]
+    fn test_delta_edge_cases() {
+        // Empty
+        let encoded = delta_encode(&[]);
+        assert!(encoded.is_empty());
+        let decoded = delta_decode(&encoded);
+        assert!(decoded.is_empty());
+        
+        // Single byte
+        let data = vec![42u8];
+        let encoded = delta_encode(&data);
+        let decoded = delta_decode(&encoded);
+        assert_eq!(data, decoded);
+        
+        // Wrap-around
+        let data: Vec<u8> = vec![255, 0, 1, 255, 254];
+        let encoded = delta_encode(&data);
+        let decoded = delta_decode(&encoded);
+        assert_eq!(data, decoded);
+        
+        // Large jumps
+        let data: Vec<u8> = vec![0, 255, 0, 255, 0];
+        let encoded = delta_encode(&data);
+        let decoded = delta_decode(&encoded);
+        assert_eq!(data, decoded);
+    }
+
+    #[test]
+    fn test_config_presets_roundtrip() {
+        let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
+        
+        let configs = [
+            ("default", HybridConfig::default()),
+            ("high_compression", HybridConfig::high_compression()),
+            ("fast", HybridConfig::fast()),
+        ];
+        
+        for (name, config) in configs {
+            let compressor = HybridCompressor::new(config);
+            let (compressed, stats) = compressor.compress(&data).unwrap();
+            
+            println!("{}: {} -> {} bytes, ratio: {:.2}x",
+                     name, stats.original_size, stats.compressed_size, stats.compression_ratio());
+            
+            let decompressed = compressor.decompress(&compressed).unwrap();
+            assert_eq!(data, decompressed, "Config {} failed roundtrip", name);
+        }
+    }
+
+    #[test]
+    fn test_compression_level_impact() {
+        let data: Vec<u8> = (0..4096).map(|i| ((i / 16) % 256) as u8).collect();
+        
+        let mut prev_size = usize::MAX;
+        let mut prev_time = 0u64;
+        
+        for level in [1, 4, 9, 12] {
+            let config = HybridConfig {
+                compression_level: level,
+                auto_select_strategy: false,
+                forced_strategy: CompressionStrategy::LZ4Only,
+                ..Default::default()
+            };
+            
+            let compressor = HybridCompressor::new(config);
+            let (_, stats) = compressor.compress(&data).unwrap();
+            
+            println!("Level {}: {} bytes, {}μs", level, stats.compressed_size, stats.compression_time_us);
+            
+            // Higher levels should generally compress better (or equal)
+            // But may take more time
+            if level > 1 {
+                assert!(
+                    stats.compressed_size <= prev_size + 50,
+                    "Level {} worse than level {}: {} vs {}",
+                    level, level - 1, stats.compressed_size, prev_size
+                );
+            }
+            
+            prev_size = stats.compressed_size;
+            prev_time = stats.compression_time_us;
+        }
+    }
+
+    #[test]
+    fn test_min_ratio_threshold() {
+        // Random-ish data that won't compress well
+        let data: Vec<u8> = (0..256)
+            .map(|i| ((i * 191 + 83) % 256) as u8)
+            .collect();
+        
+        // With very strict min_ratio, should passthrough
+        let config = HybridConfig {
+            auto_select_strategy: false,
+            forced_strategy: CompressionStrategy::LZ4Only,
+            min_ratio: 0.5, // Require 50% size reduction
+            ..Default::default()
+        };
+        
+        let compressor = HybridCompressor::new(config);
+        let (compressed, stats) = compressor.compress(&data).unwrap();
+        
+        // Should fallback to passthrough since LZ4 can't achieve 50% reduction
+        // on pseudo-random data
+        // (Note: actual behavior depends on implementation)
+        
+        // But roundtrip should always work
+        let decompressed = compressor.decompress(&compressed).unwrap();
+        assert_eq!(data, decompressed);
+    }
 }

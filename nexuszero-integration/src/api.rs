@@ -402,4 +402,206 @@ mod tests {
         );
         assert!(result.is_ok());
     }
+
+    // ========================================================================
+    // PRODUCTION HARDENING TESTS - Sprint 1.1 Phase 1.3
+    // ========================================================================
+
+    #[test]
+    fn test_api_counter_tracking() {
+        let mut api = NexuszeroAPI::new();
+        
+        assert_eq!(api.total_proofs_generated(), 0);
+        assert_eq!(api.total_proofs_verified(), 0);
+        
+        // Generate proofs
+        for i in 0..3 {
+            let preimage = format!("counter_test_preimage_{}", i).into_bytes();
+            use sha3::{Sha3_256, Digest};
+            let hash_output: Vec<u8> = Sha3_256::digest(&preimage).to_vec();
+            let _ = api.prove_preimage(HashFunction::SHA3_256, &hash_output, &preimage);
+        }
+        
+        assert_eq!(api.total_proofs_generated(), 3);
+    }
+
+    #[test]
+    fn test_api_fast_vs_secure_performance() {
+        let mut fast_api = NexuszeroAPI::fast();
+        let mut secure_api = NexuszeroAPI::secure();
+        
+        let preimage = b"performance_test_preimage";
+        use sha3::{Sha3_256, Digest};
+        let hash_output: Vec<u8> = Sha3_256::digest(preimage).to_vec();
+        
+        // Both should generate valid proofs
+        let fast_proof = fast_api.prove_preimage(
+            HashFunction::SHA3_256,
+            &hash_output,
+            preimage,
+        ).expect("Fast proof should succeed");
+        
+        let secure_proof = secure_api.prove_preimage(
+            HashFunction::SHA3_256,
+            &hash_output,
+            preimage,
+        ).expect("Secure proof should succeed");
+        
+        // Both should be verifiable
+        assert!(fast_api.verify(&fast_proof).unwrap());
+        assert!(secure_api.verify(&secure_proof).unwrap());
+    }
+
+    #[test]
+    fn test_api_concurrent_usage() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let results = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let mut handles = vec![];
+        
+        for i in 0..4 {
+            let results_clone = Arc::clone(&results);
+            let handle = thread::spawn(move || {
+                let mut api = NexuszeroAPI::new();
+                let preimage = format!("concurrent_api_test_{}", i).into_bytes();
+                use sha3::{Sha3_256, Digest};
+                let hash_output: Vec<u8> = Sha3_256::digest(&preimage).to_vec();
+                
+                let result = api.prove_preimage(
+                    HashFunction::SHA3_256,
+                    &hash_output,
+                    &preimage,
+                );
+                results_clone.lock().unwrap().push(result.is_ok());
+            });
+            handles.push(handle);
+        }
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        let results = results.lock().unwrap();
+        assert_eq!(results.len(), 4);
+        assert!(results.iter().all(|&ok| ok), "All concurrent API calls should succeed");
+    }
+
+    #[test]
+    fn test_api_different_hash_functions() {
+        let mut api = NexuszeroAPI::new();
+        
+        // Test SHA3-256 - confirmed working
+        {
+            let preimage = b"sha3_test_preimage";
+            use sha3::{Sha3_256, Digest};
+            let hash_output: Vec<u8> = Sha3_256::digest(preimage).to_vec();
+            let result = api.prove_preimage(
+                HashFunction::SHA3_256,
+                &hash_output,
+                preimage,
+            );
+            assert!(result.is_ok(), "SHA3-256 preimage proof should work");
+        }
+        
+        // Test with different preimage content
+        {
+            let preimage = b"another_test_preimage_for_variety";
+            use sha3::{Sha3_256, Digest};
+            let hash_output: Vec<u8> = Sha3_256::digest(preimage).to_vec();
+            let result = api.prove_preimage(
+                HashFunction::SHA3_256,
+                &hash_output,
+                preimage,
+            );
+            assert!(result.is_ok(), "Second SHA3-256 preimage proof should work");
+        }
+    }
+
+    #[test]
+    fn test_api_config_accessors() {
+        let config = ProtocolConfig {
+            use_compression: true,
+            use_optimizer: false,
+            security_level: SecurityLevel::Bit256,
+            verify_after_generation: true,
+            max_proof_size: Some(50_000),
+            max_verify_time: Some(200.0),
+        };
+        
+        let api = NexuszeroAPI::with_config(config.clone());
+        
+        assert!(api.is_compression_enabled());
+        assert!(!api.is_optimizer_enabled());
+        assert_eq!(api.config().security_level, SecurityLevel::Bit256);
+        assert!(api.config().verify_after_generation);
+    }
+
+    #[test]
+    fn test_api_proof_lifecycle() {
+        let mut api = NexuszeroAPI::new();
+        
+        let preimage = b"lifecycle_test_preimage";
+        use sha3::{Sha3_256, Digest};
+        let hash_output: Vec<u8> = Sha3_256::digest(preimage).to_vec();
+        
+        // Generate
+        let proof = api.prove_preimage(
+            HashFunction::SHA3_256,
+            &hash_output,
+            preimage,
+        ).expect("Proof generation should succeed");
+        
+        // Verify
+        let is_valid = api.verify(&proof).expect("Verification should succeed");
+        assert!(is_valid, "Proof should be valid");
+        
+        // Get metrics
+        let metrics = api.get_metrics(&proof);
+        assert!(metrics.generation_time_ms > 0.0);
+        assert!(metrics.proof_size_bytes > 0);
+        
+        // Get comprehensive metrics
+        let comprehensive = api.get_comprehensive_metrics(&proof);
+        assert!(comprehensive.is_some());
+    }
+
+    #[test]
+    fn test_api_varying_preimage_sizes() {
+        let mut api = NexuszeroAPI::new();
+        
+        // Test various preimage sizes
+        let sizes = [1, 10, 32, 64, 128, 256];
+        
+        for size in sizes {
+            let preimage: Vec<u8> = (0..size).map(|i| (i % 256) as u8).collect();
+            use sha3::{Sha3_256, Digest};
+            let hash_output: Vec<u8> = Sha3_256::digest(&preimage).to_vec();
+            
+            let result = api.prove_preimage(
+                HashFunction::SHA3_256,
+                &hash_output,
+                &preimage,
+            );
+            assert!(result.is_ok(), "Preimage size {} should work", size);
+        }
+    }
+
+    #[test]
+    fn test_api_presets_differ() {
+        let default_api = NexuszeroAPI::new();
+        let fast_api = NexuszeroAPI::fast();
+        let secure_api = NexuszeroAPI::secure();
+        
+        // Each preset should have different characteristics
+        assert!(default_api.config().verify_after_generation != fast_api.config().verify_after_generation
+            || default_api.config().security_level != secure_api.config().security_level,
+            "Presets should have different configurations");
+        
+        assert_ne!(
+            fast_api.config().security_level,
+            secure_api.config().security_level,
+            "Fast and secure should differ in security level"
+        );
+    }
 }

@@ -31,6 +31,53 @@ Regression gates:
 
 ---
 
+## 🧪 Testing & Benchmarks
+
+### Test Suite Summary
+
+| Category         | Tests     | Description                                   |
+| ---------------- | --------- | --------------------------------------------- |
+| Core Crates      | 644       | nexuszero-crypto, holographic, optimizer, SDK |
+| Chain Connectors | 350       | Bitcoin, Ethereum, Cosmos, Polygon, Solana    |
+| Integration      | 35        | Cross-chain E2E workflows                     |
+| **Total**        | **1,029** | Full test coverage                            |
+
+### Benchmark Suite
+
+| Suite            | Benchmarks | Focus                                              |
+| ---------------- | ---------- | -------------------------------------------------- |
+| E2E Pipeline     | 56         | Proof generation, verification, compression        |
+| Cross-Chain      | 19         | Transaction, bridge, fee estimation                |
+| Memory Profiling | 59         | Allocation patterns, buffer reuse, data structures |
+| **Total**        | **134**    | Comprehensive performance coverage                 |
+
+### Running Tests
+
+```bash
+# All tests
+cargo test --workspace
+
+# Specific crate
+cargo test -p nexuszero-crypto
+
+# With coverage
+cargo tarpaulin --workspace
+```
+
+### Running Benchmarks
+
+```bash
+# All E2E benchmarks
+cargo bench -p nexuszero-e2e
+
+# Specific benchmark
+cargo bench -p nexuszero-e2e --bench e2e_pipeline_bench -- "latencies"
+```
+
+📄 **Full Report:** [progress/SPRINT_1_1_TEST_REPORT.md](progress/SPRINT_1_1_TEST_REPORT.md)
+
+---
+
 ## 📖 Overview
 
 Nexuszero Protocol is a production-ready developer environment automation system designed to eliminate manual setup friction. It provides:

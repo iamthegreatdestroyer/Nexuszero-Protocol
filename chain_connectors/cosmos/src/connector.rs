@@ -545,6 +545,8 @@ impl ChainConnector for CosmosConnector {
 mod tests {
     use super::*;
 
+    // ==================== Connector Creation Tests ====================
+
     #[test]
     fn test_connector_creation() {
         let config = CosmosConfig::cosmoshub();
@@ -552,6 +554,48 @@ mod tests {
         assert_eq!(connector.chain_name(), "Cosmos");
         assert!(matches!(connector.chain_id(), ChainId::Cosmos));
     }
+
+    #[test]
+    fn test_connector_creation_osmosis() {
+        let config = CosmosConfig::osmosis();
+        let connector = CosmosConnector::new(config).unwrap();
+        assert_eq!(connector.chain_name(), "Cosmos");
+        assert!(matches!(connector.chain_id(), ChainId::Cosmos));
+    }
+
+    #[test]
+    fn test_connector_with_verifier_contract() {
+        // Create a valid bech32 cosmos address from real bytes
+        let verifier_bytes = vec![1u8; 20];
+        let verifier_addr = CosmosConnector::encode_bech32(&verifier_bytes, "cosmos").unwrap();
+        
+        let config = CosmosConfig::cosmoshub()
+            .with_verifier_contract(&verifier_addr);
+        let connector = CosmosConnector::new(config).unwrap();
+        assert!(connector.verifier_address().is_some());
+    }
+
+    #[test]
+    fn test_connector_with_bridge_contract() {
+        // Create a valid bech32 cosmos address from real bytes
+        let bridge_bytes = vec![2u8; 20];
+        let bridge_addr = CosmosConnector::encode_bech32(&bridge_bytes, "cosmos").unwrap();
+        
+        let config = CosmosConfig::cosmoshub()
+            .with_bridge_contract(&bridge_addr);
+        let connector = CosmosConnector::new(config).unwrap();
+        assert!(connector.bridge_address().is_some());
+    }
+
+    #[test]
+    fn test_connector_without_contracts() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        assert!(connector.verifier_address().is_none());
+        assert!(connector.bridge_address().is_none());
+    }
+
+    // ==================== Bech32 Encoding/Decoding Tests ====================
 
     #[test]
     fn test_bech32_encode_decode() {
@@ -565,5 +609,348 @@ mod tests {
         
         let decoded = CosmosConnector::decode_bech32(&encoded, prefix).unwrap();
         assert_eq!(decoded, bytes);
+    }
+
+    #[test]
+    fn test_bech32_encode_decode_osmosis_prefix() {
+        let config = CosmosConfig::osmosis();
+        let prefix = &config.address_prefix;
+        
+        let bytes = vec![2u8; 20];
+        let encoded = CosmosConnector::encode_bech32(&bytes, prefix).unwrap();
+        assert!(encoded.starts_with("osmo"));
+        
+        let decoded = CosmosConnector::decode_bech32(&encoded, prefix).unwrap();
+        assert_eq!(decoded, bytes);
+    }
+
+    #[test]
+    fn test_bech32_encode_various_lengths() {
+        let prefix = "cosmos";
+        
+        // Test different byte lengths
+        for len in [20, 32, 33] {
+            let bytes = vec![0xAB; len];
+            let encoded = CosmosConnector::encode_bech32(&bytes, prefix).unwrap();
+            let decoded = CosmosConnector::decode_bech32(&encoded, prefix).unwrap();
+            assert_eq!(decoded, bytes);
+        }
+    }
+
+    #[test]
+    fn test_bech32_encode_empty_bytes() {
+        let prefix = "cosmos";
+        let bytes: Vec<u8> = vec![];
+        // Empty bytes should still encode
+        let result = CosmosConnector::encode_bech32(&bytes, prefix);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_bech32_decode_wrong_prefix() {
+        // Create address with cosmos prefix
+        let bytes = vec![1u8; 20];
+        let encoded = CosmosConnector::encode_bech32(&bytes, "cosmos").unwrap();
+        
+        // Try to decode with osmo prefix - should fail
+        let result = CosmosConnector::decode_bech32(&encoded, "osmo");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bech32_decode_invalid_checksum() {
+        let prefix = "cosmos";
+        // Invalid bech32 address (bad checksum)
+        let result = CosmosConnector::decode_bech32("cosmos1invalid", prefix);
+        assert!(result.is_err());
+    }
+
+    // ==================== Hex Parsing Tests ====================
+
+    #[test]
+    fn test_parse_hex_to_bytes32_valid() {
+        let hex = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let result = CosmosConnector::parse_hex_to_bytes32(hex);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 32);
+    }
+
+    #[test]
+    fn test_parse_hex_to_bytes32_without_prefix() {
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let result = CosmosConnector::parse_hex_to_bytes32(hex);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 32);
+    }
+
+    #[test]
+    fn test_parse_hex_to_bytes32_wrong_length() {
+        // 16 bytes instead of 32
+        let hex = "0x0123456789abcdef0123456789abcdef";
+        let result = CosmosConnector::parse_hex_to_bytes32(hex);
+        assert!(result.is_err());
+        
+        if let Err(ChainError::SerializationError(msg)) = result {
+            assert!(msg.contains("Expected 32 bytes"));
+        } else {
+            panic!("Expected SerializationError");
+        }
+    }
+
+    #[test]
+    fn test_parse_hex_to_bytes32_invalid_hex() {
+        let hex = "0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG";
+        let result = CosmosConnector::parse_hex_to_bytes32(hex);
+        assert!(result.is_err());
+        
+        if let Err(ChainError::SerializationError(msg)) = result {
+            assert!(msg.contains("Invalid hex"));
+        } else {
+            panic!("Expected SerializationError");
+        }
+    }
+
+    #[test]
+    fn test_parse_hex_to_bytes32_empty() {
+        let hex = "0x";
+        let result = CosmosConnector::parse_hex_to_bytes32(hex);
+        assert!(result.is_err());
+    }
+
+    // ==================== Chain Operation Fee Estimation Tests ====================
+
+    #[tokio::test]
+    async fn test_estimate_fee_submit_proof() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::SubmitProof {
+            proof_size: 1000,
+            privacy_level: 2,
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        assert!(fee.gas_units > 100_000); // base gas + extras
+        assert!(fee.gas_price > 0.0);
+        assert!(fee.total_fee_native > 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_verify_proof() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::VerifyProof {
+            proof_id: [0u8; 32],
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        assert_eq!(fee.gas_units, 50_000);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_transfer() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::Transfer {
+            amount: 1_000_000,
+            recipient: vec![1u8; 20],
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        assert_eq!(fee.gas_units, 80_000);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_bridge_initiate() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::BridgeInitiate {
+            target_chain: ChainId::Ethereum,
+            amount: 1_000_000,
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        assert_eq!(fee.gas_units, 250_000);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_bridge_complete() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::BridgeComplete {
+            transfer_id: [0u8; 32],
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        assert_eq!(fee.gas_units, 150_000);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_deploy() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::Deploy {
+            bytecode_size: 10_000,
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        assert_eq!(fee.gas_units, 500_000 + 10_000 * 100);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_contract_call() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::ContractCall {
+            calldata_size: 256,
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        assert_eq!(fee.gas_units, 100_000 + 256 * 25);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_confidence_is_medium() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::Transfer { 
+            amount: 100,
+            recipient: vec![1u8; 20],
+        };
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        
+        assert!(matches!(fee.confidence, FeeConfidence::Medium));
+        assert!(fee.priority_fee.is_none());
+        assert!(fee.total_fee_usd.is_none());
+    }
+
+    // ==================== Chain Metadata Tests ====================
+
+    #[test]
+    fn test_chain_id_returns_cosmos() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        assert!(matches!(connector.chain_id(), ChainId::Cosmos));
+    }
+
+    #[test]
+    fn test_chain_name_returns_cosmos() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        assert_eq!(connector.chain_name(), "Cosmos");
+    }
+
+    // ==================== Edge Cases ====================
+
+    #[test]
+    fn test_bech32_roundtrip_all_zeros() {
+        let prefix = "cosmos";
+        let bytes = vec![0u8; 20];
+        let encoded = CosmosConnector::encode_bech32(&bytes, prefix).unwrap();
+        let decoded = CosmosConnector::decode_bech32(&encoded, prefix).unwrap();
+        assert_eq!(decoded, bytes);
+    }
+
+    #[test]
+    fn test_bech32_roundtrip_all_ones() {
+        let prefix = "cosmos";
+        let bytes = vec![0xFF; 20];
+        let encoded = CosmosConnector::encode_bech32(&bytes, prefix).unwrap();
+        let decoded = CosmosConnector::decode_bech32(&encoded, prefix).unwrap();
+        assert_eq!(decoded, bytes);
+    }
+
+    #[test]
+    fn test_bech32_roundtrip_sequential_bytes() {
+        let prefix = "cosmos";
+        let bytes: Vec<u8> = (0u8..20).collect();
+        let encoded = CosmosConnector::encode_bech32(&bytes, prefix).unwrap();
+        let decoded = CosmosConnector::decode_bech32(&encoded, prefix).unwrap();
+        assert_eq!(decoded, bytes);
+    }
+
+    #[test]
+    fn test_parse_hex_all_zeros() {
+        let hex = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        let result = CosmosConnector::parse_hex_to_bytes32(hex).unwrap();
+        assert_eq!(result, [0u8; 32]);
+    }
+
+    #[test]
+    fn test_parse_hex_all_ones() {
+        let hex = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+        let result = CosmosConnector::parse_hex_to_bytes32(hex).unwrap();
+        assert_eq!(result, [0xFF; 32]);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_large_proof() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::SubmitProof {
+            proof_size: 100_000,
+            privacy_level: 10,
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        // Verify large proofs result in higher gas
+        assert!(fee.gas_units > 5_000_000);
+    }
+
+    #[tokio::test]
+    async fn test_estimate_fee_zero_size_operations() {
+        let config = CosmosConfig::cosmoshub();
+        let connector = CosmosConnector::new(config).unwrap();
+        
+        let operation = ChainOperation::SubmitProof {
+            proof_size: 0,
+            privacy_level: 0,
+        };
+        
+        let fee = connector.estimate_fee(operation).await.unwrap();
+        // Should still have base gas
+        assert!(fee.gas_units >= 100_000);
+    }
+
+    // ==================== Height String Parsing Tests ====================
+
+    #[test]
+    fn test_height_string_parsing_valid() {
+        // Test parsing height strings like the connector does internally
+        let height_str = "12345678";
+        let height: Result<u64, _> = height_str.parse();
+        assert!(height.is_ok());
+        assert_eq!(height.unwrap(), 12345678u64);
+    }
+
+    #[test]
+    fn test_height_string_parsing_zero() {
+        let height_str = "0";
+        let height: Result<u64, _> = height_str.parse();
+        assert!(height.is_ok());
+        assert_eq!(height.unwrap(), 0u64);
+    }
+
+    #[test]
+    fn test_height_string_parsing_max() {
+        let height_str = "18446744073709551615";
+        let height: Result<u64, _> = height_str.parse();
+        assert!(height.is_ok());
+        assert_eq!(height.unwrap(), u64::MAX);
+    }
+
+    #[test]
+    fn test_height_string_parsing_invalid() {
+        let height_str = "abc";
+        let height: Result<u64, _> = height_str.parse();
+        assert!(height.is_err());
     }
 }

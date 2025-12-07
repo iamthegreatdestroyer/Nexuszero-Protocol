@@ -24,6 +24,12 @@
 //! for multi-core CPU utilization. It complements the SIMD operations by
 //! enabling horizontal scaling across CPU cores.
 //!
+//! # Thread Safety
+//!
+//! All public types in this module implement `Send + Sync` and are safe for
+//! concurrent access from multiple threads. The module uses atomic operations
+//! for metrics tracking and Rayon's work-stealing thread pool for parallelism.
+//!
 //! # Architecture
 //!
 //! ```text
@@ -73,13 +79,131 @@
 //! // Create parallel prover
 //! let prover = ParallelProver::new(config);
 //!
-//! // Parallel MSM computation
-//! let result = prover.parallel_msm(&bases, &scalars);
+//! // Parallel MSM computation with error handling
+//! let result = prover.parallel_msm_checked(&bases, &scalars, modulus)?;
 //! ```
 
 use rayon::prelude::*;
+use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+use tracing::instrument;
+
+// ============================================================================
+// Error Types
+// ============================================================================
+
+/// Error type for parallel operations
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParallelError {
+    /// Input vectors have mismatched lengths
+    LengthMismatch {
+        expected: usize,
+        actual: usize,
+        operation: &'static str,
+    },
+    /// Empty input where non-empty is required
+    EmptyInput {
+        operation: &'static str,
+    },
+    /// Invalid modulus (must be > 1)
+    InvalidModulus {
+        value: u64,
+    },
+    /// NTT size must be power of 2
+    InvalidNttSize {
+        size: usize,
+    },
+    /// Invalid sparse matrix format
+    InvalidSparseMatrix {
+        reason: &'static str,
+    },
+    /// Overflow would occur during computation
+    Overflow {
+        operation: &'static str,
+    },
+    /// Thread pool error
+    ThreadPoolError {
+        reason: String,
+    },
+}
+
+impl fmt::Display for ParallelError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParallelError::LengthMismatch { expected, actual, operation } => {
+                write!(f, "Length mismatch in {}: expected {}, got {}", operation, expected, actual)
+            }
+            ParallelError::EmptyInput { operation } => {
+                write!(f, "Empty input not allowed for {}", operation)
+            }
+            ParallelError::InvalidModulus { value } => {
+                write!(f, "Invalid modulus: {} (must be > 1)", value)
+            }
+            ParallelError::InvalidNttSize { size } => {
+                write!(f, "Invalid NTT size: {} (must be power of 2)", size)
+            }
+            ParallelError::InvalidSparseMatrix { reason } => {
+                write!(f, "Invalid sparse matrix: {}", reason)
+            }
+            ParallelError::Overflow { operation } => {
+                write!(f, "Overflow would occur in {}", operation)
+            }
+            ParallelError::ThreadPoolError { reason } => {
+                write!(f, "Thread pool error: {}", reason)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ParallelError {}
+
+/// Result type for parallel operations
+pub type ParallelResult<T> = Result<T, ParallelError>;
+
+// ============================================================================
+// Validation Helpers
+// ============================================================================
+
+/// Validate that two vectors have matching lengths
+#[inline]
+fn validate_lengths(a_len: usize, b_len: usize, operation: &'static str) -> ParallelResult<()> {
+    if a_len != b_len {
+        return Err(ParallelError::LengthMismatch {
+            expected: a_len,
+            actual: b_len,
+            operation,
+        });
+    }
+    Ok(())
+}
+
+/// Validate that input is non-empty
+#[inline]
+fn validate_non_empty(len: usize, operation: &'static str) -> ParallelResult<()> {
+    if len == 0 {
+        return Err(ParallelError::EmptyInput { operation });
+    }
+    Ok(())
+}
+
+/// Validate modulus value
+#[inline]
+fn validate_modulus(modulus: u64) -> ParallelResult<()> {
+    if modulus <= 1 {
+        return Err(ParallelError::InvalidModulus { value: modulus });
+    }
+    Ok(())
+}
+
+/// Validate NTT size is power of 2
+#[inline]
+fn validate_ntt_size(size: usize) -> ParallelResult<()> {
+    if !size.is_power_of_two() || size == 0 {
+        return Err(ParallelError::InvalidNttSize { size });
+    }
+    Ok(())
+}
 
 /// Configuration for parallel operations
 #[derive(Debug, Clone)]
@@ -188,6 +312,12 @@ pub struct ParallelProver {
     sequential_ops: AtomicU64,
     parallel_time_ns: AtomicU64,
 }
+
+// SAFETY: ParallelProver uses only atomic operations for metrics,
+// and ParallelConfig is Clone + Send + Sync. All parallel operations
+// use Rayon's thread pool which handles thread safety internally.
+unsafe impl Send for ParallelProver {}
+unsafe impl Sync for ParallelProver {}
 
 impl ParallelProver {
     /// Create new parallel prover with configuration
@@ -371,6 +501,41 @@ impl ParallelProver {
         result
     }
 
+    /// Parallel multi-scalar multiplication (checked version)
+    ///
+    /// Computes: sum(scalars[i] * bases[i]) mod modulus
+    ///
+    /// # Errors
+    /// - `ParallelError::LengthMismatch` if bases and scalars have different lengths
+    /// - `ParallelError::EmptyInput` if inputs are empty
+    /// - `ParallelError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, bases, scalars), fields(len = bases.len()))]
+    pub fn parallel_msm_checked(
+        &self,
+        bases: &[u64],
+        scalars: &[u64],
+        modulus: u64,
+    ) -> ParallelResult<u64> {
+        validate_lengths(bases.len(), scalars.len(), "parallel_msm")?;
+        validate_non_empty(bases.len(), "parallel_msm")?;
+        validate_modulus(modulus)?;
+        
+        Ok(self.parallel_msm_u64(bases, scalars, modulus))
+    }
+
+    /// Parallel modular sum (checked version)
+    ///
+    /// # Errors
+    /// - `ParallelError::EmptyInput` if data is empty
+    /// - `ParallelError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, data), fields(len = data.len()))]
+    pub fn parallel_modular_sum_checked(&self, data: &[u64], modulus: u64) -> ParallelResult<u64> {
+        validate_non_empty(data.len(), "parallel_modular_sum")?;
+        validate_modulus(modulus)?;
+        
+        Ok(self.parallel_modular_sum(data, modulus))
+    }
+
     /// Sequential MSM implementation
     fn msm_sequential(&self, bases: &[u64], scalars: &[u64], modulus: u64) -> u64 {
         bases.iter()
@@ -546,6 +711,49 @@ impl ParallelProver {
         }
     }
 
+    /// Parallel NTT (checked version)
+    ///
+    /// # Errors
+    /// - `ParallelError::InvalidNttSize` if size is not a power of 2
+    /// - `ParallelError::EmptyInput` if values is empty
+    /// - `ParallelError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, values), fields(len = values.len()))]
+    pub fn parallel_ntt_checked(
+        &self,
+        values: &mut [u64],
+        omega: u64,
+        modulus: u64,
+    ) -> ParallelResult<()> {
+        validate_non_empty(values.len(), "parallel_ntt")?;
+        validate_ntt_size(values.len())?;
+        validate_modulus(modulus)?;
+        
+        self.parallel_ntt(values, omega, modulus);
+        Ok(())
+    }
+
+    /// Parallel inverse NTT (checked version)
+    ///
+    /// # Errors
+    /// - `ParallelError::InvalidNttSize` if size is not a power of 2
+    /// - `ParallelError::EmptyInput` if values is empty
+    /// - `ParallelError::InvalidModulus` if modulus <= 1
+    #[instrument(level = "debug", skip(self, values), fields(len = values.len()))]
+    pub fn parallel_intt_checked(
+        &self,
+        values: &mut [u64],
+        omega_inv: u64,
+        n_inv: u64,
+        modulus: u64,
+    ) -> ParallelResult<()> {
+        validate_non_empty(values.len(), "parallel_intt")?;
+        validate_ntt_size(values.len())?;
+        validate_modulus(modulus)?;
+        
+        self.parallel_intt(values, omega_inv, n_inv, modulus);
+        Ok(())
+    }
+
     /// Bit-reversal permutation
     fn bit_reverse_permutation(&self, values: &mut [u64]) {
         let n = values.len();
@@ -684,6 +892,59 @@ impl ParallelProver {
                 })
                 .collect()
         }
+    }
+
+    /// Parallel sparse matrix-vector multiplication (checked version)
+    ///
+    /// # Errors
+    /// - `ParallelError::LengthMismatch` if row_indices, col_indices, and values have different lengths
+    /// - `ParallelError::InvalidModulus` if modulus <= 1
+    /// - `ParallelError::InvalidSparseMatrix` if indices are out of bounds
+    #[instrument(level = "debug", skip(self, row_indices, col_indices, values, vector), fields(nnz = row_indices.len()))]
+    pub fn parallel_sparse_matvec_checked(
+        &self,
+        row_indices: &[usize],
+        col_indices: &[usize],
+        values: &[u64],
+        vector: &[u64],
+        num_rows: usize,
+        modulus: u64,
+    ) -> ParallelResult<Vec<u64>> {
+        // Validate index arrays have matching lengths
+        if row_indices.len() != col_indices.len() {
+            return Err(ParallelError::LengthMismatch {
+                expected: row_indices.len(),
+                actual: col_indices.len(),
+                operation: "parallel_sparse_matvec (col_indices)",
+            });
+        }
+        if row_indices.len() != values.len() {
+            return Err(ParallelError::LengthMismatch {
+                expected: row_indices.len(),
+                actual: values.len(),
+                operation: "parallel_sparse_matvec (values)",
+            });
+        }
+        
+        validate_modulus(modulus)?;
+        
+        // Validate indices are in bounds
+        for &row in row_indices {
+            if row >= num_rows {
+                return Err(ParallelError::InvalidSparseMatrix {
+                    reason: "row index out of bounds",
+                });
+            }
+        }
+        for &col in col_indices {
+            if col >= vector.len() {
+                return Err(ParallelError::InvalidSparseMatrix {
+                    reason: "column index out of bounds for vector",
+                });
+            }
+        }
+        
+        Ok(self.parallel_sparse_matvec(row_indices, col_indices, values, vector, num_rows, modulus))
     }
 }
 
@@ -937,5 +1198,258 @@ mod tests {
         
         let metrics = prover.metrics();
         assert!(metrics.total_operations > 0);
+    }
+
+    // ========================================================================
+    // Checked Variant Tests
+    // ========================================================================
+
+    #[test]
+    fn test_parallel_msm_checked_success() {
+        let prover = ParallelProver::auto();
+        
+        let bases = vec![1u64, 2, 3, 4, 5];
+        let scalars = vec![10u64, 20, 30, 40, 50];
+        
+        let result = prover.parallel_msm_checked(&bases, &scalars, 1000);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 550);
+    }
+
+    #[test]
+    fn test_parallel_msm_checked_length_mismatch() {
+        let prover = ParallelProver::auto();
+        
+        let bases = vec![1u64, 2, 3];
+        let scalars = vec![10u64, 20]; // Different length
+        
+        let result = prover.parallel_msm_checked(&bases, &scalars, 1000);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::LengthMismatch { .. }));
+    }
+
+    #[test]
+    fn test_parallel_msm_checked_empty_input() {
+        let prover = ParallelProver::auto();
+        
+        let bases: Vec<u64> = vec![];
+        let scalars: Vec<u64> = vec![];
+        
+        let result = prover.parallel_msm_checked(&bases, &scalars, 1000);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::EmptyInput { .. }));
+    }
+
+    #[test]
+    fn test_parallel_msm_checked_invalid_modulus() {
+        let prover = ParallelProver::auto();
+        
+        let bases = vec![1u64, 2, 3];
+        let scalars = vec![10u64, 20, 30];
+        
+        let result = prover.parallel_msm_checked(&bases, &scalars, 0);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::InvalidModulus { .. }));
+        
+        let result = prover.parallel_msm_checked(&bases, &scalars, 1);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::InvalidModulus { .. }));
+    }
+
+    #[test]
+    fn test_parallel_ntt_checked_success() {
+        let prover = ParallelProver::auto();
+        
+        let modulus = 65537u64;
+        let n = 8usize;
+        let g = 3u64;
+        let exp = (modulus - 1) / (n as u64);
+        let omega = mod_pow(g, exp, modulus);
+        
+        let mut values: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let original = values.clone();
+        
+        let result = prover.parallel_ntt_checked(&mut values, omega, modulus);
+        assert!(result.is_ok());
+        assert_ne!(values, original);
+    }
+
+    #[test]
+    fn test_parallel_ntt_checked_not_power_of_two() {
+        let prover = ParallelProver::auto();
+        
+        let mut values: Vec<u64> = vec![1, 2, 3]; // Not power of 2
+        
+        let result = prover.parallel_ntt_checked(&mut values, 3, 65537);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::InvalidNttSize { .. }));
+    }
+
+    #[test]
+    fn test_parallel_ntt_checked_empty_input() {
+        let prover = ParallelProver::auto();
+        
+        let mut values: Vec<u64> = vec![];
+        
+        let result = prover.parallel_ntt_checked(&mut values, 3, 65537);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::EmptyInput { .. }));
+    }
+
+    #[test]
+    fn test_parallel_intt_checked_success() {
+        let prover = ParallelProver::auto();
+        
+        let modulus = 65537u64;
+        let n = 8usize;
+        let g = 3u64;
+        let exp = (modulus - 1) / (n as u64);
+        let omega = mod_pow(g, exp, modulus);
+        let omega_inv = mod_inverse_u64(omega, modulus);
+        let n_inv = mod_inverse_u64(n as u64, modulus);
+        
+        let mut values: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let original = values.clone();
+        
+        prover.parallel_ntt(&mut values, omega, modulus);
+        
+        let result = prover.parallel_intt_checked(&mut values, omega_inv, n_inv, modulus);
+        assert!(result.is_ok());
+        assert_eq!(values, original);
+    }
+
+    #[test]
+    fn test_parallel_sparse_matvec_checked_success() {
+        let prover = ParallelProver::auto();
+        
+        let row_indices = vec![0, 0, 1, 2, 2];
+        let col_indices = vec![0, 2, 1, 0, 2];
+        let values = vec![1u64, 2, 3, 4, 5];
+        let vector = vec![10u64, 20, 30];
+        
+        let result = prover.parallel_sparse_matvec_checked(
+            &row_indices, &col_indices, &values, &vector, 3, 1000
+        );
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), vec![70, 60, 190]);
+    }
+
+    #[test]
+    fn test_parallel_sparse_matvec_checked_length_mismatch() {
+        let prover = ParallelProver::auto();
+        
+        let row_indices = vec![0, 0, 1];
+        let col_indices = vec![0, 2]; // Different length
+        let values = vec![1u64, 2, 3];
+        let vector = vec![10u64, 20, 30];
+        
+        let result = prover.parallel_sparse_matvec_checked(
+            &row_indices, &col_indices, &values, &vector, 3, 1000
+        );
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::LengthMismatch { .. }));
+    }
+
+    #[test]
+    fn test_parallel_sparse_matvec_checked_row_out_of_bounds() {
+        let prover = ParallelProver::auto();
+        
+        let row_indices = vec![0, 5, 1]; // Row 5 is out of bounds for num_rows=3
+        let col_indices = vec![0, 1, 2];
+        let values = vec![1u64, 2, 3];
+        let vector = vec![10u64, 20, 30];
+        
+        let result = prover.parallel_sparse_matvec_checked(
+            &row_indices, &col_indices, &values, &vector, 3, 1000
+        );
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::InvalidSparseMatrix { .. }));
+    }
+
+    #[test]
+    fn test_parallel_sparse_matvec_checked_col_out_of_bounds() {
+        let prover = ParallelProver::auto();
+        
+        let row_indices = vec![0, 1, 2];
+        let col_indices = vec![0, 1, 10]; // Col 10 is out of bounds for vector.len()=3
+        let values = vec![1u64, 2, 3];
+        let vector = vec![10u64, 20, 30];
+        
+        let result = prover.parallel_sparse_matvec_checked(
+            &row_indices, &col_indices, &values, &vector, 3, 1000
+        );
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ParallelError::InvalidSparseMatrix { .. }));
+    }
+
+    // ========================================================================
+    // Thread Safety Stress Tests
+    // ========================================================================
+
+    #[test]
+    fn test_parallel_prover_concurrent_access() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let prover = Arc::new(ParallelProver::auto());
+        let mut handles = vec![];
+        
+        // Spawn multiple threads accessing the prover concurrently
+        for i in 0..4 {
+            let prover_clone = Arc::clone(&prover);
+            let handle = thread::spawn(move || {
+                let data: Vec<u64> = (0..1000).map(|x| x + i * 1000).collect();
+                let result = prover_clone.parallel_modular_sum(&data, 1_000_000);
+                result
+            });
+            handles.push(handle);
+        }
+        
+        // All threads should complete successfully
+        for handle in handles {
+            let result = handle.join().expect("Thread panicked");
+            assert!(result < 1_000_000);
+        }
+        
+        // Metrics should be consistent
+        let metrics = prover.metrics();
+        assert!(metrics.total_operations >= 4000);
+    }
+
+    #[test]
+    fn test_parallel_msm_concurrent_stress() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let prover = Arc::new(ParallelProver::auto());
+        let mut handles = vec![];
+        
+        // Run multiple MSM operations concurrently
+        for _ in 0..8 {
+            let prover_clone = Arc::clone(&prover);
+            let handle = thread::spawn(move || {
+                let n = 512;
+                let bases: Vec<u64> = (1..=n as u64).collect();
+                let scalars: Vec<u64> = (1..=n as u64).collect();
+                let modulus = 0xFFFFFFFF00000001u64;
+                
+                let result = prover_clone.parallel_msm_checked(&bases, &scalars, modulus);
+                assert!(result.is_ok());
+                result.unwrap()
+            });
+            handles.push(handle);
+        }
+        
+        // All should produce the same result
+        let mut results = vec![];
+        for handle in handles {
+            results.push(handle.join().expect("Thread panicked"));
+        }
+        
+        // All results should be identical
+        let first = results[0];
+        for result in &results {
+            assert_eq!(*result, first);
+        }
     }
 }

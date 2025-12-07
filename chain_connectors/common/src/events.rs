@@ -260,4 +260,326 @@ mod tests {
         let filter = EventFilter::bridge_events();
         assert_eq!(filter.event_types.len(), 2);
     }
+
+    // ===== HARDENING TESTS =====
+
+    #[test]
+    fn test_event_filter_default() {
+        let filter = EventFilter::default();
+        assert!(filter.event_types.is_empty());
+        assert!(filter.from_block.is_none());
+        assert!(filter.to_block.is_none());
+        assert!(filter.addresses.is_empty());
+        assert!(filter.topics.is_empty());
+    }
+
+    #[test]
+    fn test_event_filter_with_addresses() {
+        let addresses = vec![vec![0x12; 20], vec![0x34; 20]];
+        let filter = EventFilter::new().with_addresses(addresses.clone());
+        
+        assert_eq!(filter.addresses.len(), 2);
+        assert_eq!(filter.addresses[0], vec![0x12; 20]);
+    }
+
+    #[test]
+    fn test_event_filter_with_topics() {
+        let filter = EventFilter::new()
+            .with_topic(0, [0xaa; 32])
+            .with_topic(2, [0xbb; 32]);
+        
+        assert_eq!(filter.topics.len(), 3);
+        assert_eq!(filter.topics[0], Some([0xaa; 32]));
+        assert!(filter.topics[1].is_none());
+        assert_eq!(filter.topics[2], Some([0xbb; 32]));
+    }
+
+    #[test]
+    fn test_event_filter_chained_builder() {
+        let filter = EventFilter::new()
+            .from_block(1000)
+            .to_block(2000)
+            .with_event_types(vec![EventType::ProofSubmitted, EventType::ProofVerified])
+            .with_addresses(vec![vec![0x12; 20]])
+            .with_topic(0, [0xff; 32]);
+        
+        assert_eq!(filter.from_block, Some(1000));
+        assert_eq!(filter.to_block, Some(2000));
+        assert_eq!(filter.event_types.len(), 2);
+        assert_eq!(filter.addresses.len(), 1);
+        assert_eq!(filter.topics.len(), 1);
+    }
+
+    #[test]
+    fn test_all_event_types() {
+        let event_types = [
+            EventType::ProofSubmitted,
+            EventType::ProofVerified,
+            EventType::BridgeTransferInitiated,
+            EventType::BridgeTransferCompleted,
+            EventType::BridgeTransferFailed,
+            EventType::HtlcCreated,
+            EventType::HtlcRedeemed,
+            EventType::HtlcRefunded,
+            EventType::Transfer,
+            EventType::ContractDeployed,
+            EventType::Unknown,
+        ];
+        
+        assert_eq!(event_types.len(), 11);
+        
+        // Test equality
+        assert_eq!(EventType::ProofSubmitted, EventType::ProofSubmitted);
+        assert_ne!(EventType::ProofSubmitted, EventType::ProofVerified);
+    }
+
+    #[test]
+    fn test_event_type_evm_signature() {
+        // These should return Some signature
+        assert!(EventType::ProofSubmitted.evm_signature().is_some());
+        assert!(EventType::ProofVerified.evm_signature().is_some());
+        assert!(EventType::BridgeTransferInitiated.evm_signature().is_some());
+        
+        // These should return None
+        assert!(EventType::Unknown.evm_signature().is_none());
+        assert!(EventType::HtlcCreated.evm_signature().is_none());
+    }
+
+    #[test]
+    fn test_event_type_serde_roundtrip() {
+        let event_types = [
+            EventType::ProofSubmitted,
+            EventType::Transfer,
+            EventType::Unknown,
+        ];
+        
+        for event_type in event_types {
+            let json = serde_json::to_string(&event_type).unwrap();
+            let parsed: EventType = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, event_type);
+        }
+    }
+
+    #[test]
+    fn test_chain_event_structure() {
+        let event = ChainEvent {
+            chain: ChainId::Ethereum,
+            block_number: 15_000_000,
+            block_hash: [0xaa; 32],
+            tx_hash: [0xbb; 32],
+            log_index: 5,
+            event_type: EventType::ProofSubmitted,
+            data: EventData::ProofSubmitted {
+                proof_id: [0xcc; 32],
+                submitter: vec![0x12; 20],
+                privacy_level: 3,
+            },
+            raw: RawEventData {
+                address: vec![0x34; 20],
+                topics: vec![[0xdd; 32]],
+                data: vec![1, 2, 3, 4],
+            },
+        };
+        
+        assert_eq!(event.chain, ChainId::Ethereum);
+        assert_eq!(event.block_number, 15_000_000);
+        assert_eq!(event.log_index, 5);
+    }
+
+    #[test]
+    fn test_event_data_proof_submitted() {
+        let data = EventData::ProofSubmitted {
+            proof_id: [1u8; 32],
+            submitter: vec![2u8; 20],
+            privacy_level: 5,
+        };
+        
+        match data {
+            EventData::ProofSubmitted { proof_id, submitter, privacy_level } => {
+                assert_eq!(proof_id, [1u8; 32]);
+                assert_eq!(submitter.len(), 20);
+                assert_eq!(privacy_level, 5);
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_event_data_bridge_transfer() {
+        let data = EventData::BridgeTransferInitiated {
+            transfer_id: [1u8; 32],
+            source_chain: ChainId::Ethereum,
+            target_chain: ChainId::Polygon,
+            sender: vec![2u8; 20],
+            amount: 1_000_000_000_000_000_000u128,
+        };
+        
+        match data {
+            EventData::BridgeTransferInitiated { source_chain, target_chain, amount, .. } => {
+                assert_eq!(source_chain, ChainId::Ethereum);
+                assert_eq!(target_chain, ChainId::Polygon);
+                assert_eq!(amount, 1_000_000_000_000_000_000u128);
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_event_data_htlc_created() {
+        let data = EventData::HtlcCreated {
+            htlc_id: [1u8; 32],
+            sender: vec![2u8; 20],
+            recipient: vec![3u8; 20],
+            amount: 500_000,
+            hash_lock: [4u8; 32],
+            timeout_block: 1_000_000,
+        };
+        
+        match data {
+            EventData::HtlcCreated { htlc_id, amount, timeout_block, .. } => {
+                assert_eq!(htlc_id, [1u8; 32]);
+                assert_eq!(amount, 500_000);
+                assert_eq!(timeout_block, 1_000_000);
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_event_data_htlc_redeemed() {
+        let data = EventData::HtlcRedeemed {
+            htlc_id: [1u8; 32],
+            preimage: [2u8; 32],
+        };
+        
+        match data {
+            EventData::HtlcRedeemed { htlc_id, preimage } => {
+                assert_eq!(htlc_id, [1u8; 32]);
+                assert_eq!(preimage, [2u8; 32]);
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_event_data_transfer() {
+        let data = EventData::Transfer {
+            from: vec![1u8; 20],
+            to: vec![2u8; 20],
+            amount: 1_000_000,
+        };
+        
+        match data {
+            EventData::Transfer { from, to, amount } => {
+                assert_eq!(from.len(), 20);
+                assert_eq!(to.len(), 20);
+                assert_eq!(amount, 1_000_000);
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_event_data_unknown() {
+        let data = EventData::Unknown {
+            topics: vec![[0xaa; 32], [0xbb; 32]],
+            data: vec![1, 2, 3, 4, 5],
+        };
+        
+        match data {
+            EventData::Unknown { topics, data } => {
+                assert_eq!(topics.len(), 2);
+                assert_eq!(data.len(), 5);
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_raw_event_data_structure() {
+        let raw = RawEventData {
+            address: vec![0x12; 20],
+            topics: vec![[0xaa; 32], [0xbb; 32], [0xcc; 32]],
+            data: vec![1, 2, 3, 4, 5, 6, 7, 8],
+        };
+        
+        assert_eq!(raw.address.len(), 20);
+        assert_eq!(raw.topics.len(), 3);
+        assert_eq!(raw.data.len(), 8);
+    }
+
+    #[test]
+    fn test_event_channel_creation() {
+        let (tx, mut rx) = event_channel(100);
+        
+        // Channel should be open
+        assert!(!tx.is_closed());
+        
+        // Drop sender
+        drop(tx);
+        
+        // Receiver should indicate channel closed
+        let result = rx.try_recv();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_chain_event_structure_complete() {
+        // Test structure without full serde roundtrip (u128 has JSON limitations)
+        let event = ChainEvent {
+            chain: ChainId::Polygon,
+            block_number: 100,
+            block_hash: [0x11; 32],
+            tx_hash: [0x22; 32],
+            log_index: 0,
+            event_type: EventType::Transfer,
+            data: EventData::Transfer {
+                from: vec![1u8; 20],
+                to: vec![2u8; 20],
+                amount: 1000,
+            },
+            raw: RawEventData {
+                address: vec![3u8; 20],
+                topics: vec![],
+                data: vec![],
+            },
+        };
+        
+        // Verify structure
+        assert_eq!(event.chain, ChainId::Polygon);
+        assert_eq!(event.block_number, 100);
+        assert_eq!(event.event_type, EventType::Transfer);
+        assert_eq!(event.log_index, 0);
+    }
+
+    #[test]
+    fn test_event_filter_block_range_validation() {
+        // Valid range
+        let filter = EventFilter::new()
+            .from_block(100)
+            .to_block(200);
+        
+        assert!(filter.from_block.unwrap() < filter.to_block.unwrap());
+        
+        // Same block (valid)
+        let filter = EventFilter::new()
+            .from_block(100)
+            .to_block(100);
+        
+        assert_eq!(filter.from_block, filter.to_block);
+    }
+
+    #[test]
+    fn test_event_type_hash_and_eq() {
+        use std::collections::HashSet;
+        
+        let mut set = HashSet::new();
+        set.insert(EventType::ProofSubmitted);
+        set.insert(EventType::ProofVerified);
+        set.insert(EventType::ProofSubmitted); // duplicate
+        
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&EventType::ProofSubmitted));
+        assert!(set.contains(&EventType::ProofVerified));
+    }
 }

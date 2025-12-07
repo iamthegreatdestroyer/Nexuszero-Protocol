@@ -87,8 +87,8 @@ pub struct Commitment {
 /// Challenge value
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Challenge {
-    /// Challenge bytes
-    pub value: [u8; 32],
+    /// Challenge bytes - expanded to 64 bytes for enhanced security
+    pub value: Vec<u8>,
 }
 
 /// Response in the proof
@@ -260,7 +260,7 @@ fn generate_blinding_factors(count: usize, size: usize) -> Vec<Vec<u8>> {
 }
 
 /// Convert challenge to scalar for arithmetic
-fn challenge_to_bigint(challenge: &[u8; 32]) -> BigUint {
+fn challenge_to_bigint(challenge: &[u8]) -> BigUint {
     BigUint::from_bytes_be(challenge)
 }
 
@@ -364,7 +364,7 @@ fn commit_range(value: u64, blinding_r: &[u8], generator_g: &[u8], generator_h: 
 fn compute_discrete_log_response(
     secret: &[u8],
     blinding: &[u8],
-    challenge: &[u8; 32],
+    challenge: &[u8],
 ) -> CryptoResult<Response> {
     let c = challenge_to_bigint(challenge);
     let r = BigUint::from_bytes_be(blinding);
@@ -379,7 +379,7 @@ fn compute_discrete_log_response(
 /// Compute response for preimage: reveal blinding XOR challenge
 fn compute_preimage_response(
     blinding: &[u8],
-    challenge: &[u8; 32],
+    challenge: &[u8],
 ) -> CryptoResult<Response> {
     // Simple response: blinding XOR first bytes of challenge
     let mut response = blinding.to_vec();
@@ -396,7 +396,7 @@ fn compute_preimage_response(
 fn compute_range_response(
     witness_blinding: &[u8],
     commitment_blinding: &[u8],
-    challenge: &[u8; 32],
+    challenge: &[u8],
 ) -> CryptoResult<Response> {
     use num_bigint::BigUint;
     
@@ -554,9 +554,9 @@ pub fn prove(statement: &Statement, witness: &Witness) -> CryptoResult<Proof> {
         }
         StatementType::Range { .. } => {
             // For Bulletproofs, commitment is generated within the protocol
-            // Placeholder commitment for compatibility
-            let gen_g = vec![2u8; 32];
-            let gen_h = vec![3u8; 32];
+            // Placeholder commitment for compatibility - use cryptographically secure generators
+            let gen_g = crate::proof::bulletproofs::generator_g().to_bytes_be();
+            let gen_h = crate::proof::bulletproofs::generator_h().to_bytes_be();
             vec![commit_range(0, &blinding[0], &gen_g, &gen_h)?]
         }
         StatementType::Custom { .. } => {
@@ -752,7 +752,7 @@ pub fn verify(statement: &Statement, proof: &Proof) -> CryptoResult<()> {
                 let modulus_bytes = vec![0xFF; 32];
                 let mod_big = BigUint::from_bytes_be(&modulus_bytes);
                 
-                let gen_h = vec![3u8; 32];
+                let gen_h = crate::proof::bulletproofs::generator_h().to_bytes_be();
                 let t_big = BigUint::from_bytes_be(&proof.commitments[0].value);
                 let c_big = BigUint::from_bytes_be(commitment);
                 let challenge_big = BigUint::from_bytes_be(&proof.challenge.value);
@@ -783,9 +783,13 @@ pub fn verify(statement: &Statement, proof: &Proof) -> CryptoResult<()> {
 
 /// Compute Fiat-Shamir challenge
 pub fn compute_challenge(statement: &Statement, commitments: &[Commitment]) -> CryptoResult<Challenge> {
-    use sha3::{Digest, Sha3_256};
+    use sha3::{Digest, Sha3_512};
 
-    let mut hasher = Sha3_256::new();
+    let mut hasher = Sha3_512::new();
+
+    // Domain separation: Include protocol identifier
+    hasher.update(b"NEXUSZERO-ZK-PROOF");
+    hasher.update(b"Fiat-Shamir-Challenge-v1");
 
     // Hash statement
     let stmt_bytes = statement.to_bytes()?;
@@ -797,8 +801,7 @@ pub fn compute_challenge(statement: &Statement, commitments: &[Commitment]) -> C
     }
 
     let hash_output = hasher.finalize();
-    let mut challenge_bytes = [0u8; 32];
-    challenge_bytes.copy_from_slice(&hash_output);
+    let challenge_bytes = hash_output.to_vec();
 
     Ok(Challenge {
         value: challenge_bytes,
@@ -1044,7 +1047,7 @@ mod tests {
             commitments: vec![Commitment {
                 value: vec![1, 2, 3],
             }],
-            challenge: Challenge { value: [0u8; 32] },
+            challenge: Challenge { value: vec![0u8; 32] },
             responses: vec![Response {
                 value: vec![4, 5, 6],
             }],
@@ -1430,9 +1433,9 @@ mod tests {
 
     #[test]
     fn test_proof_validation_errors() {
-        let bad_proof_empty = Proof { commitments: vec![], challenge: Challenge { value: [0u8;32] }, responses: vec![Response{ value: vec![1]}], metadata: ProofMetadata{version:1,timestamp:0,size:0}, bulletproof: None };        
+        let bad_proof_empty = Proof { commitments: vec![], challenge: Challenge { value: vec![0u8;32] }, responses: vec![Response{ value: vec![1]}], metadata: ProofMetadata{version:1,timestamp:0,size:0}, bulletproof: None };        
         assert!(bad_proof_empty.validate().is_err());
-        let bad_proof_no_responses = Proof { commitments: vec![Commitment{ value: vec![1]}], challenge: Challenge { value: [0u8;32] }, responses: vec![], metadata: ProofMetadata{version:1,timestamp:0,size:0}, bulletproof: None };        
+        let bad_proof_no_responses = Proof { commitments: vec![Commitment{ value: vec![1]}], challenge: Challenge { value: vec![0u8;32] }, responses: vec![], metadata: ProofMetadata{version:1,timestamp:0,size:0}, bulletproof: None };        
         assert!(bad_proof_no_responses.validate().is_err());
     }
 
@@ -1683,7 +1686,7 @@ mod tests {
         let mut proof = prove(&statement, &witness).unwrap();
         
         // Set challenge to all zeros (weak challenge)
-        proof.challenge.value = [0u8; 32];
+        proof.challenge.value = vec![0u8; 32];
         
         // Verification should fail due to challenge mismatch
         let result = verify(&statement, &proof);

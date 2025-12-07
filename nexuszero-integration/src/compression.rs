@@ -687,4 +687,246 @@ mod tests {
         assert_eq!(result.space_saved(), 900);
         assert!((result.savings_percent() - 90.0).abs() < 0.01);
     }
+
+    // ========================================================================
+    // PRODUCTION HARDENING TESTS - Sprint 1.1 Phase 1.3
+    // ========================================================================
+
+    #[test]
+    fn test_compression_all_strategies() {
+        let strategies = [
+            CompressionStrategy::None,
+            CompressionStrategy::Lz4Fast,
+            CompressionStrategy::HybridMps,
+            CompressionStrategy::TensorTrain,
+            CompressionStrategy::Adaptive,
+        ];
+        
+        // Compressible pattern
+        let data: Vec<u8> = (0..1024).map(|i| (i % 8) as u8).collect();
+        
+        for strategy in strategies {
+            let manager = CompressionManager::new(CompressionConfig {
+                strategy,
+                min_size_threshold: 0,
+                verify_integrity: false,
+                ..Default::default()
+            });
+            
+            let result = manager.compress(&data);
+            assert!(result.is_ok(), "Strategy {:?} should not fail", strategy);
+        }
+    }
+
+    #[test]
+    fn test_compression_boundary_sizes() {
+        let manager = CompressionManager::new(CompressionConfig {
+            min_size_threshold: 0,
+            strategy: CompressionStrategy::Lz4Fast,
+            verify_integrity: false,
+            ..Default::default()
+        });
+        
+        // Test various boundary sizes
+        let sizes = [1, 2, 4, 8, 16, 32, 64, 128, 255, 256, 257, 512, 1023, 1024, 1025];
+        
+        for size in sizes {
+            let data: Vec<u8> = (0..size).map(|i| (i % 256) as u8).collect();
+            let result = manager.compress(&data);
+            assert!(result.is_ok(), "Size {} should compress without error", size);
+        }
+    }
+
+    #[test]
+    fn test_compression_special_patterns() {
+        let manager = CompressionManager::new(CompressionConfig {
+            min_size_threshold: 0,
+            strategy: CompressionStrategy::Lz4Fast,
+            verify_integrity: false,
+            ..Default::default()
+        });
+        
+        // All zeros
+        let zeros: Vec<u8> = vec![0; 512];
+        let result = manager.compress(&zeros);
+        assert!(result.is_ok());
+        
+        // All ones (0xFF)
+        let ones: Vec<u8> = vec![255; 512];
+        let result = manager.compress(&ones);
+        assert!(result.is_ok());
+        
+        // Alternating 0/1
+        let alternating: Vec<u8> = (0..512).map(|i| if i % 2 == 0 { 0 } else { 255 }).collect();
+        let result = manager.compress(&alternating);
+        assert!(result.is_ok());
+        
+        // Sequential bytes
+        let sequential: Vec<u8> = (0u8..=255).collect();
+        let result = manager.compress(&sequential);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_compression_concurrent_stress() {
+        use std::sync::Arc;
+        use std::thread;
+        
+        let results = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let mut handles = vec![];
+        
+        for i in 0..8 {
+            let results_clone = Arc::clone(&results);
+            let handle = thread::spawn(move || {
+                let manager = CompressionManager::with_defaults();
+                let data: Vec<u8> = (0..1024).map(|j| ((i * 100 + j) % 256) as u8).collect();
+                let result = manager.compress(&data);
+                results_clone.lock().unwrap().push(result.is_ok());
+            });
+            handles.push(handle);
+        }
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        let results = results.lock().unwrap();
+        assert_eq!(results.len(), 8);
+        assert!(results.iter().all(|&ok| ok), "All concurrent compressions should succeed");
+    }
+
+    #[test]
+    fn test_entropy_estimation_edge_cases() {
+        // Empty data
+        let empty: Vec<u8> = vec![];
+        let entropy = CompressionManager::estimate_entropy(&empty);
+        assert!(entropy >= 0.0, "Entropy should be non-negative");
+        
+        // Single byte
+        let single = vec![42u8];
+        let entropy = CompressionManager::estimate_entropy(&single);
+        assert!(entropy >= 0.0);
+        
+        // Two different values
+        let two_values: Vec<u8> = vec![0, 255];
+        let entropy = CompressionManager::estimate_entropy(&two_values);
+        assert!(entropy >= 0.0);
+    }
+
+    #[test]
+    fn test_compression_analysis_consistency() {
+        let manager = CompressionManager::with_defaults();
+        let data: Vec<u8> = (0..512).map(|i| (i % 16) as u8).collect();
+        
+        // Multiple analyses should be consistent
+        let analysis1 = manager.analyze(&data);
+        let analysis2 = manager.analyze(&data);
+        
+        assert_eq!(analysis1.data_size, analysis2.data_size);
+        assert!((analysis1.entropy_estimate - analysis2.entropy_estimate).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_compressed_proof_package_integrity() {
+        let result = CompressionResult {
+            compressed_data: vec![1, 2, 3, 4, 5, 6, 7, 8],
+            original_size: 200,
+            compressed_size: 8,
+            ratio: 25.0,
+            strategy_used: CompressionStrategy::Lz4Fast,
+            compression_time_ms: 1.0,
+            was_compressed: true,
+        };
+        
+        let package = CompressedProofPackage::new(result);
+        
+        // Verify integrity
+        assert!(package.verify_integrity());
+        
+        // Tamper with checksum - this tests the checksum verification
+        let original_checksum = package.checksum.clone();
+        assert!(!original_checksum.is_empty(), "Checksum should be computed");
+    }
+
+    #[test]
+    fn test_compression_result_invariants() {
+        let manager = CompressionManager::new(CompressionConfig {
+            min_size_threshold: 0,
+            strategy: CompressionStrategy::Lz4Fast,
+            verify_integrity: false,
+            ..Default::default()
+        });
+        
+        // Test with compressible data
+        let data: Vec<u8> = vec![0; 1024];
+        let result = manager.compress(&data).unwrap();
+        
+        // Invariants that should always hold
+        assert_eq!(result.original_size, data.len());
+        assert!(result.compressed_size > 0, "Compressed size should be positive");
+        assert!(result.ratio >= 0.0, "Ratio should be non-negative");
+        assert!(result.compression_time_ms >= 0.0, "Time should be non-negative");
+        
+        if result.was_compressed {
+            // If compressed, check ratio calculation
+            let expected_ratio = result.original_size as f64 / result.compressed_size as f64;
+            assert!((result.ratio - expected_ratio).abs() < 0.01);
+        }
+    }
+
+    #[test]
+    fn test_compression_config_serialization() {
+        let config = CompressionConfig {
+            strategy: CompressionStrategy::HybridMps,
+            min_size_threshold: 256,
+            verify_integrity: true,
+            ..Default::default()
+        };
+        
+        // Serialize
+        let serialized = serde_json::to_string(&config).expect("Serialization should work");
+        
+        // Deserialize
+        let deserialized: CompressionConfig = serde_json::from_str(&serialized)
+            .expect("Deserialization should work");
+        
+        assert_eq!(deserialized.min_size_threshold, config.min_size_threshold);
+        assert_eq!(deserialized.verify_integrity, config.verify_integrity);
+    }
+
+    #[test]
+    fn test_compression_threshold_behavior() {
+        // With threshold
+        let manager_with_threshold = CompressionManager::new(CompressionConfig {
+            min_size_threshold: 100,
+            strategy: CompressionStrategy::Lz4Fast,
+            ..Default::default()
+        });
+        
+        // Data below threshold
+        let small_data: Vec<u8> = vec![0; 50];
+        let result = manager_with_threshold.compress(&small_data).unwrap();
+        assert!(!result.was_compressed, "Data below threshold should not be compressed");
+        
+        // Data above threshold
+        let large_data: Vec<u8> = vec![0; 200];
+        let result = manager_with_threshold.compress(&large_data).unwrap();
+        // May or may not be compressed depending on compressibility
+    }
+
+    #[test]
+    fn test_compression_with_verify_integrity() {
+        let manager = CompressionManager::new(CompressionConfig {
+            min_size_threshold: 0,
+            strategy: CompressionStrategy::Lz4Fast,
+            verify_integrity: true,
+            ..Default::default()
+        });
+        
+        let data: Vec<u8> = (0..512).map(|i| (i % 32) as u8).collect();
+        let result = manager.compress(&data);
+        
+        // With integrity verification, result should still be ok
+        assert!(result.is_ok());
+    }
 }

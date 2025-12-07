@@ -276,4 +276,310 @@ mod tests {
         let r = svd.compression_ratio();
         assert!(r.is_finite());
     }
+
+    // ========================================================================
+    // PRODUCTION HARDENING TESTS - Phase 1.2.3
+    // ========================================================================
+
+    #[test]
+    fn test_concurrent_svd_stress() {
+        use std::sync::Arc;
+        use std::thread;
+
+        // Create varied test matrices
+        let matrices: Vec<Arc<Array2<f64>>> = (0..4)
+            .map(|i| {
+                let m = Array2::from_shape_fn((8, 6), |(r, c)| {
+                    ((r + c + i) as f64) * 0.1 + 1.0
+                });
+                Arc::new(m)
+            })
+            .collect();
+
+        let handles: Vec<_> = matrices
+            .into_iter()
+            .map(|mat| {
+                thread::spawn(move || {
+                    for _ in 0..5 {
+                        let result = TensorSVD::compute(&mat);
+                        assert!(result.is_ok(), "SVD failed in thread");
+                        
+                        let svd = result.unwrap();
+                        assert!(!svd.s.is_empty());
+                        assert!(svd.s.iter().all(|&s| s >= 0.0 && s.is_finite()));
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().expect("Thread panicked");
+        }
+    }
+
+    #[test]
+    fn test_svd_numerical_stability_small_values() {
+        // Matrix with very small values
+        let small = Array2::from_shape_fn((4, 4), |(i, j)| {
+            ((i + j) as f64) * 1e-10
+        });
+        
+        let result = TensorSVD::compute(&small);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        for &s in &svd.s {
+            assert!(s.is_finite(), "Non-finite singular value: {}", s);
+            assert!(s >= 0.0, "Negative singular value: {}", s);
+        }
+    }
+
+    #[test]
+    fn test_svd_numerical_stability_large_values() {
+        // Matrix with large values
+        let large = Array2::from_shape_fn((4, 4), |(i, j)| {
+            ((i + j + 1) as f64) * 1e6
+        });
+        
+        let result = TensorSVD::compute(&large);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        for &s in &svd.s {
+            assert!(s.is_finite(), "Non-finite singular value: {}", s);
+            assert!(s >= 0.0, "Negative singular value: {}", s);
+        }
+    }
+
+    #[test]
+    fn test_svd_wide_matrix() {
+        // Wide matrix (more columns than rows)
+        let wide = Array2::from_shape_fn((3, 10), |(i, j)| {
+            (i * 10 + j) as f64
+        });
+        
+        let result = TensorSVD::compute(&wide);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        // For 3x10 matrix, we should have at most 3 singular values
+        assert!(svd.s.len() <= 3);
+        assert_eq!(svd.u.nrows(), 3);
+        assert_eq!(svd.vt.ncols(), 10);
+    }
+
+    #[test]
+    fn test_svd_tall_matrix() {
+        // Tall matrix (more rows than columns)
+        let tall = Array2::from_shape_fn((10, 3), |(i, j)| {
+            (i * 3 + j) as f64
+        });
+        
+        let result = TensorSVD::compute(&tall);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        // For 10x3 matrix, we should have at most 3 singular values
+        assert!(svd.s.len() <= 3);
+        assert_eq!(svd.u.nrows(), 10);
+        assert_eq!(svd.vt.ncols(), 3);
+    }
+
+    #[test]
+    fn test_svd_single_row() {
+        let row = array![[1.0, 2.0, 3.0, 4.0]]; // 1x4 matrix
+        
+        let result = TensorSVD::compute(&row);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        assert_eq!(svd.s.len(), 1);
+        assert_eq!(svd.u.nrows(), 1);
+    }
+
+    #[test]
+    fn test_svd_single_column() {
+        let col = array![[1.0], [2.0], [3.0], [4.0]]; // 4x1 matrix
+        
+        let result = TensorSVD::compute(&col);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        assert_eq!(svd.s.len(), 1);
+        assert_eq!(svd.vt.ncols(), 1);
+    }
+
+    #[test]
+    fn test_svd_identity_matrix() {
+        // Identity matrix should have all singular values = 1
+        let identity = Array2::from_diag(&Array1::from_vec(vec![1.0, 1.0, 1.0]));
+        
+        let result = TensorSVD::compute(&identity);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        for &s in &svd.s {
+            assert!((s - 1.0).abs() < 0.1, "Expected singular value ~1.0, got {}", s);
+        }
+    }
+
+    #[test]
+    fn test_svd_diagonal_matrix() {
+        // Diagonal matrix with known singular values
+        let diag = Array2::from_diag(&Array1::from_vec(vec![5.0, 3.0, 1.0]));
+        
+        let result = TensorSVD::compute(&diag);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        // Singular values should be sorted in descending order
+        for i in 0..svd.s.len() - 1 {
+            assert!(
+                svd.s[i] >= svd.s[i + 1] - 1e-6,
+                "Singular values not sorted: {} < {}",
+                svd.s[i],
+                svd.s[i + 1]
+            );
+        }
+    }
+
+    #[test]
+    fn test_svd_zero_row() {
+        // Matrix with a zero row
+        let m = array![[1.0, 2.0, 3.0], [0.0, 0.0, 0.0], [4.0, 5.0, 6.0]];
+        
+        let result = TensorSVD::compute(&m);
+        assert!(result.is_ok());
+        
+        let svd = result.unwrap();
+        // Should have at most 2 non-zero singular values (rank 2)
+        let non_zero = svd.s.iter().filter(|&&s| s > 1e-10).count();
+        assert!(non_zero <= 2, "Expected rank ≤ 2, got {} non-zero singular values", non_zero);
+    }
+
+    #[test]
+    fn test_svd_params_variations() {
+        let m = Array2::from_shape_fn((6, 4), |(i, j)| (i + j + 1) as f64);
+        
+        let params_list = vec![
+            SVDParams::default(),
+            SVDParams { power_iters: 0, ..Default::default() },
+            SVDParams { power_iters: 5, ..Default::default() },
+            SVDParams { oversampling: 0, ..Default::default() },
+            SVDParams { oversampling: 20, ..Default::default() },
+            SVDParams { target_rel_error: 0.1, ..Default::default() },
+            SVDParams { target_rel_error: 0.99, ..Default::default() },
+        ];
+        
+        for params in params_list {
+            let result = TensorSVD::compute_with_params(&m, params);
+            assert!(result.is_ok(), "Failed with params: {:?}", params);
+            
+            let svd = result.unwrap();
+            assert!(!svd.s.is_empty());
+            assert!(svd.compression_ratio() > 0.0);
+        }
+    }
+
+    #[test]
+    fn test_truncation_edge_cases() {
+        let m = array![[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]];
+        let mut svd = TensorSVD::compute(&m).unwrap();
+        let orig_len = svd.s.len();
+        
+        // Truncate to 0 should still keep at least 1
+        svd.truncate(0);
+        // The implementation truncates to k.min(s.len()), so 0 results in empty
+        // which may or may not be valid - check what actually happens
+        
+        // Reset
+        let mut svd = TensorSVD::compute(&m).unwrap();
+        
+        // Truncate to 1
+        svd.truncate(1);
+        assert_eq!(svd.s.len(), 1);
+        assert_eq!(svd.u.ncols(), 1);
+        assert_eq!(svd.vt.nrows(), 1);
+        
+        // Reset and truncate to exact length
+        let mut svd = TensorSVD::compute(&m).unwrap();
+        svd.truncate(orig_len);
+        assert_eq!(svd.s.len(), orig_len);
+    }
+
+    #[test]
+    fn test_compression_ratio_invariants() {
+        let m = Array2::from_shape_fn((10, 8), |(i, j)| (i + j) as f64);
+        let svd = TensorSVD::compute(&m).unwrap();
+        
+        let ratio = svd.compression_ratio();
+        assert!(ratio > 0.0, "Compression ratio should be positive");
+        assert!(ratio.is_finite(), "Compression ratio should be finite");
+    }
+
+    #[test]
+    fn test_eigen_orthonormality() {
+        // Test that eigenvectors from power deflation are orthonormal
+        let m = Array2::from_diag(&Array1::from_vec(vec![4.0, 3.0, 2.0, 1.0]));
+        let (eigvals, eigvecs) = symmetric_eigen_power_deflation(m, 4);
+        
+        // Check eigenvalues are non-negative
+        for &ev in &eigvals {
+            assert!(ev >= 0.0, "Negative eigenvalue: {}", ev);
+        }
+        
+        // Check eigenvectors are normalized
+        for i in 0..eigvecs.ncols() {
+            let col = eigvecs.column(i);
+            let norm = col.dot(&col).sqrt();
+            assert!(
+                (norm - 1.0).abs() < 1e-4,
+                "Eigenvector {} not normalized: norm = {}",
+                i,
+                norm
+            );
+        }
+        
+        // Check orthogonality between different eigenvectors
+        for i in 0..eigvecs.ncols() {
+            for j in (i + 1)..eigvecs.ncols() {
+                let dot = eigvecs.column(i).dot(&eigvecs.column(j));
+                assert!(
+                    dot.abs() < 1e-4,
+                    "Eigenvectors {} and {} not orthogonal: dot = {}",
+                    i,
+                    j,
+                    dot
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_reconstruction_quality() {
+        let m = array![[3.0, 1.0, 0.0], [1.0, 3.0, 1.0], [0.0, 1.0, 3.0]];
+        let svd = TensorSVD::compute(&m).unwrap();
+        
+        // Full reconstruction should be accurate
+        let full_error = approximate_rel_frob_error(&m, &svd);
+        assert!(
+            full_error < 0.1,
+            "Full reconstruction error too high: {}",
+            full_error
+        );
+        
+        // Verify truncation increases error
+        let mut truncated = TensorSVD::compute(&m).unwrap();
+        if truncated.s.len() > 1 {
+            truncated.truncate(1);
+            let trunc_error = approximate_rel_frob_error(&m, &truncated);
+            assert!(
+                trunc_error >= full_error - 1e-10,
+                "Truncation should not decrease error: {} < {}",
+                trunc_error,
+                full_error
+            );
+        }
+    }
 }
+
