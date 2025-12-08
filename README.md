@@ -162,9 +162,24 @@ Nexuszero-Protocol/
 ├── LICENSE                                  # MIT License
 │
 ├── nexuszero-crypto/                        # Rust cryptography library
-│   └── (Ring-LWE, NTT, Schnorr signatures)
+│   ├── src/
+│   │   ├── proof/
+│   │   │   ├── schnorr.rs               # Schnorr signatures (NEW!)
+│   │   │   ├── bulletproofs.rs          # Range proofs
+│   │   │   └── ...
+│   │   ├── side_channel.rs              # Side-channel analysis (NEW!)
+│   │   ├── test_vectors.rs              # Test vector generation (NEW!)
+│   │   └── ...
+│   ├── tests/
+│   │   ├── property_based_tests.rs      # Property-based tests (NEW!)
+│   │   └── ...
+│   └── (Ring-LWE, NTT, Schnorr, Bulletproofs)
 │
-└── nexuszero-optimizer/                     # Neural optimizer (NEW!)
+├── nexuszero-optimizer/                     # Neural optimizer (NEW!)
+│   └── (PyTorch GNN for proof parameter optimization)
+│
+└── benchmarks/                              # Performance benchmarks (NEW!)
+    └── crypto_benchmarks.rs                 # Criterion-based benchmarks
 
 ---
 
@@ -173,7 +188,6 @@ Nexuszero-Protocol/
 Legal and Intellectual Property (IP) templates, filing notes, and licensing guidance live in the `legal/` directory. This includes patent templates, trademark application guidance, licensing strategy, copyright header templates, and related artifacts.
 
 See: `legal/README.md` for more details and templates.
-    └── (PyTorch GNN for proof parameter optimization)
 ```
 
 ---
@@ -309,6 +323,66 @@ let proof = prove_range(value, &blinding, 7)?; // 2^7 = 128 > 100
 // Verify proof
 verify_range(&proof, &commitment, 7)?; // ✓ Passes
 ```
+
+### 0.6. Schnorr Signatures & Advanced Cryptography 🔐 (NEW!)
+
+**Complete Schnorr Signature Implementation:**
+
+- ✅ RFC 3526 Group 14 (2048-bit MODP safe prime group)
+- ✅ Fiat-Shamir transform for non-interactive proofs
+- ✅ Domain-separated hashing (`schnorr-signature-v1`)
+- ✅ Fresh random nonces per signature (non-deterministic)
+- ✅ Comprehensive test suite (24+ unit tests, 7+ property-based tests)
+
+**Security Features:**
+
+- **Unforgeability:** Cannot create valid signatures without private key
+- **Non-repudiation:** Signatures cryptographically bind to signer
+- **Zero-knowledge:** Signatures don't reveal private key information
+- **Side-channel resistance:** Constant-time operations where possible
+
+**Side-Channel Analysis Framework:**
+
+- ✅ **Timing Analysis:** Statistical timing leak detection with p-values
+- ✅ **Cache Analysis:** Cache-timing attack detection
+- ✅ **Memory Analysis:** Memory access pattern consistency checking
+- ✅ **Power Analysis:** Software-based power consumption simulation
+
+**Comprehensive Testing Infrastructure:**
+
+- ✅ **Test Vector Generation:** Deterministic generation for security audits
+  - LWE, Bulletproof, Schnorr, and Hash test vectors
+  - Reproducible with fixed seed for audit trails
+  - 100+ test cases across all categories
+- ✅ **Property-Based Testing:** 15+ proptest tests using Hypothesis framework
+  - Parameter validation consistency
+  - Proof soundness and correctness
+  - Serialization round-trip verification
+  - Challenge manipulation detection
+  - Fiat-Shamir transform determinism
+
+**Example Usage:**
+
+```rust
+use nexuszero_crypto::proof::schnorr::{schnorr_keygen, schnorr_sign, schnorr_verify};
+
+// Generate key pair
+let (private_key, public_key) = schnorr_keygen()?;
+
+// Sign message
+let message = b"Hello, Nexuszero!";
+let signature = schnorr_sign(message, &private_key)?;
+
+// Verify signature
+schnorr_verify(message, &signature, &public_key)?; // ✓ Passes
+```
+
+**Documentation:**
+
+- Full API documentation in code (`nexuszero-crypto/src/proof/schnorr.rs`)
+- Side-channel analysis guide (`nexuszero-crypto/src/side_channel.rs`)
+- Test vector specifications (`nexuszero-crypto/src/test_vectors.rs`)
+- Property-based testing (`nexuszero-crypto/tests/property_based_tests.rs`)
 
 ### 1. VS Code Workspace Configuration [REF:VSCODE-001]
 
@@ -542,10 +616,18 @@ Session 4 checkpoint with:
 **Implemented Suites:**
 
 - Unit tests (encryption, polynomial ops, NTT, proofs)
-- Property-based tests (LWE, proofs)
+- **Property-based tests (NEW!)** – **15+ proptest tests** for cryptographic robustness
+  - Parameter validation consistency
+  - Proof soundness and correctness
+  - Serialization verification
+  - Challenge manipulation detection
+  - Fiat-Shamir transform properties
 - Negative tests (validation, tampering, mismatches) – **60 tests passing**
 - Bulletproofs tests (commitment, inner product, range proofs) – **10 tests**
+- **Schnorr signature tests (NEW!)** – **24+ unit tests, 7+ property tests**
+- **Side-channel analysis (NEW!)** – Timing, cache, memory, power analysis
 - Benchmarks (LWE encrypt, proof gen/verify)
+- **Test vector generation (NEW!)** – Deterministic vectors for security audits (100+ test cases)
 - Test vector ingestion + execution (`tests/test_vector_runner.rs`)
 
 **Recent Improvements:**
