@@ -7,6 +7,7 @@
 
 pub mod bulletproofs;
 pub mod proof;
+pub mod schnorr;
 pub mod statement;
 pub mod witness;
 pub mod witness_manager;
@@ -31,6 +32,10 @@ pub use statement::{Statement, StatementBuilder, StatementType};
 pub use witness::{Witness, WitnessType};
 pub use witness_manager::{WitnessManager, DefaultWitnessManager, WitnessMetadata, CachedWitness, ValidationConstraints, WitnessGenerationConfig, TransformationResult, CacheStats};
 pub use bulletproofs::{BulletproofRangeProof, prove_range, verify_range};
+pub use schnorr::{
+    SchnorrPrivateKey, SchnorrPublicKey, SchnorrSignature, SchnorrParams,
+    schnorr_keygen, schnorr_sign, schnorr_verify
+};
 pub use plugins::{
     ProofPluginEnum, ProofRegistry, ProofType, SetupParams, VerificationKey, ProverKey,
     CircuitComponent, CircuitInfo, PluginInfo,
