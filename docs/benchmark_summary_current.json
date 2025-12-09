@@ -1,0 +1,28 @@
+{
+  "report": [
+    {
+      "name": "lwe_decrypt_128bit",
+      "baseline_mean_us": 33.4579202315594,
+      "current_mean_us": 38.31255401155303,
+      "relative_change_pct": 14.509669896978442
+    },
+    {
+      "name": "lwe_encrypt_128bit",
+      "baseline_mean_us": 513.0528882361126,
+      "current_mean_us": 483.9904956043463,
+      "relative_change_pct": -5.6645997514376125
+    },
+    {
+      "name": "prove_range_8bits",
+      "baseline_mean_us": 6490.2065,
+      "current_mean_us": 10256.735,
+      "relative_change_pct": 58.03403173689466
+    },
+    {
+      "name": "verify_range_8bits",
+      "baseline_mean_us": 3.389291077961733,
+      "current_mean_us": 3.9017345380335757,
+      "relative_change_pct": 15.119488066513842
+    }
+  ]
+}
