@@ -78,6 +78,30 @@ cargo bench -p nexuszero-e2e --bench e2e_pipeline_bench -- "latencies"
 
 ---
 
+## 📉 Latest Benchmark Report (Task 6)
+
+We regularly run the Criterion-based performance benchmarks. The latest report is available at [`docs/benchmark_report.md`](docs/benchmark_report.md).
+
+Summary (compared to pinned baseline `benchmark_summary.json`):
+
+| Benchmark | Baseline (us) | Current (us) | Change (%) | Status |
+|---|---:|---:|---:|---|
+| `lwe_decrypt_128bit` | 33.458 | 38.313 | +14.51% | ⚠️ Regression |
+| `lwe_encrypt_128bit` | 513.053 | 483.990 | -5.66% | ✅ OK (Improved) |
+| `prove_range_8bits` | 6490.207 | 10256.735 | +58.03% | ⚠️ Regression |
+| `verify_range_8bits` | 3.389 | 3.902 | +15.12% | ⚠️ Regression |
+
+Action Items:
+
+- Investigate LWE decrypt slowdown (critical path); evaluate allocation patterns and NTT/AVX2 optimizations.
+- Investigate Bulletproof `prove_range` regression (primes, modular inverse path, and extra checks added).
+- Verify compile-time features: ensure `avx2`, `simd`, `hardware-acceleration` features are used where appropriate in CI and benchmarks.
+- Add per-benchmark baseline files to CI and fail PRs on >10% regressions. (See `benchmark_summary.json`)
+
+See `docs/benchmark_report.md` for details, environment info, and recommendations.
+
+---
+
 ## 📖 Overview
 
 Nexuszero Protocol is a production-ready developer environment automation system designed to eliminate manual setup friction. It provides:
