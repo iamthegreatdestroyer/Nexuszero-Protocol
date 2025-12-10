@@ -1,5 +1,5 @@
 # Benchmark Report
-Generated: 2025-12-09T15:43:48.526098 UTC
+Generated: 2025-12-09T20:54:14.269091 UTC
 
 ## Environment
 - OS: Windows 11 AMD64
@@ -9,7 +9,7 @@ Generated: 2025-12-09T15:43:48.526098 UTC
 ## Benchmarks (compared to baseline)
 | Benchmark | Baseline (us) | Current (us) | Change (%) |
 |---|---:|---:|---:|
-| lwe_decrypt_128bit | 33.458 | 38.313 | 14.51% |
-| lwe_encrypt_128bit | 513.053 | 483.990 | -5.66% |
-| prove_range_8bits | 6490.207 | 10256.735 | 58.03% |
-| verify_range_8bits | 3.389 | 3.902 | 15.12% |
+| lwe_decrypt_128bit | 33.458 | 27.795 | -16.93% |
+| lwe_encrypt_128bit | 513.053 | 373.039 | -27.29% |
+| prove_range_8bits | 6490.207 | 8523.942 | 31.34% |
+| verify_range_8bits | 3.389 | 3.028 | -10.65% |

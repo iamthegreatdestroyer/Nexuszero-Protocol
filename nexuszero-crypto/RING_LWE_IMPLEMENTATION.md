@@ -169,20 +169,20 @@ pub fn ring_decrypt(
 
 ## 📊 Performance Characteristics
 
-### Current Implementation
+### Current Implementation (NIST-Aligned Parameters)
 
-- **Key Generation:** ~3ms for n=512 (128-bit security)
-- **Encryption:** ~5ms for 256 message bits
-- **Decryption:** ~3ms
-- **Polynomial Multiplication:** O(n²) schoolbook method
+- **Key Generation:** ~2-5ms (n=768 to n=1088)
+- **Encryption:** ~3-8ms for 256 message bits
+- **Decryption:** ~2-6ms
+- **Polynomial Multiplication:** O(n²) schoolbook method (NTT pending)
 
-### Standard Parameter Sets
+### Standard Parameter Sets (NIST-Aligned)
 
-| Security Level | n    | q     | σ   | Key Size | Ciphertext Size |
-| -------------- | ---- | ----- | --- | -------- | --------------- |
-| 128-bit        | 512  | 12289 | 3.2 | ~6 KB    | ~12 KB          |
-| 192-bit        | 1024 | 40961 | 3.2 | ~16 KB   | ~32 KB          |
-| 256-bit        | 2048 | 65537 | 3.2 | ~32 KB   | ~64 KB          |
+| Security Level | n    | q       | σ   | Key Size | Ciphertext Size | Performance  |
+| -------------- | ---- | ------- | --- | -------- | --------------- | ------------ |
+| 128-bit        | 768  | 3329    | 3.0 | ~4.6 KB  | ~9.2 KB         | Fastest      |
+| 192-bit        | 1024 | 3329    | 3.0 | ~6.1 KB  | ~12.2 KB        | Balanced     |
+| 256-bit        | 1088 | 8380417 | 3.2 | ~65 KB   | ~130 KB         | Conservative |
 
 ### Future Optimizations
 

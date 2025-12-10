@@ -88,16 +88,17 @@ Hardware acceleration features (`avx2`, `simd`) provide significant performance 
 
 Summary (compared to baseline without hardware acceleration):
 
-| Benchmark            | Baseline (us) | AVX2/SIMD (us) | Change (%) | Status              |
-| -------------------- | ------------: | -------------: | ---------: | ------------------- |
-| `lwe_encrypt_128bit` |       513.053 |        483.990 |     -5.66% | ✅ OK (No change)   |
-| `lwe_decrypt_128bit` |        33.458 |         26.231 |    -21.75% | ✅ **IMPROVED**     |
-| `prove_discrete_log_micro` |      123.456 |        111.234 |     -9.01% | ✅ **IMPROVED**     |
-| `verify_discrete_log_micro` |        5.678 |          4.876 |    -13.95% | ✅ **IMPROVED**     |
-| `prove_range_8bits`  |      6490.207 |       5412.345 |    -16.57% | ✅ **IMPROVED**     |
-| `verify_range_8bits` |         3.389 |         3.310 |     -2.33% | ✅ **IMPROVED**     |
+| Benchmark                   | Baseline (us) | AVX2/SIMD (us) | Change (%) | Status            |
+| --------------------------- | ------------: | -------------: | ---------: | ----------------- |
+| `lwe_encrypt_128bit`        |       513.053 |        483.990 |     -5.66% | ✅ OK (No change) |
+| `lwe_decrypt_128bit`        |        33.458 |         26.231 |    -21.75% | ✅ **IMPROVED**   |
+| `prove_discrete_log_micro`  |       123.456 |        111.234 |     -9.01% | ✅ **IMPROVED**   |
+| `verify_discrete_log_micro` |         5.678 |          4.876 |    -13.95% | ✅ **IMPROVED**   |
+| `prove_range_8bits`         |      6490.207 |       5412.345 |    -16.57% | ✅ **IMPROVED**   |
+| `verify_range_8bits`        |         3.389 |          3.310 |     -2.33% | ✅ **IMPROVED**   |
 
 **Key Findings:**
+
 - **Decrypt Operations:** 21-23% performance improvement with AVX2/SIMD
 - **Proof Operations:** 9-23% improvement across discrete log and range proofs
 - **Bulletproof Operations:** 16-23% improvement for range proof generation
