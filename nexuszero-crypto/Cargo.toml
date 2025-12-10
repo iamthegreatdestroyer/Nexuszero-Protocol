@@ -126,7 +126,7 @@ panic = "abort"
 
 [profile.bench]
 opt-level = 3
-debug = false
+debug = true
 
 [[bench]]
 name = "crypto_benchmarks"

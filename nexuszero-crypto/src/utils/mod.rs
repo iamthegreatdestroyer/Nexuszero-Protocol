@@ -7,9 +7,16 @@ pub mod gpu_math;
 pub mod constant_time;
 pub mod hardware;
 pub mod sidechannel;
+pub mod dual_exponentiation;
 
 // Re-export common functions
 pub use math::{mod_inverse, modular_exponentiation, montgomery_modmul, montgomery_modpow};
+
+// Re-export dual and multi-exponentiation functions
+pub use dual_exponentiation::{
+    MultiExpConfig, ExpTable, ShamirTrick, InterleavedExponentiation,
+    VectorExponentiation, WindowedMultiExponentiation,
+};
 
 // Re-export GPU acceleration functions
 #[cfg(feature = "gpu")]

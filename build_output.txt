@@ -1,0 +1,344 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   C:\Users\sgbil\Nexuszero-Protocol\nexuszero-crypto\Cargo.toml
+workspace: C:\Users\sgbil\Nexuszero-Protocol\Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   C:\Users\sgbil\Nexuszero-Protocol\proof_network\prover_node\Cargo.toml
+workspace: C:\Users\sgbil\Nexuszero-Protocol\Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   C:\Users\sgbil\Nexuszero-Protocol\sdks\rust\Cargo.toml
+workspace: C:\Users\sgbil\Nexuszero-Protocol\Cargo.toml
+   Compiling serde v1.0.228
+   Compiling serde_json v1.0.145
+   Compiling uuid v1.19.0
+   Compiling tracing-serde v0.2.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling url v2.5.7
+   Compiling chrono v0.4.42
+   Compiling bincode v1.3.3
+   Compiling tracing-subscriber v0.3.22
+   Compiling reqwest v0.11.27
+   Compiling nexuszero-crypto v0.1.0 (C:\Users\sgbil\Nexuszero-Protocol\nexuszero-crypto)
+warning: unused imports: `Arc` and `Mutex`
+  --> nexuszero-crypto\src\lattice\ring_lwe.rs:99:17
+   |
+99 | use std::sync::{Arc, Mutex};
+   |                 ^^^  ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unexpected `cfg` condition value: `sentry`
+   --> nexuszero-crypto\src\metrics\error_tracking.rs:526:15
+    |
+526 |         #[cfg(feature = "sentry")]
+    |               ^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `allow-insecure`, `avx2`, `avx512`, `bellpepper`, `bellpepper-core`, `bytemuck`, `default`, `ff`, `gpu`, `hardware-acceleration`, `lazy_static`, `neon`, `nova`, `nova-snark`, `pasta_curves`, `pollster`, `simd`, `tpu`, and `wgpu`
+    = help: consider adding `sentry` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unused imports: `ProverCapabilities` and `VerifierCapabilities`
+ --> nexuszero-crypto\src\proof\proof.rs:5:122
+  |
+5 | ...ifierConfig, ProverRegistry, VerifierRegistry, ProverCapabilities, VerifierCapabilities};
+  |                                                   ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Proof`, `Statement`, `VerifierCapabilities`, `VerifierConfig`, and `Verifier`
+ --> nexuszero-crypto\src\proof\hardware_acceleration.rs:6:20
+  |
+6 | use crate::proof::{Statement, Proof, Verifier, VerifierConfig, VerifierCapabilities};
+  |                    ^^^^^^^^^  ^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::proof::verifier::VerificationGuarantee`
+ --> nexuszero-crypto\src\proof\hardware_acceleration.rs:7:5
+  |
+7 | use crate::proof::verifier::VerificationGuarantee;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `CryptoError` and `CryptoResult`
+ --> nexuszero-crypto\src\proof\hardware_acceleration.rs:8:13
+  |
+8 | use crate::{CryptoError, CryptoResult};
+  |             ^^^^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `async_trait::async_trait`
+ --> nexuszero-crypto\src\proof\hardware_acceleration.rs:9:5
+  |
+9 | use async_trait::async_trait;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> nexuszero-crypto\src\proof\hardware_acceleration.rs:10:5
+   |
+10 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `async_trait::async_trait`
+ --> nexuszero-crypto\src\proof\performance_optimization.rs:8:5
+  |
+8 | use async_trait::async_trait;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::sync::Arc`
+  --> nexuszero-crypto\src\side_channel.rs:35:5
+   |
+35 | use std::sync::Arc;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `std::thread`
+  --> nexuszero-crypto\src\side_channel.rs:36:5
+   |
+36 | use std::thread;
+   |     ^^^^^^^^^^^
+
+warning: unused imports: `AtomicBool` and `Ordering`
+  --> nexuszero-crypto\src\side_channel.rs:37:25
+   |
+37 | use std::sync::atomic::{AtomicBool, Ordering};
+   |                         ^^^^^^^^^^  ^^^^^^^^
+
+warning: unused import: `num_bigint::BigUint`
+  --> nexuszero-crypto\src\side_channel.rs:38:5
+   |
+38 | use num_bigint::BigUint;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Rng`
+  --> nexuszero-crypto\src\side_channel.rs:39:12
+   |
+39 | use rand::{Rng, RngCore};
+   |            ^^^
+
+warning: unused imports: `CryptoError` and `LatticeParameters`
+  --> nexuszero-crypto\src\benchmark.rs:39:13
+   |
+39 | use crate::{CryptoError, CryptoResult, LatticeParameters};
+   |             ^^^^^^^^^^^                ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::lattice::RingLWEParameters`
+  --> nexuszero-crypto\src\benchmark.rs:40:5
+   |
+40 | use crate::lattice::RingLWEParameters;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ring_lwe::RingLWEParameters`
+   --> nexuszero-crypto\src\test_vectors.rs:2:63
+    |
+2   |     lattice::{lwe::{LWEParameters, keygen, encrypt, decrypt}, ring_lwe::RingLWEParameters},
+    |                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+   --> nexuszero-crypto\src\lib.rs:248:1
+    |
+248 | pub mod test_vectors;
+    | ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+   --> nexuszero-crypto\src\test_vectors.rs:10:5
+    |
+10  | use std::collections::HashMap;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+   --> nexuszero-crypto\src\lib.rs:248:1
+    |
+248 | pub mod test_vectors;
+    | ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused doc comment
+   --> nexuszero-crypto\src\utils\math.rs:179:1
+    |
+179 | /// Global cache for Montgomery contexts to avoid recomputation
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+    = note: `#[warn(unused_doc_comments)]` on by default
+
+warning: unused import: `BigInt`
+ --> nexuszero-crypto\src\utils\math.rs:6:18
+  |
+6 | use num_bigint::{BigInt, BigUint};
+  |                  ^^^^^^
+
+warning: unused import: `BigInt`
+ --> nexuszero-crypto\src\utils\gpu_math.rs:8:27
+  |
+8 | use num_bigint::{BigUint, BigInt};
+  |                           ^^^^^^
+
+warning: unused import: `std::sync::Arc`
+ --> nexuszero-crypto\src\utils\gpu_math.rs:9:5
+  |
+9 | use std::sync::Arc;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused variable: `description`
+   --> nexuszero-crypto\src\proof\plugins\groth16.rs:102:37
+    |
+102 |             StatementType::Custom { description } => {
+    |                                     ^^^^^^^^^^^ help: try ignoring the field: `description: _`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `description`
+   --> nexuszero-crypto\src\proof\plugins\plonk.rs:103:37
+    |
+103 |             StatementType::Custom { description } => {
+    |                                     ^^^^^^^^^^^ help: try ignoring the field: `description: _`
+
+warning: unused variable: `idx`
+   --> nexuszero-crypto\src\proof\performance_optimization.rs:250:18
+    |
+250 |             for (idx, (uncached_idx, result)) in uncached_indices.iter().zip(uncached_results.iter()).enumerate() {
+    |                  ^^^ help: if this is intentional, prefix it with an underscore: `_idx`
+
+warning: unused variable: `statement`
+   --> nexuszero-crypto\src\proof\performance_optimization.rs:392:42
+    |
+392 |     async fn select_best_strategy(&self, statement: &Statement, witness: &Witness) -> CryptoResult<String> {
+    |                                          ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_statement`
+
+warning: unused variable: `witness`
+   --> nexuszero-crypto\src\proof\performance_optimization.rs:392:65
+    |
+392 |     async fn select_best_strategy(&self, statement: &Statement, witness: &Witness) -> CryptoResult<String> {
+    |                                                                 ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_witness`
+
+warning: unused variable: `operation_results`
+   --> nexuszero-crypto\src\benchmark.rs:273:17
+    |
+273 |         let mut operation_results: HashMap<String, PerformanceMetrics> = HashMap::new();
+    |                 ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_operation_results`
+
+warning: variable does not need to be mutable
+   --> nexuszero-crypto\src\benchmark.rs:273:13
+    |
+273 |         let mut operation_results: HashMap<String, PerformanceMetrics> = HashMap::new();
+    |             ----^^^^^^^^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: unused import: `Hash`
+   --> nexuszero-crypto\src\proof\performance_optimization.rs:310:25
+    |
+310 |         use std::hash::{Hash, Hasher};
+    |                         ^^^^
+
+warning: unused variable: `modulus_minus_one`
+   --> nexuszero-crypto\src\proof\bulletproofs.rs:288:9
+    |
+288 |     let modulus_minus_one = modulus - BigUint::from(1u32);
+    |         ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_modulus_minus_one`
+
+warning: unused variable: `config`
+   --> nexuszero-crypto\src\proof\proof.rs:179:69
+    |
+179 |     async fn prove(&self, statement: &Statement, witness: &Witness, config: &ProverConfig) -> CryptoResult<Proof> { 
+    |                                                                     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+
+warning: unused variable: `config`
+   --> nexuszero-crypto\src\proof\proof.rs:183:82
+    |
+183 |     async fn prove_batch(&self, statements: &[Statement], witnesses: &[Witness], config: &ProverConfig) -> CryptoResult<Vec<Proof>> { 
+    |                                                                                  ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+
+warning: unused variable: `config`
+   --> nexuszero-crypto\src\proof\proof.rs:219:66
+    |
+219 |     async fn verify(&self, statement: &Statement, proof: &Proof, config: &VerifierConfig) -> CryptoResult<bool> {
+    |                                                                  ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+
+warning: unused variable: `config`
+   --> nexuszero-crypto\src\proof\proof.rs:223:78
+    |
+223 |     async fn verify_batch(&self, statements: &[Statement], proofs: &[Proof], config: &VerifierConfig) -> CryptoResult<Vec<bool>> {
+    |                                                                              ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+
+warning: unused variable: `sk`
+   --> nexuszero-crypto\src\benchmark.rs:418:26
+    |
+418 |                     let (sk, pk) = lwe::keygen(&params, &mut rng).unwrap();
+    |                          ^^ help: if this is intentional, prefix it with an underscore: `_sk`
+
+warning: function `mod_pow` is never used
+   --> nexuszero-crypto\src\lattice\ring_lwe.rs:683:4
+    |
+683 | fn mod_pow(base: u64, exp: u64, modulus: u64) -> u64 {
+    |    ^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: field `enabled` is never read
+   --> nexuszero-crypto\src\metrics\zk_metrics.rs:411:5
+    |
+409 | pub struct ZkMetrics {
+    |            --------- field in this struct
+410 |     /// Whether metrics are enabled
+411 |     enabled: bool,
+    |     ^^^^^^^
+
+warning: field `security_level` is never read
+   --> nexuszero-crypto\src\metrics\zk_metrics.rs:708:5
+    |
+705 | pub struct ProofGenerationGuard {
+    |            -------------------- field in this struct
+...
+708 |     security_level: SecurityLevel,
+    |     ^^^^^^^^^^^^^^
+
+warning: method `update_entry_counts` is never used
+   --> nexuszero-crypto\src\proof\witness_manager.rs:263:14
+    |
+194 | impl DefaultWitnessManager {
+    | -------------------------- method in this implementation
+...
+263 |     async fn update_entry_counts(&self) {
+    |              ^^^^^^^^^^^^^^^^^^^
+
+warning: fields `nodes` and `threshold` are never read
+   --> nexuszero-crypto\src\proof\verifier.rs:189:5
+    |
+188 | pub struct DistributedVerifier {
+    |            ------------------- fields in this struct
+189 |     nodes: Vec<String>, // Node endpoints
+    |     ^^^^^
+190 |     threshold: usize,   // Minimum nodes that must agree
+    |     ^^^^^^^^^
+
+warning: field `error_rate` is never read
+   --> nexuszero-crypto\src\proof\verifier.rs:230:5
+    |
+229 | pub struct ProbabilisticVerifier {
+    |            --------------------- field in this struct
+230 |     error_rate: f64, // Acceptable false positive/negative rate
+    |     ^^^^^^^^^^
+
+warning: method `send_verification_request` is never used
+   --> nexuszero-crypto\src\proof\distributed_verification.rs:195:14
+    |
+92  | impl DistributedVerifier {
+    | ------------------------ method in this implementation
+...
+195 |     async fn send_verification_request(
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `config` is never read
+   --> nexuszero-crypto\src\side_channel.rs:343:5
+    |
+342 | pub struct MemoryAccessAnalyzer {
+    |            -------------------- field in this struct
+343 |     config: SideChannelConfig,
+    |     ^^^^^^
+
+warning: field `config` is never read
+   --> nexuszero-crypto\src\side_channel.rs:459:5
+    |
+458 | pub struct PowerAnalyzer {
+    |            ------------- field in this struct
+459 |     config: SideChannelConfig,
+    |     ^^^^^^
+
+warning: `nexuszero-crypto` (lib) generated 45 warnings (run `cargo fix --lib -p nexuszero-crypto` to apply 21 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 37.20s

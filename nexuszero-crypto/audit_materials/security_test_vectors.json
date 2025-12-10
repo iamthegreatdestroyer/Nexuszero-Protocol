@@ -1,0 +1,600 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "generated_at": "2025-12-07T16:14:55.422817100+00:00",
+    "security_level": "128-bit",
+    "seed": "bb8cfbacc94628a13a2a3b90e8970e6dad443d45cb650469fa4552a5150ad6a5"
+  },
+  "lwe_vectors": {
+    "keygen_tests": [
+      {
+        "test_id": "lwe_keygen_0",
+        "seed": "e6039c493fc6e1c91dbd46d20cdacc490090d651c841055d11b4e08e5cbaa11d",
+        "public_key_hash": "21e8ca6d2d92127a019c014c68a72dbac14b7f35c4e2dfa5f780a2c8c1e723a3",
+        "secret_key_hash": "15f78483ef885008295776e2750af425e4d9303bec4821af609a878c255c947b"
+      },
+      {
+        "test_id": "lwe_keygen_1",
+        "seed": "bc0855b257321af21b609a5b5fe3dbc4f48732d49b7b4969e639bd51102811dc",
+        "public_key_hash": "e9e43566dace9fcde401a400e4a659cd099d8d20fb0c01302fbe547baacfb267",
+        "secret_key_hash": "76de79fe9931b1a746810e988e99f5a054f7bfaa9f7827188027785320ce1555"
+      },
+      {
+        "test_id": "lwe_keygen_2",
+        "seed": "1489338838160a1bde1f165d65f78f1aeba34cfff648b5eee6c38fcbc62ce1d2",
+        "public_key_hash": "9c605d5ff33712ad09dd47c41b9b01e2a01c59b1a019a38e19967786c6df3625",
+        "secret_key_hash": "74df9cfa9299c885ca558ac0df46394afe0472bf77b6922a8f2bb5aa81d67307"
+      },
+      {
+        "test_id": "lwe_keygen_3",
+        "seed": "60ce9a88ccc871d32a14331dd7d771ab69818fe7812e45130c1be48219086c5f",
+        "public_key_hash": "c645564e9fd37fbd87987dddf0820cdffda16bc62ed7ddf01d07752a4c2df8bf",
+        "secret_key_hash": "45bd6e96e0616c4789c6a274c2bec628fc8d8a16b74bcf3de032882ddb1d0c65"
+      },
+      {
+        "test_id": "lwe_keygen_4",
+        "seed": "5666edd94f214052f1e2834b8961f5f4688ab1c53aeb6432cfbbce36534270be",
+        "public_key_hash": "77052be4aa33c019e634fed8818edb63179a915ab48fbe38f62d36c392d3a099",
+        "secret_key_hash": "e87893a1a3f5c409ba18ed23e4fff07a344d444b87174cea504b93d43cdcf24c"
+      },
+      {
+        "test_id": "lwe_keygen_5",
+        "seed": "fbcedfff25a9ccccb277f87d6c66a1859d43764df9cbfd0ca093759363af6958",
+        "public_key_hash": "1528c6a9257dd7349e61b51feacd5208c440a840cb2e02d0b67ef10f1056abfa",
+        "secret_key_hash": "7a39f312e0fecbdf0fc9879b36c43e79ee34d8e1d9892deef6ba3147e528e83a"
+      },
+      {
+        "test_id": "lwe_keygen_6",
+        "seed": "db64cf9f788dee6562ecdbb3eab67a37669265d27e9bf18d3031ee24bcb697cc",
+        "public_key_hash": "8df5482ad11aab31a7e45055546e3af546c39b5a0cd702aa6e21196f3b33ef11",
+        "secret_key_hash": "4fe93c99fa774afa2c3ae0c895bb1ca8dcd709ab4926d354edabbcd9d065734e"
+      },
+      {
+        "test_id": "lwe_keygen_7",
+        "seed": "e07a6a11081ff0e3ab4f00e411e00f6bdb41fcb29224fb872e2a5dc078ccfb33",
+        "public_key_hash": "8edea649c7450f62f5e33e07217b318889a9f8e311163d873b892ae45e2b34c9",
+        "secret_key_hash": "51facb3a12d0deb4012a267f50c90ec93c91f7f806c97e29b5867ebd9d1c2e79"
+      },
+      {
+        "test_id": "lwe_keygen_8",
+        "seed": "9ed4ad49fb88253c48de5f3cea024c7ac7b4d9a33de1f122f6540f02dc0d09ca",
+        "public_key_hash": "959c83489acb02a49e2334f563a5a79fc872c782df18286a9550610d2fee66d6",
+        "secret_key_hash": "2d1af40f7a34574a87584a9e93b4deab8e0487569a28706bfc8c01bca301506b"
+      },
+      {
+        "test_id": "lwe_keygen_9",
+        "seed": "7100ad703de056aebcc68ebdcb019491b8eaaebfb5e7c45ea5ab8f4adda09446",
+        "public_key_hash": "e364f2c6cc534d1f98853eedfdb76a87d98cdd3a81c6a30923c72752329c922b",
+        "secret_key_hash": "f6363975b7df184a5ab2ad423f1eca0212d0a3feba3a435215fb70b82f3b6edf"
+      }
+    ],
+    "encrypt_decrypt_tests": [
+      {
+        "test_id": "lwe_encrypt_decrypt_0",
+        "message": false,
+        "ciphertext_hash": "923b23cd853450a6e7079ffd74c97564570c243c694ae20dbf558fb3ecfb7e35",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_1",
+        "message": false,
+        "ciphertext_hash": "34883a924495e513db46529e35859cb2f070c3f97686a9a011dd8e295a9a1a16",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_2",
+        "message": false,
+        "ciphertext_hash": "4f20f21969a00ab7546e35b781940bff6f8b67139533e7301809f832cb60637d",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_3",
+        "message": true,
+        "ciphertext_hash": "826c804b3ba3fde6d8fa014334871dcc60fa58e01e443acbc07aa65341eba639",
+        "decrypted_message": true,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_4",
+        "message": false,
+        "ciphertext_hash": "b2afcb51b513073c5a97c50865e875f5f15102da09b51cadfbd46b92f5cb9b33",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_5",
+        "message": false,
+        "ciphertext_hash": "47900de781d42e877d937070f4850b03656083be238972b3f990f8f896d40ee1",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_6",
+        "message": true,
+        "ciphertext_hash": "a8820d5705c245dc9c6f4c062296f499ad5ae50a0331cad9c90dd1b3908fc0d2",
+        "decrypted_message": true,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_7",
+        "message": false,
+        "ciphertext_hash": "c8c7923cc2b3375f43dd0c89b15423e82428c3afa7fa7c215c4e4aaeda5e4675",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_8",
+        "message": false,
+        "ciphertext_hash": "a12332c2983bfe6f69a0cbca02eeaa4bd4cc600beca70d4f25a91030304537b5",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_9",
+        "message": true,
+        "ciphertext_hash": "2682abbd0f5d0daed7822f92a1c74f03546267f0a14d5e1da170b0003f33dc60",
+        "decrypted_message": true,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_10",
+        "message": true,
+        "ciphertext_hash": "3ff7b57fe59c7dbd8c8eec513e891339cf246ce0c853ec11ce0d051446a4dd37",
+        "decrypted_message": true,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_11",
+        "message": false,
+        "ciphertext_hash": "b34f3c59c8e924abc82254df471f6e044981409a3b76b42ca61f37fa68b7b432",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_12",
+        "message": false,
+        "ciphertext_hash": "46e929958a738907624eb33303cae66048a9e7601667d17e82c85c380c42db74",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_13",
+        "message": false,
+        "ciphertext_hash": "4be0fa90ff378fbc69fd183a22cbb4c27f0e11f4fec2aa5e188672e8b6d52748",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_14",
+        "message": false,
+        "ciphertext_hash": "be44e349650301f60f77d4378e69187cda774ead726af0c9434b25dc87bffce5",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_15",
+        "message": false,
+        "ciphertext_hash": "bd9ae33c247e92506c08586af705e54cb7c9ea6d53ff44d910d097c697f188a5",
+        "decrypted_message": false,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_16",
+        "message": true,
+        "ciphertext_hash": "f47cd0990cd37a1b478cfcd21a0b0ecdd4dedcd04d75d18462947c9432f0ea77",
+        "decrypted_message": true,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_17",
+        "message": true,
+        "ciphertext_hash": "348a957126e368e084772acd057efcb5d9a8ae639044f09ef7a15af045383466",
+        "decrypted_message": true,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_18",
+        "message": true,
+        "ciphertext_hash": "bc17a167a6d8c1835079836c24d38d2e8ce7358dbd8ca16e27b403798cb93635",
+        "decrypted_message": true,
+        "success": true
+      },
+      {
+        "test_id": "lwe_encrypt_decrypt_19",
+        "message": false,
+        "ciphertext_hash": "fed1918139047ab75f97a73322d264a0f5c1aa56fe218bf7adbbf80305e18973",
+        "decrypted_message": false,
+        "success": true
+      }
+    ],
+    "soundness_tests": [
+      {
+        "test_id": "lwe_soundness_0",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_1",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_2",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_3",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_4",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_5",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_6",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_7",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_8",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      },
+      {
+        "test_id": "lwe_soundness_9",
+        "wrong_key_used": true,
+        "decryption_success": true,
+        "expected_failure": true
+      }
+    ]
+  },
+  "bulletproof_vectors": {
+    "valid_range_proofs": [
+      {
+        "test_id": "bulletproof_valid_0",
+        "value": 432555457,
+        "blinding_hex": "e556ca28520c876d2c865734287ed3e7073f081b2fe2da8b7fd2e9286849ffa3",
+        "proof_size_bytes": 8707,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_1",
+        "value": 2481479218,
+        "blinding_hex": "c2f5b0b4857f914aec067f6745087fbc337071e9732565f5bf9d55437b3e4e51",
+        "proof_size_bytes": 8744,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_2",
+        "value": 3062845239,
+        "blinding_hex": "9aaabaa537b02a85db4764ed344471e86d6200f437c48e68e7ae60c5db88d658",
+        "proof_size_bytes": 8746,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_3",
+        "value": 1816219275,
+        "blinding_hex": "f476ad010bfaf368f0d0a69cc6c6a06367da9d2b777af817dcadb238e80ae6f7",
+        "proof_size_bytes": 8756,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_4",
+        "value": 4021210754,
+        "blinding_hex": "5b93f7c64d23b882183f6d9df98408b6b2d9cbbaedaf3fa7753cba6707ac81a6",
+        "proof_size_bytes": 8742,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_5",
+        "value": 3931547155,
+        "blinding_hex": "55b5f863ddfe26a0c63a568c23c1f1f6b29d3f870aff53f9f038331cd07dc8f0",
+        "proof_size_bytes": 8788,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_6",
+        "value": 3462903902,
+        "blinding_hex": "929a7fc0862dc4722df21be52e5ca0ad65eb92fd6c1084f20bbd32cd04a1167c",
+        "proof_size_bytes": 8745,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_7",
+        "value": 2006739627,
+        "blinding_hex": "bc0d3737e15d8a68a4231dcae82877a5b210277464461acfa78301618412b07e",
+        "proof_size_bytes": 8688,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_8",
+        "value": 2691152591,
+        "blinding_hex": "f19ade34abf4cbbd2783837794dbdbf3496553e38e62e76835e0b6c8c2ea21b9",
+        "proof_size_bytes": 8753,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_9",
+        "value": 1183249439,
+        "blinding_hex": "88a210c3ac71eb277fe8c0adb9a6aa00c9075e5da048d6b241e71bc0d98f9e93",
+        "proof_size_bytes": 8761,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_10",
+        "value": 1938733863,
+        "blinding_hex": "a8579c9392748dc4ad4dafc0f963bbdf39f4a2a5662419ce6676030f2e32d040",
+        "proof_size_bytes": 8718,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_11",
+        "value": 2084905063,
+        "blinding_hex": "48fc18aaf0b9c70bf8ae9fb4134624f6e82f944f1eee5aacebafc9a9434ca377",
+        "proof_size_bytes": 8774,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_12",
+        "value": 210248798,
+        "blinding_hex": "3815bd6fe8c6f3801cab0c9423bc9ba12968a22b2337b2bc7c450b7367c63015",
+        "proof_size_bytes": 8718,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_13",
+        "value": 2527813055,
+        "blinding_hex": "2e73bd065bcb91c7e546731b65025c2e1ade552f66042bda9389902e02fed859",
+        "proof_size_bytes": 8708,
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_valid_14",
+        "value": 3584670160,
+        "blinding_hex": "e072b23d0f4b8bdd9908435367867c518436adf76626eda6956729b73bf0193b",
+        "proof_size_bytes": 8740,
+        "verification_result": true
+      }
+    ],
+    "invalid_range_proofs": [
+      {
+        "test_id": "bulletproof_invalid_0",
+        "invalid_value": 8589934592,
+        "reason": "Value exceeds maximum range",
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_invalid_1",
+        "invalid_value": 18446744073709551615,
+        "reason": "Maximum u64 value",
+        "verification_result": true
+      }
+    ],
+    "edge_case_proofs": [
+      {
+        "test_id": "bulletproof_edge_0",
+        "value": 0,
+        "description": "Zero value",
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_edge_1",
+        "value": 1,
+        "description": "Minimum positive value",
+        "verification_result": true
+      },
+      {
+        "test_id": "bulletproof_edge_2",
+        "value": 4294967295,
+        "description": "Maximum valid value",
+        "verification_result": true
+      }
+    ]
+  },
+  "schnorr_vectors": {
+    "valid_proofs": [],
+    "invalid_proofs": [],
+    "soundness_tests": []
+  },
+  "hash_vectors": {
+    "sha256_tests": [
+      {
+        "test_id": "hash_sha256_0",
+        "input_hex": "ea090ecda844ae924e6aa528303392e8a675f0ab",
+        "output_hex": "6464dff76abdedc1acfdf7ba3733e2c38ba936b6191750c021470a61f883e572"
+      },
+      {
+        "test_id": "hash_sha256_1",
+        "input_hex": "f6b7dccc7509d48dc689ba40e364fcfd88481b9349330b5f521724fc3e3736b10d362c8f57b41f6adc87fc851af7c2f2bafd255abcb67abf5fc5f3ad34295d4b766b2f29",
+        "output_hex": "93c1113566dd305184647cfa8b3aec0c6567b3d9168c9d67b135a791034a1087"
+      },
+      {
+        "test_id": "hash_sha256_2",
+        "input_hex": "1e6374178d363fd0fbd2086abc0cda6eb2601372b7572cb4350df9b413a170eb97d4b4ebf1cdf0b0eeca",
+        "output_hex": "ee3d353b5faf74a1ab553ddd147d7fb8329f9c5295362f012680da42c6ff6dff"
+      },
+      {
+        "test_id": "hash_sha256_3",
+        "input_hex": "f25b56954b2a58b334d5f01f4eb99272f96c330978f96306f57ac5ea0765c90b73c9411ef33b4bd5b539a5fcf2a74a88b39dbe464f95e56585e4a50050d0f9cc1fd943682a1e20867d1faea49c7d107e344d66d364d484910c3ab3adbad1ba69",
+        "output_hex": "4f052f0938a59ad0eed2e7f3ef754da92959d875b620301ab5800678feab773a"
+      },
+      {
+        "test_id": "hash_sha256_4",
+        "input_hex": "e3c2621ec680a55db35d5e2c6e6046d2fb40bdb5ab5680d170dfd7dcc75447",
+        "output_hex": "1160a6b6a001c9228064499c8c8635a74f08e0b27156b04bf8ba33c05127b0e1"
+      },
+      {
+        "test_id": "hash_sha256_5",
+        "input_hex": "b33d41d6c88fda3def03dab25c96585b8eb88d4f4c96f1c49b65069357af7939e9cbb961380f51a808c1082d6ae5ebad0b9a5e0d9718f778d96fe9fba7cd9ae202a9e1050882d70b313feb63d8785ea25235c2a63e10658a8301567955",
+        "output_hex": "1bbe5fc54f381dffe58448e22e2fb1b4c8f6c282f5d7e352d2bab3d8767a8dd6"
+      },
+      {
+        "test_id": "hash_sha256_6",
+        "input_hex": "13ce4e81643b61963caa2aae7a343b23ec8475c7af5a63d183c9be4785530dc1a25684618264fb9a8e8a391ff25dce76095b49e506ece7d569fa3fde",
+        "output_hex": "e0f83674c8d31a0461cfb43c03c532adc58df9295f78cd5ad51e8b458422b7d5"
+      },
+      {
+        "test_id": "hash_sha256_7",
+        "input_hex": "19a8264a",
+        "output_hex": "cb9ba73dab373297dd28fba765f700670c35884445296cf2c38f65f68f2d1530"
+      },
+      {
+        "test_id": "hash_sha256_8",
+        "input_hex": "f79b5e7d128b7ec3d42665d5c481a6a76b815fcc57102a2652919911cbee24fd4808a463ee63f8516b",
+        "output_hex": "12edb74e97bc1c9665611898aec14b4a03248d4113ffd276d62a2d0f4f25d03f"
+      },
+      {
+        "test_id": "hash_sha256_9",
+        "input_hex": "020c221621f1da4dee3b3f7a0f38ef346976ac93e7c14fa2f4f6336ad38a0af9579aec4d18edd1dc76214c970c9f32a5abd677828f6c192f477c",
+        "output_hex": "eb0aa184805194cd2d99d8421fd99dc0d6e726934aa8ff8a3d70deb3ca5c4d0e"
+      },
+      {
+        "test_id": "hash_sha256_10",
+        "input_hex": "6a9e8979bc3d046332c368e5c693d1a5c42e046f9ba6998f015275abe35ba2b908237b5e12700e17a5ce524e0a4fb1f2b9bdcfa0c5f6b8fd3c12fa9875ddd9974618e766d8d0",
+        "output_hex": "de3576e2c3e314532916f5545da3f84da8f3994e0bc691a18d783738e8ab6399"
+      },
+      {
+        "test_id": "hash_sha256_11",
+        "input_hex": "b15f1febc680b9f28aea6bb9ebd79d1b",
+        "output_hex": "ada2f5e2256022e069b8e07ad26315e830878f835b92a380b4ff83440c83610a"
+      },
+      {
+        "test_id": "hash_sha256_12",
+        "input_hex": "467b3c2cc3d9429f3d4470f6057edab4223ae5514a9969a3fc4b7b2d7a3de20ae907139d1edbbc55357ebce13c3517",
+        "output_hex": "579f8f0d478f5c8c6c9f6893237d96cb777a626186420bc35b1c73cd9294bb42"
+      },
+      {
+        "test_id": "hash_sha256_13",
+        "input_hex": "16216bcb74f97b87b7fb91bbdb1d3ae8f7ed1ae5b3a6b70f9f7e8ff25de6873316b3659677ef7e7ce67e7e9a2f246305dcc7a05c4715536aad952ff349d5375d0e59f2520c7468e080f29e869fff",
+        "output_hex": "cb7792e648ce198ce13117760b32c5c1a03ad925b8cd04ee2213810f35f1787f"
+      },
+      {
+        "test_id": "hash_sha256_14",
+        "input_hex": "3d4862721da20960bf17b03d11c2eaf3638aa60fdce213551343433af47890176a3dceaf59361d39",
+        "output_hex": "e81e4e7765d4c88df00e368c1a2392735d9f52fd519aff315197a6c945260a6b"
+      },
+      {
+        "test_id": "hash_sha256_15",
+        "input_hex": "d890991ea8519f87392bf4645dc2c8b548fe3d1a78cd943634df4bd754c934dade5fc5b9bdab051f74e424093b39e2323c1222cf161069c703644262e1995bf666d75f0927422414660777a3f03e51727c6dcbf7",
+        "output_hex": "cf2664033c9eb36bfe28636f091b46b8a3066d8f0c60cf546248d7d91e908e72"
+      },
+      {
+        "test_id": "hash_sha256_16",
+        "input_hex": "384eebb546eafef9c2ff7f79ab065735d2602ab4341e3516a099f02f865980bb257a29d7ab2ce128318e93b158d119d2aec47d91c1e6c9c0965874bf0c5c6a",
+        "output_hex": "404047a227573f96d41adf8b79fcf1d4ab121bf0ec183cf88d39879d5fdb24eb"
+      },
+      {
+        "test_id": "hash_sha256_17",
+        "input_hex": "b1",
+        "output_hex": "a6124adec80e7954c0bd1293f8ed316cb360a920936a1a20cb07d180f2a34d12"
+      },
+      {
+        "test_id": "hash_sha256_18",
+        "input_hex": "8433697467d901cacf76a3804552401b23264a008ce062bc23c953b3e631279c25001fa9c79b882515b310034e2701272edc516ed1ffea88181a9e222de846db93a4c2c08ef98bf887c3e179e7baebd4895b70a57a72bfa977cf3aafdeb14ccf",
+        "output_hex": "640b64cfe5031d85de5b752c5e8b9806cc354232182744541d47c5ce584eaf5f"
+      },
+      {
+        "test_id": "hash_sha256_19",
+        "input_hex": "a483cdb5adf01d13dea40f7033bae3f451de7626a2d432",
+        "output_hex": "983d940d4366c915a97302e84b89528e74e07d0faa0729fe361c719cbac071e8"
+      }
+    ],
+    "consistency_tests": [
+      {
+        "test_id": "hash_consistency_0",
+        "input_hex": "fbb409fa9512635b65148f6c8a9bb59b9282bf13d1b7ec646326dd17bc226d5cd59c6a272d5ea24c103611a811eec0fb9236efbf2592b4c603b45d3a535b995bc24298ef3a6b33a1736bd5",
+        "hash1_hex": "56cd38ac70bf4e27fed331a535eaadae2257609ff7d83da81be861e9629ab50c",
+        "hash2_hex": "56cd38ac70bf4e27fed331a535eaadae2257609ff7d83da81be861e9629ab50c",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_1",
+        "input_hex": "5514bcf19321ffaf79c72ae46cc92c",
+        "hash1_hex": "87ea608098a2fb0b35f8d38adae2982a8ddd1b491ad07424b8a1ba758f53c7ab",
+        "hash2_hex": "87ea608098a2fb0b35f8d38adae2982a8ddd1b491ad07424b8a1ba758f53c7ab",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_2",
+        "input_hex": "77c5daec64c505ebe9e967465300fc6005513154ea1eaf0bb78697f76f9f37678966869d9d54a872c73d08152abc0cc5c3ed7bfa2a74a162d25ca4ec41beb48c2d1cec81187313fc8f9edd939c971334d8de0391eb6280de",
+        "hash1_hex": "4ce59522e8d87c97dcc1e5d52e3c980ca3bcfd509746337dd8b4684c262096bc",
+        "hash2_hex": "4ce59522e8d87c97dcc1e5d52e3c980ca3bcfd509746337dd8b4684c262096bc",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_3",
+        "input_hex": "3822ae3f55ed75f9d05d8b3b7ec35a8314d8c520227b50b91e6f340ba8734478c93eb331e8777c0df5e75332a3c7c1acf95ca5bf5f56",
+        "hash1_hex": "276158946f101f851422783efd1d38b5f3738f5affbe5053a6bbc18a2176f2f6",
+        "hash2_hex": "276158946f101f851422783efd1d38b5f3738f5affbe5053a6bbc18a2176f2f6",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_4",
+        "input_hex": "d0ae8016b118e918f595f3085a95f1fc12b7d3a0bf26ecd4f5a7c5bc8e50c1f1b3fe0d5a6db48937b3a17a7cba657dcc9313b3e97d156a9187bcc59a117436f4bb45e8c24bc447ed9404f4e8cb472352b79c90cf94381716955c137183d57d",
+        "hash1_hex": "073c4578eea37b73420b60a4026a18ad3e1013be3eea6cfdab9288dde77b51e3",
+        "hash2_hex": "073c4578eea37b73420b60a4026a18ad3e1013be3eea6cfdab9288dde77b51e3",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_5",
+        "input_hex": "bbc8be3a4a94b00ac3841229cca6016124c4434967",
+        "hash1_hex": "83db80fc1e48c26c979ea3cd1274404c735b3e94b8b89ab4a14d35689e42a0f3",
+        "hash2_hex": "83db80fc1e48c26c979ea3cd1274404c735b3e94b8b89ab4a14d35689e42a0f3",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_6",
+        "input_hex": "453af7870ea543cf70ee8a670556f189d4611d22acef140ff716aa6c61e9d12e3744053c412d7db6ded989146d429f36408cbc6cbc6289c366b8c196a15932a0ebcb1a05f711451d41a3831f271ec7448841bf07ddaf",
+        "hash1_hex": "44a77ae0e53f5fbd2020f66d68905e904886d6493eac07d6705baf2054389513",
+        "hash2_hex": "44a77ae0e53f5fbd2020f66d68905e904886d6493eac07d6705baf2054389513",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_7",
+        "input_hex": "5083d92fb751df53a44cfc74b9d424b5ceef550db3d1f17d0ddd9e769dd4e36c1c13615a73cdf1724b",
+        "hash1_hex": "a280c5a5a644770a36700ff36e4239046bdfa551851415b6c86eb8f4d0517b85",
+        "hash2_hex": "a280c5a5a644770a36700ff36e4239046bdfa551851415b6c86eb8f4d0517b85",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_8",
+        "input_hex": "29ed7174dbf6b85ce28235b51f8da9a839d7829562be668c94943a7f06b37ee05eac4d5f279802e8ea9784c0967f",
+        "hash1_hex": "0c7f0df003efdc68700b7da8486a9bbf075d8f45ba2bb265041771cde52008af",
+        "hash2_hex": "0c7f0df003efdc68700b7da8486a9bbf075d8f45ba2bb265041771cde52008af",
+        "consistent": true
+      },
+      {
+        "test_id": "hash_consistency_9",
+        "input_hex": "51d6fe946000b1430d2d68c08c2c9208cc365573fb2c2664b9df82bc3beadc5ef31385c52d818c12446df4b390b56d6a116a1a5dbccd8123e127033076ef57635509b59042b4b1b248a8c2e5e4e7554d540d8c0876cbc9",
+        "hash1_hex": "7ae8811fb57d3b1908f752bc9f18a0efa0cd07f0d48a673878014f13b8bc009f",
+        "hash2_hex": "7ae8811fb57d3b1908f752bc9f18a0efa0cd07f0d48a673878014f13b8bc009f",
+        "consistent": true
+      }
+    ]
+  }
+}
