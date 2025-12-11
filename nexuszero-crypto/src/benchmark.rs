@@ -15,20 +15,23 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,no_run
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! use nexuszero_crypto::benchmark::{PerformanceBenchmarker, BenchmarkConfig};
 //!
 //! let mut benchmarker = PerformanceBenchmarker::new();
 //! let config = BenchmarkConfig::default();
 //!
 //! // Run comprehensive benchmarks
-//! let results = benchmarker.run_comprehensive_benchmarks(&config).await?;
+//! let results = benchmarker.run_comprehensive_benchmarks().await?;
 //!
 //! // Check for regressions
 //! if results.has_regressions() {
 //!     println!("Performance regressions detected!");
 //! }
-//! ```
+//! # Ok(())
+//! # }
+//! # example();
 
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

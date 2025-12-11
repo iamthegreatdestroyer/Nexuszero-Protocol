@@ -9,13 +9,14 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use nexuszero_crypto::metrics::error_tracking::{ZkErrorTracker, ErrorContext};
+//! use nexuszero_crypto::metrics::error_tracking::{ZkErrorTracker, ErrorContext, ZkErrorCategory, ErrorSeverity};
 //!
 //! let tracker = ZkErrorTracker::global();
 //!
 //! // Track an error with context
 //! tracker.track_error(
-//!     "proof_generation_failed",
+//!     ZkErrorCategory::ProofGeneration,
+//!     ErrorSeverity::Error,
 //!     ErrorContext::new()
 //!         .with_proof_type("schnorr")
 //!         .with_circuit_size(1024)

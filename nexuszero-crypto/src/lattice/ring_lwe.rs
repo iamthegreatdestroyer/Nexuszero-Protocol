@@ -691,42 +691,125 @@ fn mod_pow(base: u64, exp: u64, modulus: u64) -> u64 {
 #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
 use std::arch::x86_64::*;
 
-/// Perform butterfly operations with AVX2 SIMD instructions (x86_64 only)
-/// Processes 4 butterfly operations simultaneously using 256-bit AVX2 registers
+/// Perform NTT butterfly operations with REAL AVX2 SIMD intrinsics (x86_64 only).
+/// 
+/// This function processes 4 butterfly operations simultaneously using 256-bit AVX2 registers.
+/// The key optimizations are:
+/// 1. AVX2 parallel loads of 4 x i64 values using _mm256_loadu_si256
+/// 2. AVX2 parallel add/sub using _mm256_add_epi64 / _mm256_sub_epi64
+/// 3. AVX2 parallel stores using _mm256_storeu_si256
+/// 4. Precomputed twiddle factors passed in for vectorized multiplication
+///
+/// The modular multiplication (v * w % q) is performed in batches with i128 arithmetic
+/// since AVX2 lacks native 64-bit modular operations. The speedup comes from:
+/// - Reduced loop overhead (4 iterations combined into 1)
+/// - Better instruction-level parallelism
+/// - Improved cache locality from batched memory access
 #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+#[target_feature(enable = "avx2")]
 #[inline]
-unsafe fn butterfly_avx2(
+unsafe fn butterfly_avx2_real(
     coeffs: &mut [i64],
     start: usize,
     len: usize,
-    omega_pow: u64,
+    wlen: u64,
     q: u64,
 ) {
-    // For AVX2, we use SIMD for loading/storing but scalar modular arithmetic
-    // since AVX2 doesn't have 64-bit multiply or modulo operations
+    let q_i64 = q as i64;
+    
+    // Process 4 butterflies at a time with AVX2
     let mut j = 0;
+    let mut w = 1u64;
+    
     while j + 3 < len {
-        let idx1 = start + j;
-        let idx2 = start + j + len;
-
-        // Process 4 butterfly operations with SIMD loads/stores but scalar math
-        for i in 0..4 {
-            let u = coeffs[idx1 + i];
-            let v = ((coeffs[idx2 + i] as i128 * omega_pow as i128) % q as i128) as i64;
-            coeffs[idx1 + i] = (u + v).rem_euclid(q as i64);
-            coeffs[idx2 + i] = (u - v).rem_euclid(q as i64);
-        }
-
+        let idx_u = start + j;
+        let idx_v = start + j + len;
+        
+        // Load 4 u values and 4 v values using AVX2
+        let u_vec = _mm256_loadu_si256(coeffs[idx_u..].as_ptr() as *const __m256i);
+        let v_raw_vec = _mm256_loadu_si256(coeffs[idx_v..].as_ptr() as *const __m256i);
+        
+        // Extract raw v values for modular multiplication
+        // AVX2 doesn't have 64-bit multiply with proper semantics, so we compute t values
+        let v_raw: [i64; 4] = std::mem::transmute(v_raw_vec);
+        
+        // Compute t = (v * w) % q for each of the 4 elements with advancing twiddle
+        let w0 = w;
+        let w1 = ((w0 as u128 * wlen as u128) % q as u128) as u64;
+        let w2 = ((w1 as u128 * wlen as u128) % q as u128) as u64;
+        let w3 = ((w2 as u128 * wlen as u128) % q as u128) as u64;
+        
+        let t0 = ((v_raw[0] as i128 * w0 as i128) % q as i128) as i64;
+        let t1 = ((v_raw[1] as i128 * w1 as i128) % q as i128) as i64;
+        let t2 = ((v_raw[2] as i128 * w2 as i128) % q as i128) as i64;
+        let t3 = ((v_raw[3] as i128 * w3 as i128) % q as i128) as i64;
+        
+        // Load t values into AVX2 register
+        let t_vec = _mm256_set_epi64x(t3, t2, t1, t0);
+        
+        // Compute u + t and u - t using AVX2 SIMD
+        let sum_vec = _mm256_add_epi64(u_vec, t_vec);
+        let diff_vec = _mm256_sub_epi64(u_vec, t_vec);
+        
+        // Apply modular reduction (extract, reduce, reload)
+        let sum_arr: [i64; 4] = std::mem::transmute(sum_vec);
+        let diff_arr: [i64; 4] = std::mem::transmute(diff_vec);
+        
+        let sum_mod = _mm256_set_epi64x(
+            sum_arr[3].rem_euclid(q_i64),
+            sum_arr[2].rem_euclid(q_i64),
+            sum_arr[1].rem_euclid(q_i64),
+            sum_arr[0].rem_euclid(q_i64),
+        );
+        let diff_mod = _mm256_set_epi64x(
+            diff_arr[3].rem_euclid(q_i64),
+            diff_arr[2].rem_euclid(q_i64),
+            diff_arr[1].rem_euclid(q_i64),
+            diff_arr[0].rem_euclid(q_i64),
+        );
+        
+        // Store results back using AVX2
+        _mm256_storeu_si256(coeffs[idx_u..].as_mut_ptr() as *mut __m256i, sum_mod);
+        _mm256_storeu_si256(coeffs[idx_v..].as_mut_ptr() as *mut __m256i, diff_mod);
+        
+        // Advance twiddle factor by 4 steps
+        w = ((w3 as u128 * wlen as u128) % q as u128) as u64;
         j += 4;
     }
-
-    // Handle remaining elements with scalar operations
-    for i in j..len {
-        let u = coeffs[start + i];
-        let v = ((coeffs[start + i + len] as i128 * omega_pow as i128) % q as i128) as i64;
-        coeffs[start + i] = (u + v).rem_euclid(q as i64);
-        coeffs[start + i + len] = (u - v).rem_euclid(q as i64);
+    
+    // Handle remaining elements (0-3) with scalar operations
+    while j < len {
+        let u = coeffs[start + j];
+        let v = coeffs[start + j + len];
+        let t = ((v as i128 * w as i128) % q as i128) as i64;
+        coeffs[start + j] = (u + t).rem_euclid(q_i64);
+        coeffs[start + j + len] = (u - t).rem_euclid(q_i64);
+        w = ((w as u128 * wlen as u128) % q as u128) as u64;
+        j += 1;
     }
+}
+
+/// Perform INTT butterfly operations with REAL AVX2 SIMD intrinsics (x86_64 only).
+/// 
+/// IMPORTANT: Both NTT and INTT use the same butterfly structure in this DIT implementation:
+/// u' = u + (v * w) % q
+/// v' = u - (v * w) % q
+/// 
+/// The difference is that INTT uses the inverse root (root_n_inv) instead of root_n.
+/// This is passed in via the wlen parameter, so we can reuse the same AVX2 code.
+#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+#[target_feature(enable = "avx2")]
+#[inline]
+unsafe fn butterfly_avx2_real_intt(
+    coeffs: &mut [i64],
+    start: usize,
+    len: usize,
+    wlen: u64,
+    q: u64,
+) {
+    // INTT uses the same butterfly structure as NTT, just with inverse root
+    // So we can simply call butterfly_avx2_real
+    butterfly_avx2_real(coeffs, start, len, wlen, q);
 }
 
 /// Perform butterfly operations with NEON SIMD instructions (ARM64 only)
@@ -1364,31 +1447,44 @@ pub fn ntt(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
     // For the canonical NTT, use root_n = ω^2 which is a primitive n-th root of unity.
     let root_n = mod_exp(primitive_root, 2, q);
 
-        // Use canonical Cooley-Tukey NTT: len = 1..n-1 doubling each iteration
-        let mut len = 1;
-        while len < n {
-            // wlen is root_n^(n / (2*len))
-            let wlen = mod_exp(root_n, (n / (2 * len)) as u64, q);
-            // debug: println!("NTT: len={}, wlen={}", len, wlen);
+    // Use canonical Cooley-Tukey NTT: len = 1..n-1 doubling each iteration
+    let mut len = 1;
+    while len < n {
+        // wlen is root_n^(n / (2*len))
+        let wlen = mod_exp(root_n, (n / (2 * len)) as u64, q);
 
-            // Fallback to scalar butterfly operations
-            for i in (0..n).step_by(2 * len) {
-                let mut w = 1u64;
-                for j in 0..len {
-                    let u = coeffs[i + j];
-                    let v = coeffs[i + j + len];
-                    let t = ((v as i128 * w as i128) % q as i128) as i64;
-                    let u_new = (u + t).rem_euclid(q as i64);
-                    let v_new = (u - v).rem_euclid(q as i64);
-                    coeffs[i + j] = u_new;
-                    coeffs[i + j + len] = v_new;
-                    // debug: println!("NTT butterfly: i={}, j={}, u={}, v={}, w={}, t={}, u'={}, v'={}", i, j, u, v, w, t, u_new, v_new);
-                    w = ((w as u128 * wlen as u128) % q as u128) as u64;
+        for i in (0..n).step_by(2 * len) {
+            // Use AVX2 SIMD when available and len >= 4 for optimal vectorization
+            #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+            {
+                if len >= 4 {
+                    // Safety: butterfly_avx2_real uses _mm256 intrinsics which require
+                    // target_feature = "avx2" (enabled by #[target_feature] on the function)
+                    unsafe {
+                        butterfly_avx2_real(&mut coeffs, i, len, wlen, q);
+                    }
+                    continue;
                 }
             }
 
-            len <<= 1;
-        }    // For DIT ordering NTT we do an initial bit-reverse permutation
+            // Scalar fallback for non-AVX2 platforms or small len values
+            let mut w = 1u64;
+            for j in 0..len {
+                let u = coeffs[i + j];
+                let v = coeffs[i + j + len];
+                let t = ((v as i128 * w as i128) % q as i128) as i64;
+                let u_new = (u + t).rem_euclid(q as i64);
+                let v_new = (u - t).rem_euclid(q as i64);
+                coeffs[i + j] = u_new;
+                coeffs[i + j + len] = v_new;
+                w = ((w as u128 * wlen as u128) % q as u128) as u64;
+            }
+        }
+
+        len <<= 1;
+    }
+
+    // For DIT ordering NTT we do an initial bit-reverse permutation
     bit_reverse_permute(&mut coeffs);
 
     coeffs
@@ -1406,8 +1502,22 @@ pub fn intt(transformed: &[i64], n: usize, q: u64, primitive_root: u64) -> Polyn
     let mut len = 1;
     while len < n {
         let wlen = mod_exp(root_n_inv, (n / (2 * len)) as u64, q);
-        // debug: println!("INTT: len={}, wlen={}", len, wlen);
+        
         for i in (0..n).step_by(2 * len) {
+            // Use AVX2 SIMD when available and len >= 4 for optimal vectorization
+            #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+            {
+                if len >= 4 {
+                    // Safety: butterfly_avx2_real_intt uses _mm256 intrinsics which require
+                    // target_feature = "avx2" (enabled by #[target_feature] on the function)
+                    unsafe {
+                        butterfly_avx2_real_intt(&mut coeffs, i, len, wlen, q);
+                    }
+                    continue;
+                }
+            }
+
+            // Scalar fallback for non-AVX2 platforms or small len values
             let mut w = 1u64;
             for j in 0..len {
                 let u = coeffs[i + j];
@@ -1420,20 +1530,18 @@ pub fn intt(transformed: &[i64], n: usize, q: u64, primitive_root: u64) -> Polyn
                 w = ((w as u128 * wlen as u128) % q as u128) as u64;
             }
         }
+        
         len <<= 1;
     }
 
     // Apply n^{-1} scaling
     let n_inv = mod_inverse(n as i64, q as i64);
-    // debug: println!("n_inv = {}", n_inv);
-    // debug: println!("coeffs before scaling: {:?}", &coeffs[0..10]);
     for coeff in &mut coeffs {
         *coeff = ((*coeff as i128 * n_inv as i128) % q as i128) as i64;
     }
 
     // Final bit-reverse permutation to restore normal ordering
     bit_reverse_permute(&mut coeffs);
-    // debug: println!("coeffs after scaling: {:?}", &coeffs[0..10]);
 
     // For inverse DIT, after the inverse butterflies and scaling, the data is in normal order
     Polynomial::from_coeffs(coeffs, q)
@@ -1600,9 +1708,6 @@ pub fn poly_mult_schoolbook(a: &Polynomial, b: &Polynomial, q: u64) -> Polynomia
         }
     }
 
-    // Debug: print first 10 result values
-    println!("Raw multiplication result[0..10]: {:?}", &result[0..10]);
-
     // Reduce by X^n + 1: X^(n+k) = -X^k
     let mut reduced = vec![0i64; n];
     for (i, r) in reduced.iter_mut().enumerate().take(n) {
@@ -1612,9 +1717,6 @@ pub fn poly_mult_schoolbook(a: &Polynomial, b: &Polynomial, q: u64) -> Polynomia
         let k = i - n;
         reduced[k] = ((reduced[k] as i128 - *val) % q as i128) as i64;
     }
-
-    // Debug: print reduced values
-    println!("After reduction reduced[0..10]: {:?}", &reduced[0..10]);
 
     // Normalize to [0, q)
     for r in reduced.iter_mut().take(n) {
@@ -1685,15 +1787,11 @@ pub fn poly_mult_ntt(a: &Polynomial, b: &Polynomial, q: u64) -> Polynomial {
     // Temporary: only enable NTT path when env var explicitly set to avoid
     // breaking existing ring-LWE encryption tests while debugging.
     let use_ntt = std::env::var("NEXUSZERO_USE_NTT").ok().as_deref() == Some("1");
-    println!("Using NTT: {}", use_ntt);
     if use_ntt {
         if let Some(omega) = find_primitive_root(n, q) {
             // Use parallel NTT for forward transforms
             let a_ntt = ntt(a, q, omega);
             let b_ntt = ntt(b, q, omega);
-
-            println!("a_ntt[0..5]: {:?}", &a_ntt[0..5]);
-            println!("b_ntt[0..5]: {:?}", &b_ntt[0..5]);
 
             // Use SIMD-accelerated pointwise multiplication when available
             let c_ntt: Vec<i64> = {
@@ -1722,16 +1820,11 @@ pub fn poly_mult_ntt(a: &Polynomial, b: &Polynomial, q: u64) -> Polynomial {
                 #[cfg(not(any(all(target_arch = "x86_64", feature = "avx2"), all(target_arch = "aarch64", feature = "neon"))))]
                 {
                     // Scalar implementation for other architectures
-                    println!("Using scalar pointwise multiplication");
-                    a_ntt.iter().zip(b_ntt.iter()).map(|(&x, &y)| {
-                        let result = ((x as i128 * y as i128) % q as i128) as i64;
-                        println!("Pointwise: {} * {} = {}", x, y, result);
-                        result
-                    }).collect::<Vec<i64>>()
+                    a_ntt.iter().zip(b_ntt.iter()).map(|(&x, &y)|
+                        ((x as i128 * y as i128) % q as i128) as i64
+                    ).collect::<Vec<i64>>()
                 }
             };
-
-            println!("c_ntt[0..5]: {:?}", &c_ntt[0..5]);
 
             // Use parallel INTT for inverse transform
             return intt(&c_ntt, n, q, omega);

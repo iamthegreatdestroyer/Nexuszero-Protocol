@@ -40,7 +40,7 @@
 //!
 //! ```rust,no_run
 //! use nexuszero_crypto::proof::bulletproofs::*;
-//! use rand::thread_rng;
+//! use rand::{thread_rng, Rng};
 //!
 //! // Prove value is in range [0, 2^64)
 //! let value: u64 = 42;
@@ -52,8 +52,7 @@
 //! let proof = prove_range(value, &blinding, RANGE_BITS)?;
 //!
 //! // Verify proof
-//! let valid = verify_range(&commitment, &proof)?;
-//! assert!(valid);
+//! verify_range(&proof, &commitment, RANGE_BITS)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -63,7 +62,7 @@
 //!
 //! ```rust,no_run
 //! # use nexuszero_crypto::proof::bulletproofs::*;
-//! # use rand::thread_rng;
+//! # use rand::{thread_rng, Rng};
 //! # let mut rng = thread_rng();
 //! # let blinding: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
 //! // Prove value is in range [1000, 1000 + 2^32)
@@ -71,10 +70,9 @@
 //! let min_value: u64 = 1000;
 //!
 //! let commitment = pedersen_commit(value, &blinding)?;
-//! let proof = prove_range_offset(value, &blinding, 32, min_value)?;
+//! let proof = prove_range_offset(value, min_value, &blinding, 32)?;
 //!
-//! let valid = verify_range_offset(&commitment, &proof, 32, min_value)?;
-//! assert!(valid);
+//! verify_range_offset(&proof, &commitment, min_value, 32)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -84,9 +82,10 @@
 //!
 //! ```rust,no_run
 //! # use nexuszero_crypto::proof::bulletproofs::*;
-//! # let proofs_with_commitments: Vec<(Vec<u8>, BulletproofRangeProof)> = vec![];
+//! # let proofs: Vec<BulletproofRangeProof> = vec![];
+//! # let commitments: Vec<Vec<u8>> = vec![];
 //! // Verify 100 proofs ~3x faster than individual verification
-//! let all_valid = verify_batch_range_proofs(&proofs_with_commitments)?;
+//! let all_valid = verify_batch_range_proofs(&proofs, &commitments, 64)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!

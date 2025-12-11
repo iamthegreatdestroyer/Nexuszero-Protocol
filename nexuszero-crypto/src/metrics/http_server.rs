@@ -9,7 +9,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     let server = MetricsServer::new("0.0.0.0:9090");
+//!     let server = MetricsServer::from_str("0.0.0.0:9090").expect("Invalid address");
 //!     server.run().await.expect("Metrics server failed");
 //! }
 //! ```

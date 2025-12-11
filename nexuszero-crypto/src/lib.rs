@@ -116,8 +116,7 @@
 //! let proof = prove_range(amount, &blinding, RANGE_BITS)?;
 //!
 //! // Verifier checks proof (learns nothing about amount)
-//! let is_valid = verify_range(&commitment, &proof)?;
-//! assert!(is_valid);
+//! verify_range(&proof, &commitment, RANGE_BITS)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -157,7 +156,7 @@
 //! let range_proof = prove_range(amount, &blinding, 64)?;
 //!
 //! // Verifier checks both encryption and range
-//! assert!(verify_range(&commitment, &range_proof)?);
+//! assert!(verify_range(&range_proof, &commitment, 64)?);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!

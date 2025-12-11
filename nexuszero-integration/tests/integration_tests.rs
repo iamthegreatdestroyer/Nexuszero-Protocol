@@ -115,7 +115,7 @@ fn create_dummy_proof() -> OptimizedProof {
         statement,
         base_proof: nexuszero_crypto::proof::Proof {
             commitments: vec![],
-            challenge: nexuszero_crypto::proof::proof::Challenge { value: [0u8; 32] },
+            challenge: nexuszero_crypto::proof::proof::Challenge { value: vec![0u8; 32] },
             responses: vec![],
             metadata: nexuszero_crypto::proof::ProofMetadata { 
                 size: 100,
@@ -290,7 +290,7 @@ mod module_communication {
             statement: statement.clone(),
             base_proof: nexuszero_crypto::proof::Proof {
                 commitments: vec![],
-                challenge: nexuszero_crypto::proof::proof::Challenge { value: [0u8; 32] },
+                challenge: nexuszero_crypto::proof::proof::Challenge { value: vec![0u8; 32] },
                 responses: vec![],
                 metadata: nexuszero_crypto::proof::ProofMetadata { 
                     size: 100,
@@ -532,7 +532,7 @@ mod module_communication {
             statement,
             base_proof: nexuszero_crypto::proof::Proof {
                 commitments: vec![],
-                challenge: nexuszero_crypto::proof::proof::Challenge { value: [0u8; 32] },
+                challenge: nexuszero_crypto::proof::proof::Challenge { value: vec![0u8; 32] },
                 responses: vec![],
                 metadata: nexuszero_crypto::proof::ProofMetadata { 
                     size: 100,

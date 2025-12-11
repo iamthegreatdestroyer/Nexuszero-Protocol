@@ -14,12 +14,12 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use nexuszero_crypto::metrics::zk_metrics::{ZkMetrics, ProofType};
+//! use nexuszero_crypto::metrics::zk_metrics::{ZkMetrics, ProofType, SecurityLevel};
 //!
 //! let metrics = ZkMetrics::global();
 //!
 //! // Track proof generation
-//! let timer = metrics.proof_generation_timer(ProofType::Schnorr);
+//! let timer = metrics.proof_generation_timer(ProofType::Schnorr, SecurityLevel::High);
 //! // ... generate proof ...
 //! timer.observe_duration();
 //!
