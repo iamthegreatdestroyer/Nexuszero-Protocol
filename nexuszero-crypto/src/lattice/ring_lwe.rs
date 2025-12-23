@@ -1404,6 +1404,12 @@ pub fn ntt(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
     // For the canonical NTT, use root_n = ω^2 which is a primitive n-th root of unity.
     let root_n = mod_exp(primitive_root, 2, q);
 
+    // Runtime CPU feature detection - check ONCE at function start (not in loop)
+    #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+    let use_avx2 = is_x86_feature_detected!("avx2");
+    #[cfg(not(all(target_arch = "x86_64", feature = "avx2")))]
+    let use_avx2 = false;
+
     // Use canonical Cooley-Tukey NTT: len = 1..n-1 doubling each iteration
     let mut len = 1;
     while len < n {
@@ -1411,13 +1417,11 @@ pub fn ntt(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
         let wlen = mod_exp(root_n, (n / (2 * len)) as u64, q);
 
         for i in (0..n).step_by(2 * len) {
-            // Use AVX2 SIMD when available and len >= 4 for optimal vectorization
+            // Use AVX2 SIMD when available (detection done once at function start)
             #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
             {
-                if len >= 4 {
-                    // Safety: butterfly_avx2_real uses _mm256 intrinsics which require
-                    // target_feature = "avx2" (enabled by #[target_feature] on the function)
-                    eprintln!("DEBUG: Using AVX2 SIMD for NTT butterfly (len={}, n={})", len, n);
+                if len >= 4 && use_avx2 {
+                    // Safety: butterfly_avx2_real uses _mm256 intrinsics
                     unsafe {
                         butterfly_avx2_real(&mut coeffs, i, len, wlen, q);
                     }
@@ -1456,18 +1460,23 @@ pub fn intt(transformed: &[i64], n: usize, q: u64, primitive_root: u64) -> Polyn
     let root_n = mod_exp(primitive_root, 2, q);
     let root_n_inv = mod_inverse(root_n as i64, q as i64) as u64;
 
+    // Runtime CPU feature detection - check ONCE at function start (not in loop)
+    #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+    let use_avx2 = is_x86_feature_detected!("avx2");
+    #[cfg(not(all(target_arch = "x86_64", feature = "avx2")))]
+    let use_avx2 = false;
+
     // Use canonical inverse NTT with increasing len and root_inv
     let mut len = 1;
     while len < n {
         let wlen = mod_exp(root_n_inv, (n / (2 * len)) as u64, q);
         
         for i in (0..n).step_by(2 * len) {
-            // Use AVX2 SIMD when available and len >= 4 for optimal vectorization
+            // Use AVX2 SIMD when available (detection done once at function start)
             #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
             {
-                if len >= 4 {
-                    // Safety: butterfly_avx2_real_intt uses _mm256 intrinsics which require
-                    // target_feature = "avx2" (enabled by #[target_feature] on the function)
+                if len >= 4 && use_avx2 {
+                    // Safety: butterfly_avx2_real_intt uses _mm256 intrinsics
                     unsafe {
                         butterfly_avx2_real_intt(&mut coeffs, i, len, wlen, q);
                     }
