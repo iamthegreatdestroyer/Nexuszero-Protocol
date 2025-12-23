@@ -168,6 +168,10 @@ harness = false
 name = "nova_proving_benchmarks"
 harness = false
 
+[[bench]]
+name = "ct_dot_product_bench"
+harness = false
+
 [features]
 default = ["lazy_static"]
 simd = []
