@@ -15,18 +15,26 @@
 //! ## Usage
 //!
 //! ```rust
-//! use nexuszero_crypto::side_channel::{TimingAnalyzer, CacheAnalyzer};
+//! use nexuszero_crypto::side_channel::{TimingAnalyzer, SideChannelConfig};
 //!
 //! // Analyze timing variations in a cryptographic operation
 //! let mut analyzer = TimingAnalyzer::new();
 //! let timing_results = analyzer.analyze_operation(|| {
-//!     // Your cryptographic operation here
-//!     my_crypto_function(input)
+//!     // Example: timing a simple operation that may have variable timing
+//!     let data = vec![1u8, 2u8, 3u8, 4u8];
+//!     let mut sum = 0u8;
+//!     for &byte in &data {
+//!         sum = sum.wrapping_add(byte);
+//!     }
+//!     sum
 //! });
 //!
 //! // Check for timing leaks
-//! if timing_results.has_timing_leak() {
-//!     println!("Timing leak detected!");
+//! if timing_results.is_ok() {
+//!     let stats = timing_results.unwrap();
+//!     if stats.has_timing_leak(&SideChannelConfig::default()) {
+//!         println!("Timing leak detected!");
+//!     }
 //! }
 //! ```
 

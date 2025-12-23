@@ -9,7 +9,7 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use nexuszero_crypto::metrics::error_tracking::{ZkErrorTracker, ErrorContext, ZkErrorCategory, ErrorSeverity};
+//! use nexuszero_crypto::metrics::{ZkErrorTracker, ErrorContext, ZkErrorCategory, ErrorSeverity};
 //!
 //! let tracker = ZkErrorTracker::global();
 //!

@@ -404,7 +404,7 @@ impl PerformanceBenchmarker {
     fn get_benchmark_operations(&self) -> Vec<BenchmarkOperation> {
         vec![
             BenchmarkOperation {
-                name: "ring_lwe_keygen".to_string(),
+                name: "lwe_keygen".to_string(),
                 function: Box::new(|| {
                     use crate::lattice::lwe;
                     let params = lwe::LWEParameters::new(512, 1024, 65537, 3.2);
@@ -413,7 +413,7 @@ impl PerformanceBenchmarker {
                 }),
             },
             BenchmarkOperation {
-                name: "ring_lwe_encrypt".to_string(),
+                name: "lwe_encrypt".to_string(),
                 function: Box::new(|| {
                     use crate::lattice::lwe;
                     let params = lwe::LWEParameters::new(512, 1024, 65537, 3.2);
@@ -424,7 +424,7 @@ impl PerformanceBenchmarker {
                 }),
             },
             BenchmarkOperation {
-                name: "ring_lwe_decrypt".to_string(),
+                name: "lwe_decrypt".to_string(),
                 function: Box::new(|| {
                     use crate::lattice::lwe;
                     let params = lwe::LWEParameters::new(512, 1024, 65537, 3.2);
@@ -433,6 +433,35 @@ impl PerformanceBenchmarker {
                     let message = true; // LWE expects bool message
                     let ciphertext = lwe::encrypt(&pk, message, &params, &mut rng).unwrap();
                     let _ = lwe::decrypt(&sk, &ciphertext, &params);
+                }),
+            },
+            BenchmarkOperation {
+                name: "ring_lwe_keygen".to_string(), // Actually Ring-LWE this time
+                function: Box::new(|| {
+                    use crate::lattice::ring_lwe::{RingLWEParameters, ring_keygen};
+                    let params = RingLWEParameters::new_128bit_security();
+                    let _ = ring_keygen(&params).unwrap();
+                }),
+            },
+            BenchmarkOperation {
+                name: "ring_lwe_encrypt".to_string(), // Actually Ring-LWE this time
+                function: Box::new(|| {
+                    use crate::lattice::ring_lwe::{RingLWEParameters, ring_keygen, ring_encrypt, encode_message, RingLWECiphertext, RingLWEPublicKey, RingLWESecretKey};
+                    let params = RingLWEParameters::new_128bit_security();
+                    let (sk, pk) = ring_keygen(&params).unwrap();
+                    let message = vec![true; params.n]; // Ring-LWE expects &[bool] message of length n
+                    let _ = ring_encrypt(&pk, &message, &params).unwrap();
+                }),
+            },
+            BenchmarkOperation {
+                name: "ring_lwe_decrypt".to_string(), // Actually Ring-LWE this time
+                function: Box::new(|| {
+                    use crate::lattice::ring_lwe::{RingLWEParameters, ring_keygen, ring_encrypt, ring_decrypt, encode_message, RingLWECiphertext, RingLWEPublicKey, RingLWESecretKey};
+                    let params = RingLWEParameters::new_128bit_security();
+                    let (sk, pk) = ring_keygen(&params).unwrap();
+                    let message = vec![true; params.n]; // Ring-LWE expects &[bool] message of length n
+                    let ciphertext = ring_encrypt(&pk, &message, &params).unwrap();
+                    let _ = ring_decrypt(&sk, &ciphertext, &params).unwrap();
                 }),
             },
             BenchmarkOperation {

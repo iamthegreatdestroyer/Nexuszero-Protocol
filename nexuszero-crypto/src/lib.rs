@@ -56,23 +56,22 @@
 //!
 //! ## Example 1: Post-Quantum Encryption (Ring-LWE)
 //!
-//! ```rust,no_run
+//! ```rust
 //! use nexuszero_crypto::lattice::ring_lwe::*;
-//! use rand::thread_rng;
-//!
+//
 //! // Select 128-bit quantum-resistant security
 //! let params = RingLWEParameters::new_128bit_security();
-//!
+//
 //! // Generate key pair
-//! let mut rng = thread_rng();
-//! let (public_key, private_key) = generate_keypair(&params, &mut rng)?;
-//!
-//! // Encrypt message (polynomial coefficients)
-//! let message: Vec<u64> = vec![42; params.n];
-//! let ciphertext = encrypt(&public_key, &message, &params, &mut rng)?;
+//! let (sk, pk) = ring_keygen(&params)?;
+//
+//! // Encrypt message (boolean array of length n)
+//! let message: Vec<bool> = vec![true, false, true, false, true, false, true, false]; // 8-bit message
+//! let message: Vec<bool> = vec![true; params.n]; // Message of length n (512 bits for 128-bit security)
+//! let ciphertext = ring_encrypt(&pk, &message, &params)?;
 //!
 //! // Decrypt
-//! let plaintext = decrypt(&private_key, &ciphertext, &params)?;
+//! let plaintext = ring_decrypt(&sk, &ciphertext, &params)?;
 //! assert_eq!(message, plaintext);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -144,11 +143,11 @@
 //! // Encrypt transaction amount
 //! let params = RingLWEParameters::new_128bit_security();
 //! let mut rng = thread_rng();
-//! let (pk, sk) = generate_keypair(&params, &mut rng)?;
+//! let (sk, pk) = ring_keygen(&params)?;
 //!
 //! let amount: u64 = 1000;
-//! let amount_vec: Vec<u64> = vec![amount; params.n];
-//! let encrypted = encrypt(&pk, &amount_vec, &params, &mut rng)?;
+//! let amount_vec: Vec<bool> = vec![true; params.n];  // Convert amount to boolean vector
+//! let encrypted = ring_encrypt(&pk, &amount_vec, &params)?;
 //!
 //! // Prove amount is valid without revealing value
 //! let blinding: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
@@ -156,7 +155,7 @@
 //! let range_proof = prove_range(amount, &blinding, 64)?;
 //!
 //! // Verifier checks both encryption and range
-//! assert!(verify_range(&range_proof, &commitment, 64)?);
+//! verify_range(&range_proof, &commitment, 64)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -170,10 +169,10 @@
 //! // Encrypt message
 //! let params = RingLWEParameters::new_128bit_security();
 //! let mut rng = thread_rng();
-//! let (enc_pk, enc_sk) = generate_keypair(&params, &mut rng)?;
+//! let (sk, pk) = ring_keygen(&params)?;
 //!
-//! let message: Vec<u64> = vec![42; params.n];
-//! let ciphertext = encrypt(&enc_pk, &message, &params, &mut rng)?;
+//! let message: Vec<bool> = vec![true; params.n];
+//! let ciphertext = ring_encrypt(&pk, &message, &params)?;
 //!
 //! // Sign ciphertext for authenticity
 //! let (sig_sk, sig_pk) = schnorr_keygen()?;
@@ -182,7 +181,7 @@
 //!
 //! // Verify signature before decryption
 //! assert!(schnorr_verify(&ciphertext_bytes, &signature, &sig_pk)?);
-//! let plaintext = decrypt(&enc_sk, &ciphertext, &params)?;
+//! let plaintext = ring_decrypt(&sk, &ciphertext, &params)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!

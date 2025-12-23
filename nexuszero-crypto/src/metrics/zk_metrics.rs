@@ -19,9 +19,9 @@
 //! let metrics = ZkMetrics::global();
 //!
 //! // Track proof generation
-//! let timer = metrics.proof_generation_timer(ProofType::Schnorr, SecurityLevel::High);
+//! let mut timer = metrics.proof_generation_timer(ProofType::Schnorr, SecurityLevel::Bit128);
 //! // ... generate proof ...
-//! timer.observe_duration();
+//! timer.complete();
 //!
 //! // Record verification
 //! metrics.record_verification(ProofType::RingLWE, 0.045, true);
