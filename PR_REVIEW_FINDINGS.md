@@ -1,7 +1,9 @@
 # Pull Request Review Findings
 
 ## Overview
-Reviewed 4 open pull requests in the Nexuszero-Protocol repository for completeness and identified errors.
+This document contains findings from reviewing 4 open pull requests in the Nexuszero-Protocol repository for completeness and errors.
+
+**IMPORTANT:** This PR (#38) does NOT introduce the code being analyzed. This is a review document that identifies issues in OTHER open pull requests (#20, #21, #29, #30). The recommendations are for the authors of those PRs to implement.
 
 ## PR #30: feat: add un-blinding option for ct_modpow_blinded (utils)
 **Status:** Open, Not Mergeable (merge conflicts - "dirty" state)  
