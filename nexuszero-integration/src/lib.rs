@@ -105,6 +105,7 @@ pub use optimization::{
     CircuitAnalysis, CircuitType, OptimizationResult, CompressionStrategy, OptimizationSource,
     BatchOptimizer, BatchOptimizationItem, OptimizationFeedback, OptimizationHistory,
     NeuralModelInterface, NeuralModelError, ModelMetadata, StubNeuralModel,
+    RemoteCircuitConfig, query_remote_optimizer,
 };
 pub use compression::{
     CompressionManager, CompressionConfig, CompressionResult, CompressionError,

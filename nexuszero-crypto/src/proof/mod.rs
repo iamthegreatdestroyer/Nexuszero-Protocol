@@ -27,7 +27,7 @@ pub mod performance_optimization;
 pub mod nova;
 
 // Re-export main types
-pub use proof::{Proof, ProofMetadata};
+pub use proof::{Proof, ProofMetadata, batch_verify, verify_batch, prove_batch};
 pub use statement::{Statement, StatementBuilder, StatementType};
 pub use witness::{Witness, WitnessType};
 pub use witness_manager::{WitnessManager, DefaultWitnessManager, WitnessMetadata, CachedWitness, ValidationConstraints, WitnessGenerationConfig, TransformationResult, CacheStats};

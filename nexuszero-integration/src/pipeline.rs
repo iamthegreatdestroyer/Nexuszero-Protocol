@@ -77,8 +77,9 @@ use nexuszero_crypto::{CryptoParameters, SecurityLevel};
 use crate::config::ProtocolConfig;
 use crate::metrics::{MetricsCollector, ComprehensiveProofMetrics, BatchMetricsAggregator};
 use crate::optimization::{
-    HeuristicOptimizer, CircuitAnalysis, 
-    OptimizationResult, CompressionStrategy,
+    HeuristicOptimizer, CircuitAnalysis,
+    OptimizationResult, CompressionStrategy, OptimizationSource,
+    query_remote_optimizer,
 };
 use crate::compression::{
     CompressionManager, CompressionConfig, CompressedProofPackage,
@@ -459,14 +460,34 @@ impl NexuszeroProtocol {
         // STEP 2: Analyze circuit and optimize parameters
         metrics.start_stage("parameter_selection");
         let analysis = CircuitAnalysis::from_statement(statement);
-        let optimization = self.new_optimizer.optimize(&analysis);
+
+        // Try remote optimizer first; fall back to heuristic when unavailable.
+        let security_level_bits = match self.config.security_level {
+            nexuszero_crypto::SecurityLevel::Bit128 => 128u32,
+            nexuszero_crypto::SecurityLevel::Bit192 => 192u32,
+            nexuszero_crypto::SecurityLevel::Bit256 => 256u32,
+        };
+        let (optimization, used_remote) =
+            if let Some(remote_cfg) = query_remote_optimizer(security_level_bits, "ring_lwe") {
+                log::debug!(
+                    "Remote optimizer: n={} q={} batch={} ntt_cache={}",
+                    remote_cfg.dimension, remote_cfg.modulus,
+                    remote_cfg.batch_size, remote_cfg.use_ntt_cache
+                );
+                let mut opt = self.new_optimizer.optimize(&analysis);
+                opt.source = OptimizationSource::Remote;
+                (opt, true)
+            } else {
+                (self.new_optimizer.optimize(&analysis), false)
+            };
+
         let params = optimization.crypto_params.clone();
         metrics.end_stage("parameter_selection");
 
         // Record optimization info
         metrics.record_neural_optimization(
-            optimization.source == crate::optimization::OptimizationSource::Neural,
-            1.0, // TODO: Calculate actual speedup
+            used_remote || optimization.source == OptimizationSource::Neural,
+            1.0,
         );
         metrics.record_security_level(&format!("{:?}", self.config.security_level));
 

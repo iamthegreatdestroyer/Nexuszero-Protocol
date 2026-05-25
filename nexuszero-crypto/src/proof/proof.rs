@@ -880,24 +880,66 @@ pub fn verify_batch(
     statements_and_proofs: &[(Statement, Proof)],
 ) -> CryptoResult<()> {
     use rayon::prelude::*;
-    
+
     // Validate inputs
     if statements_and_proofs.is_empty() {
         return Ok(());
     }
-    
+
     // Verify proofs in parallel
     let results: Vec<CryptoResult<()>> = statements_and_proofs
         .par_iter()
         .map(|(statement, proof)| verify(statement, proof))
         .collect();
-    
+
     // Check that all verifications succeeded
     for result in results {
         result?;
     }
-    
+
     Ok(())
+}
+
+/// Batch-verify multiple proofs in parallel, returning per-proof results.
+///
+/// Unlike `verify_batch`, this function never short-circuits on the first failure.
+/// Each element of the returned Vec is `true` if the corresponding proof verified,
+/// `false` otherwise. An `Err` is only returned for a structural mismatch
+/// (lengths differ).
+///
+/// # Performance
+/// Uses Rayon for parallelism. For a batch of 8 proofs the overhead of
+/// parallel dispatch is amortised, targeting <200 ms total on modern hardware
+/// (vs. ~8 × 50 ms = 400 ms serial).
+///
+/// # Arguments
+/// * `statements` - Public statements, one per proof
+/// * `proofs`     - Proofs to verify; must be same length as `statements`
+pub fn batch_verify(
+    statements: &[Statement],
+    proofs: &[Proof],
+) -> CryptoResult<Vec<bool>> {
+    use rayon::prelude::*;
+
+    if statements.len() != proofs.len() {
+        return Err(CryptoError::InvalidInput(format!(
+            "batch_verify: statements length ({}) != proofs length ({})",
+            statements.len(),
+            proofs.len()
+        )));
+    }
+
+    if statements.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let results: Vec<bool> = statements
+        .par_iter()
+        .zip(proofs.par_iter())
+        .map(|(stmt, proof)| verify(stmt, proof).is_ok())
+        .collect();
+
+    Ok(results)
 }
 
 // ============================================================================

@@ -1373,6 +1373,174 @@ unsafe fn butterfly_avx512_intt_ptr(
     }
 }
 
+// ============================================================================
+// Precomputed NTT Twiddle Factor Cache (Sprint 2 Optimization)
+// ============================================================================
+
+/// Precomputed twiddle factors for a specific (n, q, primitive_root) triple.
+///
+/// For each NTT stage i (len = 2^i), stores the twiddle `wlen = root_n^(n/(2*len))`.
+/// This avoids `O(log n)` modular exponentiations per NTT call.
+#[derive(Clone)]
+pub struct NttTwiddleCache {
+    pub n: usize,
+    pub q: u64,
+    /// Forward twiddle factors: `twiddles[i]` is `root_n^(n / (2 * 2^i))` for stage i.
+    pub twiddles: Vec<u64>,
+    /// Inverse twiddle factors: same but using `root_n_inv`.
+    pub inv_twiddles: Vec<u64>,
+    /// n^{-1} mod q — used by intt scaling step.
+    pub n_inv: u64,
+}
+
+impl NttTwiddleCache {
+    /// Build a twiddle cache for the given parameters.
+    pub fn build(n: usize, q: u64, primitive_root: u64) -> Self {
+        let root_n = mod_exp(primitive_root, 2, q);
+        let root_n_inv = mod_inverse(root_n as i64, q as i64) as u64;
+        let n_inv = mod_inverse(n as i64, q as i64) as u64;
+
+        let log_n = n.trailing_zeros() as usize;
+        let mut twiddles = Vec::with_capacity(log_n);
+        let mut inv_twiddles = Vec::with_capacity(log_n);
+
+        let mut len = 1usize;
+        while len < n {
+            let exp = (n / (2 * len)) as u64;
+            twiddles.push(mod_exp(root_n, exp, q));
+            inv_twiddles.push(mod_exp(root_n_inv, exp, q));
+            len <<= 1;
+        }
+
+        Self { n, q, twiddles, inv_twiddles, n_inv }
+    }
+}
+
+/// Global lazy-initialized twiddle cache map, keyed by (n, q, primitive_root).
+lazy_static::lazy_static! {
+    static ref NTT_TWIDDLE_CACHE: std::sync::RwLock<std::collections::HashMap<(usize, u64, u64), NttTwiddleCache>> =
+        std::sync::RwLock::new({
+            let mut map = std::collections::HashMap::new();
+            // Pre-warm for the three standard parameter sets to avoid first-call latency.
+            for (n, q, root) in &[(512usize, 12289u64, 49u64), (1024, 40961, 3), (2048, 65537, 3)] {
+                let cache = NttTwiddleCache::build(*n, *q, *root);
+                map.insert((*n, *q, *root), cache);
+            }
+            map
+        });
+}
+
+/// Get or compute the twiddle cache for the given parameters.
+pub fn get_twiddle_cache(n: usize, q: u64, primitive_root: u64) -> NttTwiddleCache {
+    let key = (n, q, primitive_root);
+    // Fast path: read lock
+    if let Ok(guard) = NTT_TWIDDLE_CACHE.read() {
+        if let Some(cache) = guard.get(&key) {
+            return cache.clone();
+        }
+    }
+    // Slow path: compute and insert
+    let cache = NttTwiddleCache::build(n, q, primitive_root);
+    if let Ok(mut guard) = NTT_TWIDDLE_CACHE.write() {
+        guard.entry(key).or_insert_with(|| cache.clone());
+    }
+    cache
+}
+
+/// NTT forward transform using precomputed twiddle factors.
+///
+/// Identical to `ntt()` but skips `mod_exp` in the main loop by reading from
+/// a cached table. On repeated calls with the same `(n, q, primitive_root)`,
+/// this eliminates O(log n) modular exponentiations per call.
+pub fn ntt_cached(poly: &Polynomial, q: u64, primitive_root: u64) -> Vec<i64> {
+    let n = poly.degree;
+    assert!(n.is_power_of_two(), "NTT size must be power of 2");
+
+    let cache = get_twiddle_cache(n, q, primitive_root);
+    let mut coeffs = poly.coeffs.clone();
+
+    let mut stage = 0usize;
+    let mut len = 1usize;
+    while len < n {
+        let wlen = cache.twiddles[stage];
+
+        for i in (0..n).step_by(2 * len) {
+            let mut w = 1u64;
+            for j in 0..len {
+                let u = coeffs[i + j];
+                let v = coeffs[i + j + len];
+                let t = ((v as i128 * w as i128) % q as i128) as i64;
+                coeffs[i + j] = (u + t).rem_euclid(q as i64);
+                coeffs[i + j + len] = (u - t).rem_euclid(q as i64);
+                w = ((w as u128 * wlen as u128) % q as u128) as u64;
+            }
+        }
+
+        stage += 1;
+        len <<= 1;
+    }
+
+    bit_reverse_permute(&mut coeffs);
+    coeffs
+}
+
+/// INTT inverse transform using precomputed twiddle factors.
+pub fn intt_cached(transformed: &[i64], n: usize, q: u64, primitive_root: u64) -> Polynomial {
+    let cache = get_twiddle_cache(n, q, primitive_root);
+    let mut coeffs = transformed.to_vec();
+
+    let mut stage = 0usize;
+    let mut len = 1usize;
+    while len < n {
+        let wlen = cache.inv_twiddles[stage];
+
+        for i in (0..n).step_by(2 * len) {
+            let mut w = 1u64;
+            for j in 0..len {
+                let u = coeffs[i + j];
+                let v = coeffs[i + j + len];
+                let t = ((v as i128 * w as i128) % q as i128) as i64;
+                coeffs[i + j] = (u + t).rem_euclid(q as i64);
+                coeffs[i + j + len] = (u - t).rem_euclid(q as i64);
+                w = ((w as u128 * wlen as u128) % q as u128) as u64;
+            }
+        }
+
+        stage += 1;
+        len <<= 1;
+    }
+
+    let n_inv = cache.n_inv as i64;
+    for coeff in &mut coeffs {
+        *coeff = ((*coeff as i128 * n_inv as i128) % q as i128) as i64;
+    }
+
+    bit_reverse_permute(&mut coeffs);
+    Polynomial::from_coeffs(coeffs, q)
+}
+
+/// Polynomial multiplication in R_q using NTT with precomputed twiddle cache.
+///
+/// For large polynomials this is O(n log n) vs O(n²) schoolbook.
+/// On repeated calls with the same parameters the twiddle computation cost
+/// is amortised across all calls.
+pub fn poly_mult_ntt_cached(a: &Polynomial, b: &Polynomial, q: u64, primitive_root: u64) -> Polynomial {
+    assert_eq!(a.degree, b.degree);
+    let n = a.degree;
+
+    let a_ntt = ntt_cached(a, q, primitive_root);
+    let b_ntt = ntt_cached(b, q, primitive_root);
+
+    // Point-wise multiplication in NTT domain
+    let c_ntt: Vec<i64> = a_ntt
+        .iter()
+        .zip(b_ntt.iter())
+        .map(|(&ai, &bi)| ((ai as i128 * bi as i128) % q as i128) as i64)
+        .collect();
+
+    intt_cached(&c_ntt, n, q, primitive_root)
+}
+
 /// Number Theoretic Transform (NTT) - Forward transform with SIMD optimizations
 /// Uses AVX2/NEON SIMD instructions when available for 4x/2x performance improvement
 /// Now uses aligned memory for optimal cache performance and parallel processing

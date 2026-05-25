@@ -216,6 +216,8 @@ pub enum OptimizationSource {
     Hybrid,
     /// Static default parameters
     Static,
+    /// Remote Python optimizer service
+    Remote,
 }
 
 // ============================================================================
@@ -832,6 +834,88 @@ impl NeuralModelInterface for StubNeuralModel {
     fn is_ready(&self) -> bool {
         self.ready
     }
+}
+
+// ============================================================================
+// HTTP OPTIMIZER CLIENT (Sprint 3)
+// ============================================================================
+
+/// Configuration returned by the remote optimizer endpoint.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RemoteCircuitConfig {
+    pub dimension: usize,
+    pub modulus: u64,
+    pub primitive_root: u64,
+    pub batch_size: usize,
+    pub use_ntt_cache: bool,
+    pub optimization_note: String,
+}
+
+/// Attempt to fetch an optimized circuit config from the remote optimizer service.
+///
+/// Reads `NEXUSZERO_OPTIMIZER_URL` from the environment (e.g.
+/// `http://localhost:8080`).  Returns `None` (graceful fallback) when:
+/// - The env var is not set
+/// - The service is unreachable
+/// - The response cannot be parsed
+///
+/// This function is intentionally synchronous and uses only `std` so that it
+/// can be called from any context without pulling in an async runtime.
+pub fn query_remote_optimizer(security_level: u32, proof_type: &str) -> Option<RemoteCircuitConfig> {
+    let base_url = std::env::var("NEXUSZERO_OPTIMIZER_URL").ok()?;
+    let base_url = base_url.trim_end_matches('/');
+
+    // Build JSON body
+    let body = format!(
+        r#"{{"security_level":{security_level},"proof_type":"{proof_type}","target":"proving_time"}}"#,
+        security_level = security_level,
+        proof_type = proof_type,
+    );
+
+    // Resolve host:port from the URL — minimal parsing, no extra deps.
+    let url_str = format!("{}/api/v1/optimization/optimize", base_url);
+    let host_port = parse_host_port(&url_str)?;
+    let path = parse_path(&url_str)?;
+
+    // TCP connect with 200 ms timeout to avoid blocking proof generation.
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    let mut stream = TcpStream::connect_timeout(
+        &host_port.parse().ok()?,
+        Duration::from_millis(200),
+    ).ok()?;
+    stream.set_read_timeout(Some(Duration::from_millis(500))).ok()?;
+
+    let request = format!(
+        "POST {} HTTP/1.0\r\nHost: {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        path,
+        host_port,
+        body.len(),
+        body,
+    );
+    stream.write_all(request.as_bytes()).ok()?;
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).ok()?;
+
+    // Extract JSON body after the blank line separator.
+    let json_body = response.split("\r\n\r\n").nth(1)?;
+    serde_json::from_str::<RemoteCircuitConfig>(json_body).ok()
+}
+
+fn parse_host_port(url: &str) -> Option<String> {
+    // Handle http://host:port/path and http://host/path
+    let without_scheme = url.strip_prefix("http://").or_else(|| url.strip_prefix("https://"))?;
+    let host_and_rest = without_scheme.splitn(2, '/').next()?;
+    Some(host_and_rest.to_string())
+}
+
+fn parse_path(url: &str) -> Option<String> {
+    let without_scheme = url.strip_prefix("http://").or_else(|| url.strip_prefix("https://"))?;
+    let rest = without_scheme.splitn(2, '/').nth(1)?;
+    Some(format!("/{}", rest))
 }
 
 // ============================================================================
