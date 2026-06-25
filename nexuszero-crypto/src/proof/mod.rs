@@ -11,6 +11,7 @@ pub mod statement;
 pub mod witness;
 pub mod witness_manager;
 pub mod plugins;
+pub mod ark_groth16;
 
 // New modular architecture modules
 pub mod circuit;

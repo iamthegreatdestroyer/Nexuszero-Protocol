@@ -65,6 +65,17 @@ async-trait = "0.1"
 # Lazy static for global registries
 lazy_static = "1.4"
 
+# Real ZK proof libraries (arkworks ecosystem)
+ark-std = "0.5"
+ark-ff = "0.5"
+ark-ec = "0.5"
+ark-bn254 = "0.5"
+ark-groth16 = "0.5"
+ark-relations = "0.5"
+ark-r1cs-std = "0.5"
+ark-snark = "0.5"
+ark-serialize = { version = "0.5", features = ["derive"] }
+
 [dev-dependencies]
 # Benchmarking
 criterion = { version = "0.5", features = ["html_reports"] }
