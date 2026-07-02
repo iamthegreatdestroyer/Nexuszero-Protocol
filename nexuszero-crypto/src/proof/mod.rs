@@ -14,6 +14,7 @@ pub mod plugins;
 pub mod ark_groth16;
 pub mod merkle_circuit;
 pub mod zkrag;
+pub mod similarity_circuit;
 
 // New modular architecture modules
 pub mod circuit;
