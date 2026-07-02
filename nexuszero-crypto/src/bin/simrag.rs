@@ -24,8 +24,10 @@ use ark_serialize::CanonicalDeserialize;
 
 use nexuszero_crypto::proof::merkle_circuit::{poseidon_config, proof_to_bytes, MerkleTree};
 use nexuszero_crypto::proof::similarity_circuit::{
-    commit_vector, prove, public_inputs, quantize_unit, setup, threshold_fr, verify, SIM_DIM,
+    commit_vector, fr_from_i64, prove, public_inputs, quantize_unit, setup, threshold_fr, verify,
+    SIM_DIM,
 };
+use ark_serialize::CanonicalSerialize;
 use nexuszero_crypto::proof::zkrag::{
     load_prepared_vk, load_proving_key, read_fr, save_prepared_vk, save_proving_key, write_fr,
 };
@@ -175,8 +177,29 @@ fn main() {
                 Err(e) => die(format!("verify: {e}")),
             }
         }
+        "leaves" => {
+            let depth: usize = need(&["--depth"]).parse().unwrap_or_else(|_| die("--depth int".into()));
+            let embeddings = read_vectors(&need(&["--vectors"]));
+            let (_tree, root) = build_tree_fixed(&embeddings, depth);
+            write_fr(&PathBuf::from(need(&["--root-out"])), &root).unwrap_or_else(|e| die(e));
+            let params = nexuszero_crypto::proof::merkle_circuit::poseidon_config();
+            let leaves_out = need(&["--leaves-out"]);
+            let mut buf = String::new();
+            for e in &embeddings {
+                let leaf = commit_vector(&params, &quantize_unit(e));
+                let mut b = Vec::new();
+                leaf.serialize_compressed(&mut b).expect("serialize leaf");
+                for byte in &b {
+                    buf.push_str(&format!("{:02x}", byte));
+                }
+                buf.push('\n');
+            }
+            std::fs::write(&leaves_out, buf).unwrap_or_else(|e| die(format!("write leaves: {e}")));
+            println!("OK simrag leaves depth={depth} n={} dim={SIM_DIM}", embeddings.len());
+            let _ = fr_from_i64; // silence unused-import if not exercised elsewhere
+        }
         other => {
-            eprintln!("usage: simrag <setup|prove|verify> ...  (got {other:?})");
+            eprintln!("usage: simrag <setup|prove|verify|leaves> ...  (got {other:?})");
             exit(2);
         }
     }

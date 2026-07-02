@@ -61,7 +61,7 @@ use ark_crypto_primitives::sponge::poseidon::PoseidonConfig;
 /// Validated correct + sound at SIM_DIM=256 (real-embedding scale); the
 /// dimension-generic tests below run at any SIM_DIM. Cost is linear in
 /// SIM_DIM (two vector folds dominate); use release builds for prod dims.
-pub const SIM_DIM: usize = 8;
+pub const SIM_DIM: usize = 1024;
 
 /// Fixed-point scale for quantizing unit-vector components. `SCALE = 2^12`.
 pub const SCALE: i64 = 4096;
