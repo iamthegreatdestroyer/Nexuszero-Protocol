@@ -146,7 +146,7 @@ mod tests {
         let (_t3, root3) = build_tree_fixed(&items2, depth).unwrap();
         assert_ne!(root, root3, "changing a committed chunk must change the root");
         assert!(
-            !verify(&pvk2, &proof, &[root3]).unwrap(),
+            !verify(&pvk2, &proof, &[root3, path.leaf]).unwrap(),
             "proof must NOT verify against a tampered corpus root"
         );
     }

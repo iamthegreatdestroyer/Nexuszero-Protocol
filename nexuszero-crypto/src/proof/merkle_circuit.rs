@@ -224,8 +224,11 @@ impl ConstraintSynthesizer<Fr> for MerkleMembershipCircuit {
             self.root.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
-        // PRIVATE witness: leaf.
-        let mut cur = FpVar::<Fr>::new_witness(cs.clone(), || {
+        // PUBLIC input: the leaf (the disclosed citation's hash). Making the
+        // leaf public binds the proof to THIS citation; the path stays private,
+        // so the proof reveals membership without the position or the sibling
+        // hashes (unlike a Phase-0 inclusion path). Public input order = [root, leaf].
+        let mut cur = FpVar::<Fr>::new_input(cs.clone(), || {
             self.leaf.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
@@ -309,7 +312,9 @@ pub fn prove(
     let mut rng = thread_rng();
     let proof = Groth16::<Bn254>::prove(pk, circuit, &mut rng)
         .map_err(|e| format!("merkle prove failed: {}", e))?;
-    Ok((proof, vec![root]))
+    // Public inputs are [root, leaf]: the leaf is public so the verifier can
+    // bind the proof to a specific disclosed citation.
+    Ok((proof, vec![root, path.leaf]))
 }
 
 /// Verify a membership proof against the public root.
@@ -406,16 +411,19 @@ pub unsafe extern "C" fn nexuszero_merkle_verify(
     vk_len: usize,
     root_ptr: *const u8,
     root_len: usize,
+    leaf_ptr: *const u8,
+    leaf_len: usize,
     proof_ptr: *const u8,
     proof_len: usize,
 ) -> i32 {
     use ark_serialize::CanonicalDeserialize;
 
-    if vk_ptr.is_null() || root_ptr.is_null() || proof_ptr.is_null() {
+    if vk_ptr.is_null() || root_ptr.is_null() || leaf_ptr.is_null() || proof_ptr.is_null() {
         return MERKLE_FFI_ERR_NULL;
     }
     let vk_bytes = std::slice::from_raw_parts(vk_ptr, vk_len);
     let root_bytes = std::slice::from_raw_parts(root_ptr, root_len);
+    let leaf_bytes = std::slice::from_raw_parts(leaf_ptr, leaf_len);
     let proof_bytes = std::slice::from_raw_parts(proof_ptr, proof_len);
 
     let pvk = match PreparedVerifyingKey::<Bn254>::deserialize_compressed(vk_bytes) {
@@ -426,12 +434,16 @@ pub unsafe extern "C" fn nexuszero_merkle_verify(
         Ok(r) => r,
         Err(_) => return MERKLE_FFI_ERR_DESERIALIZE,
     };
+    let leaf = match fr_from_bytes(leaf_bytes) {
+        Ok(l) => l,
+        Err(_) => return MERKLE_FFI_ERR_DESERIALIZE,
+    };
     let proof = match ark_groth16::Proof::<Bn254>::deserialize_compressed(proof_bytes) {
         Ok(p) => p,
         Err(_) => return MERKLE_FFI_ERR_DESERIALIZE,
     };
 
-    match verify(&pvk, &proof, &[root]) {
+    match verify(&pvk, &proof, &[root, leaf]) {
         Ok(true) => MERKLE_FFI_ACCEPTED,
         Ok(false) => MERKLE_FFI_REJECTED,
         Err(_) => MERKLE_FFI_ERR_INTERNAL,
@@ -556,8 +568,17 @@ mod tests {
         // ---- Tamper case 1: wrong public root ----
         let bad_root = root + Fr::from(1u64);
         assert!(
-            !verify(&pvk, &proof, &[bad_root]).expect("verify should not error"),
+            !verify(&pvk, &proof, &[bad_root, path.leaf]).expect("verify should not error"),
             "proof must NOT verify against a tampered root"
+        );
+
+        // ---- Tamper case 1b: wrong public leaf (bind-to-citation) ----
+        // The same proof against a DIFFERENT public leaf must be rejected: the
+        // proof is bound to the specific disclosed citation, not just the root.
+        let wrong_leaf = path.leaf + Fr::from(1u64);
+        assert!(
+            !verify(&pvk, &proof, &[root, wrong_leaf]).expect("verify should not error"),
+            "proof must NOT verify against a different public leaf"
         );
 
         // ---- Tamper case 2: forged leaf not in the tree ----
@@ -642,6 +663,7 @@ mod tests {
         let mut vk_bytes = Vec::new();
         pvk.serialize_compressed(&mut vk_bytes).unwrap();
         let root_bytes = fr_to_bytes(&root);
+        let leaf_bytes = fr_to_bytes(&path.leaf);
         let proof_bytes = proof_to_bytes(&proof);
 
         // Valid -> ACCEPTED.
@@ -651,6 +673,8 @@ mod tests {
                 vk_bytes.len(),
                 root_bytes.as_ptr(),
                 root_bytes.len(),
+                leaf_bytes.as_ptr(),
+                leaf_bytes.len(),
                 proof_bytes.as_ptr(),
                 proof_bytes.len(),
             )
@@ -665,6 +689,8 @@ mod tests {
                 vk_bytes.len(),
                 bad_root_bytes.as_ptr(),
                 bad_root_bytes.len(),
+                leaf_bytes.as_ptr(),
+                leaf_bytes.len(),
                 proof_bytes.as_ptr(),
                 proof_bytes.len(),
             )
@@ -678,6 +704,8 @@ mod tests {
                 0,
                 root_bytes.as_ptr(),
                 root_bytes.len(),
+                leaf_bytes.as_ptr(),
+                leaf_bytes.len(),
                 proof_bytes.as_ptr(),
                 proof_bytes.len(),
             )

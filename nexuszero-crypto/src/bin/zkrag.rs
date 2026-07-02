@@ -22,8 +22,8 @@ use ark_serialize::CanonicalDeserialize;
 
 use nexuszero_crypto::proof::merkle_circuit::{proof_to_bytes, prove, setup, verify};
 use nexuszero_crypto::proof::zkrag::{
-    build_tree_fixed, load_prepared_vk, load_proving_key, read_fr, save_prepared_vk,
-    save_proving_key, write_fr,
+    build_tree_fixed, leaf_from_bytes, load_prepared_vk, load_proving_key, read_fr,
+    save_prepared_vk, save_proving_key, write_fr,
 };
 
 /// Return the value following any of `flags` on the command line, if present.
@@ -85,6 +85,9 @@ fn main() {
             let path = tree.path(index);
             let (proof, _pub) = prove(&pk, root, &path).unwrap_or_else(|e| die(format!("prove: {e}")));
             write_fr(&root_out, &root).unwrap_or_else(|e| die(e));
+            if let Some(leaf_out) = arg(&["--leaf-out"]) {
+                write_fr(&PathBuf::from(leaf_out), &path.leaf).unwrap_or_else(|e| die(e));
+            }
             std::fs::write(&proof_out, proof_to_bytes(&proof))
                 .unwrap_or_else(|e| die(format!("write proof: {e}")));
             println!("OK prove index={index} depth={depth} root={} proof={}", root_out.display(), proof_out.display());
@@ -92,11 +95,19 @@ fn main() {
         "verify" => {
             let vk_path = PathBuf::from(need(&["--vk"]));
             let root = read_fr(&PathBuf::from(need(&["--root"]))).unwrap_or_else(|e| die(e));
+            // The public leaf binds the proof to a specific disclosed citation.
+            // Accept the raw chunk-id string (--leaf-input, derived the same way
+            // the tree was built) or a precomputed Fr file (--leaf).
+            let leaf = if let Some(s) = arg(&["--leaf-input"]) {
+                leaf_from_bytes(s.as_bytes())
+            } else {
+                read_fr(&PathBuf::from(need(&["--leaf"]))).unwrap_or_else(|e| die(e))
+            };
             let proof_bytes = std::fs::read(need(&["--proof"])).unwrap_or_else(|e| die(format!("read proof: {e}")));
             let pvk = load_prepared_vk(&vk_path).unwrap_or_else(|e| die(e));
             let proof = ark_groth16::Proof::<Bn254>::deserialize_compressed(&proof_bytes[..])
                 .unwrap_or_else(|e| die(format!("deserialize proof: {e}")));
-            match verify(&pvk, &proof, &[root]) {
+            match verify(&pvk, &proof, &[root, leaf]) {
                 Ok(true) => {
                     println!("ACCEPTED");
                     exit(0);
@@ -108,8 +119,22 @@ fn main() {
                 Err(e) => die(format!("verify: {e}")),
             }
         }
+        "root" => {
+            let depth: usize = need(&["--depth"]).parse().unwrap_or_else(|_| die("--depth must be an integer".into()));
+            let leaves = read_leaves(&need(&["--leaves"]));
+            let root_out = PathBuf::from(need(&["--root-out"]));
+            let (_tree, root) = build_tree_fixed(&leaves, depth).unwrap_or_else(|e| die(e));
+            write_fr(&root_out, &root).unwrap_or_else(|e| die(e));
+            println!("OK root depth={depth} root={}", root_out.display());
+        }
+        "leaf" => {
+            let input = need(&["--input"]);
+            let out = PathBuf::from(need(&["--out"]));
+            write_fr(&out, &leaf_from_bytes(input.as_bytes())).unwrap_or_else(|e| die(e));
+            println!("OK leaf out={}", out.display());
+        }
         other => {
-            eprintln!("usage: zkrag <setup|prove|verify> ...  (got {other:?})");
+            eprintln!("usage: zkrag <setup|prove|verify|root|leaf> ...  (got {other:?})");
             exit(2);
         }
     }
