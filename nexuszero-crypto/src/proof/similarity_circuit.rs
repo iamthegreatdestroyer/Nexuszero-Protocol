@@ -58,6 +58,9 @@ use ark_crypto_primitives::sponge::poseidon::PoseidonConfig;
 /// 768-d embeddings are L2-normalized then zero-padded to this length (zeros
 /// change neither the norm nor the dot product). Kept small here to keep the
 /// constraint count and setup/prove time modest; raise (e.g. 1024) for prod.
+/// Validated correct + sound at SIM_DIM=256 (real-embedding scale); the
+/// dimension-generic tests below run at any SIM_DIM. Cost is linear in
+/// SIM_DIM (two vector folds dominate); use release builds for prod dims.
 pub const SIM_DIM: usize = 8;
 
 /// Fixed-point scale for quantizing unit-vector components. `SCALE = 2^12`.
@@ -346,9 +349,13 @@ mod tests {
     // Unit vectors (length SIM_DIM=8). qa and q1 overlap strongly (cos≈0.87);
     // q2 is orthogonal to qa (cos=0).
     fn vecs() -> (Vec<f64>, Vec<f64>, Vec<f64>) {
-        let qa = vec![1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0];
-        let q1 = vec![1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let q2 = vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
+        // Dimension-generic so the same tests exercise any SIM_DIM: qa = first
+        // half ones; q1 overlaps qa strongly (cos high); q2 = orthogonal second
+        // half (cos 0).
+        let half = SIM_DIM / 2;
+        let qa = (0..SIM_DIM).map(|i| if i < half { 1.0 } else { 0.0 }).collect();
+        let q1 = (0..SIM_DIM).map(|i| if i < half - 1 { 1.0 } else { 0.0 }).collect();
+        let q2 = (0..SIM_DIM).map(|i| if i >= half { 1.0 } else { 0.0 }).collect();
         (qa, q1, q2)
     }
 
@@ -410,12 +417,10 @@ mod tests {
         let params = poseidon_config();
         let (qa, q1, q2) = vecs();
         // corpus of 4 chunk embeddings; qa is index 2.
-        let corpus = vec![
-            vec![0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
-            vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-            qa.clone(),
-            vec![0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
-        ];
+        let mut corpus: Vec<Vec<f64>> = (0..4)
+            .map(|j| (0..SIM_DIM).map(|i| ((i + j) % 3) as f64).collect())
+            .collect();
+        corpus[2] = qa.clone(); // cited chunk at index 2
         let tree = build_tree(&params, &corpus);
         let root = tree.root();
         let idx = 2usize;
