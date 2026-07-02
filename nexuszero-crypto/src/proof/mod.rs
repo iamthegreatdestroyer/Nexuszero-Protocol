@@ -13,6 +13,7 @@ pub mod witness_manager;
 pub mod plugins;
 pub mod ark_groth16;
 pub mod merkle_circuit;
+pub mod zkrag;
 
 // New modular architecture modules
 pub mod circuit;
