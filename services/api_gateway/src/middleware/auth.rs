@@ -80,7 +80,7 @@ pub async fn blacklist_token(state: &AppState, jti: &str, ttl_secs: u64) -> Resu
         .arg(&key)
         .arg(ttl_secs)
         .arg("1")
-        .query_async(&mut conn)
+        .query_async::<()>(&mut conn)
         .await?;
     Ok(())
 }
