@@ -36,7 +36,13 @@ jobs:
       - name: Run unit tests for nexuszero-holographic (strict)
         run: |
           cd nexuszero-holographic
-          cargo test --verbose --all-features
+          # NOTE: intentionally not --all-features. This crate's only
+          # non-default feature is `neural`, which links the `tch` crate and
+          # requires a local libtorch install with no setup step in CI.
+          # `neural` is a manual, opt-in local-dev enhancement with
+          # documented graceful fallback (see README) — default features
+          # cover the compression logic these strict checks exist to test.
+          cargo test --verbose
 
       - name: Run unit tests with coverage (tarpaulin)
         if: ${{ always() }}

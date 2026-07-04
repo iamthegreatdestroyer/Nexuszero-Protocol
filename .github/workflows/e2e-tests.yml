@@ -57,15 +57,29 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      # NOTE: the following steps intentionally don't use --all-features.
+      # The `neural` feature (nexuszero-holographic, nexuszero-integration)
+      # links the `tch` crate, which requires a local libtorch install and
+      # has no setup step in CI. `neural` is a manual, opt-in local-dev
+      # enhancement with documented graceful fallback (see
+      # nexuszero-holographic README) — not part of the regularly
+      # CI-tested surface. NEXUSZERO_CI_FEATURES lists every other feature
+      # in the workspace.
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        env:
+          NEXUSZERO_CI_FEATURES: allow-insecure,avx2,neon,simd,lazy_static,test-utils,mainnet,mumbai,gpu,console_error_panic_hook,js-sys,wasm,wasm-bindgen,web-sys,expensive-tests
+        run: cargo clippy --all-targets --features "$NEXUSZERO_CI_FEATURES" -- -D warnings
 
       - name: Build all crates
         id: build
-        run: cargo build --workspace --all-features
+        env:
+          NEXUSZERO_CI_FEATURES: allow-insecure,avx2,neon,simd,lazy_static,test-utils,mainnet,mumbai,gpu,console_error_panic_hook,js-sys,wasm,wasm-bindgen,web-sys,expensive-tests
+        run: cargo build --workspace --features "$NEXUSZERO_CI_FEATURES"
 
       - name: Run unit tests
-        run: cargo test --workspace --lib --bins --all-features
+        env:
+          NEXUSZERO_CI_FEATURES: allow-insecure,avx2,neon,simd,lazy_static,test-utils,mainnet,mumbai,gpu,console_error_panic_hook,js-sys,wasm,wasm-bindgen,web-sys,expensive-tests
+        run: cargo test --workspace --lib --bins --features "$NEXUSZERO_CI_FEATURES"
 
   # ============================================================================
   # Job 2: E2E Test Suite
@@ -128,6 +142,10 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     needs: build-and-test
+    env:
+      # See NOTE in build-and-test: excludes `neural` (requires libtorch,
+      # not set up in CI). Every other workspace feature is listed.
+      NEXUSZERO_CI_FEATURES: allow-insecure,avx2,neon,simd,lazy_static,test-utils,mainnet,mumbai,gpu,console_error_panic_hook,js-sys,wasm,wasm-bindgen,web-sys,expensive-tests
 
     steps:
       - name: Checkout repository
@@ -158,11 +176,11 @@ jobs:
 
       - name: Generate coverage report (llvm-cov)
         run: |
-          cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+          cargo llvm-cov --workspace --features "$NEXUSZERO_CI_FEATURES" --lcov --output-path lcov.info
 
       - name: Generate coverage report (tarpaulin)
         run: |
-          cargo tarpaulin --workspace --all-features --out xml --output-dir coverage/
+          cargo tarpaulin --workspace --features "$NEXUSZERO_CI_FEATURES" --out xml --output-dir coverage/
         continue-on-error: true
 
       - name: Upload coverage to Codecov
@@ -176,7 +194,7 @@ jobs:
       - name: Check coverage threshold
         run: |
           THRESHOLD=${{ github.event.inputs.coverage_threshold || '90' }}
-          COVERAGE=$(cargo llvm-cov --workspace --all-features --json | jq '.data[0].totals.lines.percent')
+          COVERAGE=$(cargo llvm-cov --workspace --features "$NEXUSZERO_CI_FEATURES" --json | jq '.data[0].totals.lines.percent')
           echo "Coverage: ${COVERAGE}%"
           if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
             echo "::error::Coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
@@ -271,6 +289,10 @@ jobs:
     name: Build Documentation
     runs-on: ubuntu-latest
     needs: build-and-test
+    env:
+      # See NOTE in build-and-test: excludes `neural` (requires libtorch,
+      # not set up in CI). Every other workspace feature is listed.
+      NEXUSZERO_CI_FEATURES: allow-insecure,avx2,neon,simd,lazy_static,test-utils,mainnet,mumbai,gpu,console_error_panic_hook,js-sys,wasm,wasm-bindgen,web-sys,expensive-tests
 
     steps:
       - name: Checkout repository
@@ -282,7 +304,7 @@ jobs:
           toolchain: stable
 
       - name: Build documentation
-        run: cargo doc --workspace --all-features --no-deps
+        run: cargo doc --workspace --features "$NEXUSZERO_CI_FEATURES" --no-deps
 
       - name: Upload documentation
         uses: actions/upload-artifact@v4
