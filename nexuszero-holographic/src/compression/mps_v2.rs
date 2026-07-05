@@ -136,6 +136,19 @@ impl CompressionConfig {
     }
 
     /// Lossless preset (no truncation, exact reconstruction)
+    ///
+    /// NOTE (investigated alongside a similar-looking bug in `mps_compressed.rs`'s
+    /// `MPSConfig::lossless()`): `max_bond_dim: 256` + `truncation_threshold: 0.0`
+    /// looks like the same "threshold never fires" pattern, but it is NOT dangerous
+    /// here the way it is in `mps_compressed.rs`. `tensor_train_svd` below is a
+    /// single-split SVD (always exactly 2 cores), not a per-site chain, so there is
+    /// no growing bond dimension across many sites to plateau. The retained `rank`
+    /// is already hard-capped by the matrix's own `m.min(n)` inside
+    /// `TensorSVD::compute`'s `rank_bound` (see `tensor::decomposition::TensorSVD::compute`),
+    /// independent of `max_bond_dim` and independent of the threshold comparison.
+    /// A "site-aware bound" analogous to `mps_compressed.rs`'s does not apply here —
+    /// there is no `site` index to be aware of. Left unchanged intentionally; this is
+    /// a documentation/consistency note, not a fix.
     pub fn lossless() -> Self {
         Self {
             max_bond_dim: 256,
@@ -903,6 +916,10 @@ mod tests {
         let recovered = compressed.decompress().unwrap();
 
         assert_eq!(recovered.len(), data.len());
+        // Byte-exact check for the lossless() preset: this preset exists specifically
+        // to guarantee exact reconstruction, so anything less is a real data-integrity
+        // bug, not an acceptable approximation. Do not weaken this assertion.
+        assert_eq!(recovered, data, "lossless() roundtrip must be byte-exact");
     }
 
     #[test]

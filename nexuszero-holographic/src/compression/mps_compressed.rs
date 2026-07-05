@@ -399,9 +399,30 @@ fn tensor_train_decompose(
             }
         }
 
+        // Site-aware hard rank bound (defensive hygiene, NOT a performance fix):
+        // a tensor-train split at this site can never carry more Schmidt rank than
+        // min(physical_dim^(site+1), physical_dim^(num_sites-site-1)) — the smaller
+        // of "how many distinct histories exist to the left" vs "to the right" of
+        // the cut. This is mathematically safe to compose with `truncate_tensor`'s
+        // own `.min(max_bond_dim)` clamp and with `TensorSVD::compute`'s internal
+        // `rank_bound = m.min(n)` clamp: it can only ever tighten `max_bond_dim`,
+        // never loosen it, so it cannot discard information that the existing
+        // clamps would otherwise have kept.
+        //
+        // NOTE: for `MPSConfig::lossless()` specifically this is a no-op — with
+        // physical_dim = 256 the bound reaches/exceeds 256 within 1-2 sites for
+        // any non-trivial num_sites, so it never actually tightens max_bond_dim
+        // (256) for that preset. It does NOT fix the flat-256 bond-dimension
+        // plateau seen in lossless(); that is a separate, harder performance
+        // problem being scoped independently. This bound exists purely to protect
+        // any FUTURE config with a smaller block_size/physical_dim from silently
+        // carrying a needlessly large (and here, wastefully allocated) bond
+        // dimension due to the same threshold=0.0 pattern.
+        let site_max_bond_dim = site_rank_bound(physical_dim, site, num_sites, max_bond_dim);
+
         // Apply truncation: SVD on reshaped tensor
         let truncated = if !is_last && left_bond * physical_dim > 1 {
-            truncate_tensor(&tensor, max_bond_dim, truncation_threshold)
+            truncate_tensor(&tensor, site_max_bond_dim, truncation_threshold)
         } else {
             tensor
         };
@@ -418,6 +439,50 @@ fn tensor_train_decompose(
     }
 
     Ok(tensors)
+}
+
+/// Compute `min(physical_dim^(site+1), physical_dim^(num_sites-site-1)).min(max_bond_dim)`
+/// without ever materializing `physical_dim^k` for large `k` (which overflows `u64`
+/// around k≈8 when physical_dim=256). Since the only thing the caller needs is a
+/// value clamped to `max_bond_dim`, we grow the accumulator one factor at a time and
+/// bail out the moment it reaches or exceeds `max_bond_dim` — at that point the true
+/// (possibly astronomically large) power is irrelevant, because the `.min(max_bond_dim)`
+/// would discard it anyway.
+///
+/// `site` is 0-indexed; `left_exp = site + 1` counts sites to the left of (and
+/// including) this cut, `right_exp = num_sites - site - 1` counts sites strictly to
+/// the right.
+fn site_rank_bound(physical_dim: usize, site: usize, num_sites: usize, max_bond_dim: usize) -> usize {
+    // Saturating power: base^exp, short-circuited at `cap`.
+    fn saturating_pow_capped(base: usize, exp: usize, cap: usize) -> usize {
+        if cap == 0 {
+            return 0;
+        }
+        // base == 0: 0^0 = 1 (vacuous - no sites to distinguish), 0^k = 0 for k >= 1.
+        // base == 1: 1^k = 1 for all k (no growth possible either way).
+        if base == 0 {
+            return if exp == 0 { 1.min(cap) } else { 0 };
+        }
+        if base == 1 {
+            return 1.min(cap);
+        }
+        let mut acc: usize = 1;
+        for _ in 0..exp {
+            acc = acc.saturating_mul(base);
+            if acc >= cap {
+                return cap;
+            }
+        }
+        acc
+    }
+
+    let left_exp = site + 1;
+    let right_exp = num_sites - site - 1;
+
+    let left_bound = saturating_pow_capped(physical_dim, left_exp, max_bond_dim);
+    let right_bound = saturating_pow_capped(physical_dim, right_exp, max_bond_dim);
+
+    left_bound.min(right_bound).min(max_bond_dim)
 }
 
 /// Truncate a tensor's right bond dimension using SVD
@@ -508,8 +573,10 @@ mod tests {
         let recovered = mps.decompress().unwrap();
 
         assert_eq!(recovered.len(), data.len());
-        // Note: Due to the simplified encoding, exact match may not be guaranteed
-        // Check length matches
+        // Byte-exact check for the lossless() preset: this preset exists specifically
+        // to guarantee exact reconstruction, so anything less is a real data-integrity
+        // bug, not an acceptable approximation. Do not weaken this assertion.
+        assert_eq!(recovered, data, "lossless() roundtrip must be byte-exact");
     }
 
     #[test]
