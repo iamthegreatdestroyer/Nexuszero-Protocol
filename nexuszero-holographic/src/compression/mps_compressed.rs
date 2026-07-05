@@ -74,7 +74,27 @@ impl MPSConfig {
         }
     }
 
-    /// Lossless preset (no truncation, exact reconstruction)
+    /// Lossless preset (no truncation, exact reconstruction) - DEPRECATED
+    ///
+    /// `tensor_train_decompose`'s per-site chain (below) discards `V^T` at every
+    /// site and rebuilds each site tensor synthetically from just a carried-forward
+    /// `left_bond` scalar, rather than doing genuine sequential TT-SVD math. Combined
+    /// with paying a full generic eigendecomposition-based SVD at every site
+    /// regardless of size, this preset's flat `max_bond_dim: 256` plateaus almost
+    /// immediately (see `site_rank_bound`'s doc comment) and the per-site cost
+    /// explodes: an 8-byte input takes ~68s, and a 256-byte input has never been
+    /// observed to complete. Use `HolographicEncoder::encode` with
+    /// `EncoderConfig::lossless()` instead (`nexuszero-holographic/src/compression/
+    /// encoder_new.rs`), which as of this migration routes its lossless path through
+    /// `mps_v2::CompressedTensorTrain` / `CompressionConfig::lossless()` — a single
+    /// SVD-split, always-2-cores architecture with no growing per-site bond
+    /// dimension, confirmed byte-exact and sub-second on the same cases. If you need
+    /// the lower-level type directly, use `mps_v2::CompressedTensorTrain::compress`
+    /// with `mps_v2::CompressionConfig::lossless()` directly.
+    #[deprecated(
+        since = "0.2.1",
+        note = "Per-site TT-SVD chain never completes for realistic inputs (256 bytes hangs indefinitely; 8 bytes takes ~68s). Use mps_v2::CompressedTensorTrain with mps_v2::CompressionConfig::lossless() instead (also reachable via HolographicEncoder::encode with EncoderConfig::lossless(), which now uses mps_v2 internally)."
+    )]
     pub fn lossless() -> Self {
         Self {
             max_bond_dim: 256,
@@ -564,7 +584,13 @@ mod tests {
         assert!(result.is_err());
     }
 
+    // NOTE: this test intentionally keeps exercising the deprecated per-site chain
+    // (see MPSConfig::lossless()'s #[deprecated] note) to prove the old code path is
+    // unchanged by the mps_v2 migration in encoder_new.rs - it is a record of the
+    // diagnosed bug's known-slow-but-still-correct behavior on a small input, not a
+    // recommendation to use this preset going forward. Expect ~68s runtime.
     #[test]
+    #[allow(deprecated)]
     fn test_roundtrip_basic() {
         let data: Vec<u8> = vec![0, 1, 2, 3, 4, 5, 6, 7];
         let config = MPSConfig::lossless();

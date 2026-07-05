@@ -244,6 +244,13 @@ impl E2ETestConfig {
     }
 
     /// Create an exhaustive test configuration
+    ///
+    /// NOTE: `compression_config` is populated with the now-deprecated
+    /// `MPSConfig::lossless()` for structural/field inspection only - nothing in
+    /// this workspace ever feeds an `exhaustive()` config's `compression_config`
+    /// into `CompressedMPS::compress`, so this is unaffected by that preset's
+    /// real performance bug. `#[allow(deprecated)]` just silences the warning.
+    #[allow(deprecated)]
     pub fn exhaustive() -> Self {
         Self {
             security_level: SecurityLevel::Bit256,

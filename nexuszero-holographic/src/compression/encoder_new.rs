@@ -2,20 +2,57 @@
 //!
 //! Provides a clean interface for encoding/decoding data using the
 //! CompressedMPS implementation with various configuration presets.
+//!
+//! # Backend routing (migration note, added alongside the mps_v2 lossless migration)
+//!
+//! `HolographicEncoder` can internally back its lossless path with either of two
+//! independent compression implementations:
+//! - `mps_compressed::CompressedMPS` (the original per-site TT chain). Still used
+//!   for `EncoderConfig::default()` / `high_compression()` / `fast()`, unchanged.
+//! - `mps_v2::CompressedTensorTrain` (a single SVD-split, always-2-core
+//!   architecture). Now used for `EncoderConfig::lossless()`, because
+//!   `mps_compressed`'s per-site chain never completes for realistic inputs under
+//!   its own `lossless()` preset (see `MPSConfig::lossless()`'s `#[deprecated]`
+//!   note) while `mps_v2`'s `lossless()` preset is confirmed byte-exact and
+//!   sub-second on the same cases.
+//!
+//! `HolographicEncoder::encode`/`decode`'s public signatures and `CompressedProof`'s
+//! public fields are unchanged by this - the backend selection is fully internal.
+//! The one necessary internal change is that `CompressedProof.mps_bytes` now carries
+//! a 1-byte backend tag (`BACKEND_TAG_MPS_COMPRESSED` / `BACKEND_TAG_MPS_V2`)
+//! prepended to the serialized payload, so `decode()` is self-describing and correct
+//! even if a `CompressedProof` is decoded by a `HolographicEncoder` instance
+//! constructed with a different `EncoderConfig` than the one that encoded it.
 
 use serde::{Deserialize, Serialize};
 
 use super::mps_compressed::{CompressedMPS, MPSConfig, MPSError};
+use super::mps_v2::{CompressedTensorTrain, CompressionConfig as MpsV2Config, CompressionError as MpsV2Error};
+
+/// Backend tag: payload is a bincode-serialized `mps_compressed::CompressedMPS`.
+const BACKEND_TAG_MPS_COMPRESSED: u8 = 0x01;
+/// Backend tag: payload is a bincode-serialized `mps_v2::CompressedTensorTrain`.
+const BACKEND_TAG_MPS_V2: u8 = 0x02;
 
 /// Configuration for the holographic encoder
 #[derive(Clone, Debug)]
 pub struct EncoderConfig {
-    /// Underlying MPS configuration
+    /// Underlying MPS configuration (used when `use_mps_v2` is false)
     pub mps_config: MPSConfig,
     /// Enable hybrid compression (MPS + standard algorithm)
     pub hybrid_mode: bool,
     /// Verify integrity after encoding
     pub verify_on_encode: bool,
+    /// Internal backend selector: when true, `encode`/`decode` route through
+    /// `mps_v2::CompressedTensorTrain` (via `mps_v2_config`) instead of
+    /// `mps_compressed::CompressedMPS` (via `mps_config`). Not part of the
+    /// preset-selection API surface callers are expected to toggle by hand -
+    /// set implicitly by `EncoderConfig::lossless()`. Kept `pub` only because
+    /// `EncoderConfig`'s fields were already all `pub`; manual construction
+    /// (`EncoderConfig { .. }`) defaults it to `false` via `Default`.
+    pub use_mps_v2: bool,
+    /// `mps_v2` configuration, used only when `use_mps_v2` is true.
+    pub mps_v2_config: MpsV2Config,
 }
 
 impl Default for EncoderConfig {
@@ -24,6 +61,8 @@ impl Default for EncoderConfig {
             mps_config: MPSConfig::default(),
             hybrid_mode: false,
             verify_on_encode: true,
+            use_mps_v2: false,
+            mps_v2_config: MpsV2Config::default(),
         }
     }
 }
@@ -35,6 +74,8 @@ impl EncoderConfig {
             mps_config: MPSConfig::high_compression(),
             hybrid_mode: true,
             verify_on_encode: false,
+            use_mps_v2: false,
+            mps_v2_config: MpsV2Config::default(),
         }
     }
 
@@ -44,15 +85,27 @@ impl EncoderConfig {
             mps_config: MPSConfig::fast(),
             hybrid_mode: false,
             verify_on_encode: false,
+            use_mps_v2: false,
+            mps_v2_config: MpsV2Config::default(),
         }
     }
 
     /// Lossless preset (exact reconstruction)
+    ///
+    /// Migrated to route through `mps_v2::CompressedTensorTrain` /
+    /// `mps_v2::CompressionConfig::lossless()` internally (see module-level
+    /// migration note above). `mps_config` is still populated with
+    /// `MPSConfig::lossless()` for informational/backward-compat purposes (e.g.
+    /// existing callers that inspect `config.mps_config` after building this
+    /// preset), but `encode`/`decode` no longer read it once `use_mps_v2` is set.
+    #[allow(deprecated)]
     pub fn lossless() -> Self {
         Self {
             mps_config: MPSConfig::lossless(),
             hybrid_mode: false,
             verify_on_encode: true,
+            use_mps_v2: true,
+            mps_v2_config: MpsV2Config::lossless(),
         }
     }
 }
@@ -104,26 +157,51 @@ impl HolographicEncoder {
         // Compute hash of original data
         let original_hash = simple_hash(data);
 
-        // Compress using MPS
-        let mps = CompressedMPS::compress(data, self.config.mps_config.clone())?;
+        // Compress using whichever backend this config selects, producing a
+        // backend-tagged, bincode-serialized payload plus metadata fields common
+        // to both backends.
+        let (tagged_bytes, num_sites, bond_dims) = if self.config.use_mps_v2 {
+            let tt = CompressedTensorTrain::compress(data, self.config.mps_v2_config.clone())
+                .map_err(mps_v2_err_to_mps_err)?;
+            let serialized = tt.to_bytes().map_err(mps_v2_err_to_mps_err)?;
 
-        // Serialize MPS
-        let mps_bytes = mps.to_bytes()?;
+            let mut tagged = Vec::with_capacity(1 + serialized.len());
+            tagged.push(BACKEND_TAG_MPS_V2);
+            tagged.extend_from_slice(&serialized);
+
+            let stats = tt.stats();
+            // CompressedTensorTrain is always exactly 2 cores (a single SVD split),
+            // sharing one bond dimension between them; avg_bond_dim == max_bond_dim
+            // in that case (see mps_v2::tensor_train_svd), so either stat gives the
+            // true shared rank. One entry per site mirrors CompressedMPS::bond_dims's
+            // "one bond dim per site" shape.
+            let bond_dims = vec![stats.max_bond_dim; stats.num_sites];
+            (tagged, stats.num_sites, bond_dims)
+        } else {
+            let mps = CompressedMPS::compress(data, self.config.mps_config.clone())?;
+            let serialized = mps.to_bytes()?;
+
+            let mut tagged = Vec::with_capacity(1 + serialized.len());
+            tagged.push(BACKEND_TAG_MPS_COMPRESSED);
+            tagged.extend_from_slice(&serialized);
+
+            (tagged, mps.num_sites(), mps.bond_dims().to_vec())
+        };
 
         // Optionally apply hybrid compression (LZ4 on top)
         let final_bytes = if self.config.hybrid_mode {
             // Simple RLE-like compression for repeated values
-            compress_bytes(&mps_bytes)
+            compress_bytes(&tagged_bytes)
         } else {
-            mps_bytes
+            tagged_bytes
         };
 
         let metadata = ProofMetadata {
             original_size: data.len(),
             compressed_size: final_bytes.len(),
             compression_ratio: final_bytes.len() as f64 / data.len() as f64,
-            num_sites: mps.num_sites(),
-            bond_dims: mps.bond_dims().to_vec(),
+            num_sites,
+            bond_dims,
         };
 
         let proof = CompressedProof {
@@ -146,17 +224,32 @@ impl HolographicEncoder {
     /// Decode a compressed proof back to data
     pub fn decode(&self, proof: &CompressedProof) -> Result<Vec<u8>, MPSError> {
         // Decompress bytes if hybrid mode was used
-        let mps_bytes = if self.config.hybrid_mode {
+        let tagged_bytes = if self.config.hybrid_mode {
             decompress_bytes(&proof.mps_bytes)
         } else {
             proof.mps_bytes.clone()
         };
 
-        // Deserialize MPS
-        let mps = CompressedMPS::from_bytes(&mps_bytes)?;
+        // The backend tag byte makes decode() self-describing: it reflects how
+        // `proof` was actually encoded, independent of `self.config.use_mps_v2`.
+        // This matters because `proof` may have been produced by a different
+        // HolographicEncoder instance (e.g. deserialized from storage/network)
+        // than the one decoding it.
+        let (&tag, payload) = tagged_bytes
+            .split_first()
+            .ok_or(MPSError::DecompressionFailed)?;
 
-        // Decompress MPS to original data
-        mps.decompress()
+        match tag {
+            BACKEND_TAG_MPS_V2 => {
+                let tt = CompressedTensorTrain::from_bytes(payload).map_err(mps_v2_err_to_mps_err)?;
+                tt.decompress().map_err(mps_v2_err_to_mps_err)
+            }
+            BACKEND_TAG_MPS_COMPRESSED => {
+                let mps = CompressedMPS::from_bytes(payload)?;
+                mps.decompress()
+            }
+            _ => Err(MPSError::DecompressionFailed),
+        }
     }
 
     /// Verify that a compressed proof is valid
@@ -218,6 +311,25 @@ impl std::fmt::Display for CompressionStats {
             self.num_sites,
             self.avg_bond_dim
         )
+    }
+}
+
+/// Map `mps_v2::CompressionError` onto the encoder's public `MPSError` type so
+/// `HolographicEncoder::encode`/`decode` can keep returning `Result<_, MPSError>`
+/// regardless of which backend (`mps_compressed` or `mps_v2`) actually ran.
+/// Variants that carry a `String` map onto `MPSError`'s closest same-shaped
+/// variant, preserving the message; variants `MPSError` has no dedicated slot for
+/// (`LZ4Error`, `TruncationOverflow`) are folded into `SerializationError` with
+/// their `Display` text so the detail isn't silently dropped.
+fn mps_v2_err_to_mps_err(err: MpsV2Error) -> MPSError {
+    match err {
+        MpsV2Error::EmptyInput => MPSError::EmptyInput,
+        MpsV2Error::SVDFailed(_) => MPSError::SVDFailed,
+        MpsV2Error::DecompressionFailed(_) => MPSError::DecompressionFailed,
+        MpsV2Error::SerializationError(msg) => MPSError::SerializationError(msg),
+        other @ (MpsV2Error::LZ4Error(_) | MpsV2Error::TruncationOverflow) => {
+            MPSError::SerializationError(other.to_string())
+        }
     }
 }
 
@@ -368,18 +480,66 @@ mod tests {
         // Use small data to keep tests fast
         let data: Vec<u8> = (0..16).map(|i| (i % 256) as u8).collect();
 
-        // Test all presets compile and work
+        // Test all presets compile and work. `lossless()` was previously skipped
+        // here ("too slow for 16 sites" - it never completed via the old
+        // mps_compressed per-site chain); now that it's migrated onto mps_v2 it's
+        // sub-second, so it's included like every other preset.
         for config in [
             EncoderConfig::default(),
             EncoderConfig::high_compression(),
             EncoderConfig::fast(),
-            // Skip lossless in this test as it's too slow for 16 sites
-            // EncoderConfig::lossless(),
+            EncoderConfig::lossless(),
         ] {
             let encoder = HolographicEncoder::new(config);
             let proof = encoder.encode(&data).unwrap();
             assert!(proof.metadata.compressed_size > 0);
         }
+    }
+
+    /// Regression test for the mps_v2 lossless migration: the 8-byte case that
+    /// previously took ~68s via `mps_compressed`'s per-site chain must now complete
+    /// well under a second via `mps_v2`, and must still be byte-exact.
+    #[test]
+    fn test_lossless_8_bytes_fast_and_exact() {
+        let data: Vec<u8> = vec![0, 1, 2, 3, 4, 5, 6, 7];
+        let encoder = HolographicEncoder::new(EncoderConfig::lossless());
+
+        let start = std::time::Instant::now();
+        let proof = encoder.encode(&data).unwrap();
+        let decoded = encoder.decode(&proof).unwrap();
+        let elapsed = start.elapsed();
+
+        assert_eq!(decoded, data, "lossless() roundtrip must be byte-exact");
+        assert!(
+            elapsed.as_secs() < 5,
+            "8-byte lossless encode+decode took {:?}, expected well under a second (mps_v2 baseline ~0.04s); \
+             the old mps_compressed path took ~68s for this exact case",
+            elapsed
+        );
+        println!("8-byte lossless encode+decode: {:?}", elapsed);
+    }
+
+    /// Regression test for the mps_v2 lossless migration: 256 bytes via
+    /// `mps_compressed`'s per-site chain (see
+    /// `mps_compression_validation.rs::test_config_presets`) has never been observed
+    /// to complete. Via mps_v2 it must complete fast and byte-exact.
+    #[test]
+    fn test_lossless_256_bytes_completes_and_exact() {
+        let data: Vec<u8> = (0..256).map(|i| (i % 256) as u8).collect();
+        let encoder = HolographicEncoder::new(EncoderConfig::lossless());
+
+        let start = std::time::Instant::now();
+        let proof = encoder.encode(&data).unwrap();
+        let decoded = encoder.decode(&proof).unwrap();
+        let elapsed = start.elapsed();
+
+        assert_eq!(decoded, data, "lossless() roundtrip must be byte-exact");
+        assert!(
+            elapsed.as_secs() < 10,
+            "256-byte lossless encode+decode took {:?}, expected well under a second",
+            elapsed
+        );
+        println!("256-byte lossless encode+decode: {:?}", elapsed);
     }
 
     #[test]

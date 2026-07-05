@@ -110,7 +110,18 @@ fn test_holographic_encoder_api() {
 }
 
 /// Test all configuration presets
+///
+/// NOTE: "lossless" here exercises the deprecated `MPSConfig::lossless()` /
+/// `mps_compressed` per-site chain directly (not via `HolographicEncoder`, which
+/// has been migrated to `mps_v2` for its own `EncoderConfig::lossless()` preset -
+/// see `encoder_new.rs`). This test is intentionally left unchanged: it is a
+/// pre-existing, never-completing case (256 bytes through the buggy per-site
+/// chain has never been observed to finish) that documents the diagnosed bug and
+/// is not run as part of the bounded verification commands used elsewhere for
+/// this migration. Do not remove `#[allow(deprecated)]` without also addressing
+/// why this test is still calling the deprecated preset.
 #[test]
+#[allow(deprecated)]
 fn test_config_presets() {
     let data: Vec<u8> = (0..256).map(|i| (i % 256) as u8).collect();
 

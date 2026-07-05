@@ -525,7 +525,13 @@ mod configuration_tests {
     use super::*;
 
     /// Test: Configuration loading and validation
+    ///
+    /// NOTE: inspects `MPSConfig::lossless()`'s fields only (never calls
+    /// `CompressedMPS::compress` with it), so it is unaffected by that preset's
+    /// `#[deprecated]` marker being added; `#[allow(deprecated)]` here just
+    /// silences the resulting warning.
     #[test]
+    #[allow(deprecated)]
     fn test_configuration_validation() {
         println!("Testing configuration validation");
         
