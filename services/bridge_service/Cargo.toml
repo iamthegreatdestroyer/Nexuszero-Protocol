@@ -56,7 +56,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Metrics
-prometheus = { version = "0.13", features = ["process"] }
+prometheus = { version = "0.14", features = ["process"] }
 lazy_static = "1.4"
 
 # Error handling
@@ -64,7 +64,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # Validation
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 # Decimal for precise amounts
 rust_decimal = { version = "1.32", features = ["serde"] }

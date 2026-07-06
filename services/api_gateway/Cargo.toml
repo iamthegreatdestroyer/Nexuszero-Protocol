@@ -33,7 +33,7 @@ hex.workspace = true
 # Utilities
 uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 config = "0.14"
 dotenvy = "0.15"
 lazy_static = "1.5"
@@ -41,7 +41,7 @@ lazy_static = "1.5"
 # Observability
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-prometheus = "0.13"
+prometheus = "0.14"
 metrics = "0.21"
 metrics-exporter-prometheus = "0.12"
 

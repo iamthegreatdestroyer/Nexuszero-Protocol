@@ -42,14 +42,14 @@ config = "0.14"
 dotenvy = "0.15"
 
 # Metrics
-prometheus = "0.13"
+prometheus = "0.14"
 lazy_static = "1.4"
 
 # HTTP client for external APIs
 reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
 
 # Validation
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 # Cryptography for signatures
 ed25519-dalek = { version = "2.1", features = ["serde"] }

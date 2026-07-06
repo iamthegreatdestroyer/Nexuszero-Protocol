@@ -32,7 +32,7 @@ reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-feature
 jsonwebtoken = "9.2"
 
 # Metrics
-prometheus = "0.13"
+prometheus = "0.14"
 lazy_static = "1.4"
 
 # Logging & Tracing

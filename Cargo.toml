@@ -88,7 +88,7 @@ validator = { version = "0.18", features = ["derive"] }
 rust_decimal = { version = "1.36", features = ["serde"] }
 
 # Metrics
-prometheus = "0.13"
+prometheus = "0.14"
 lazy_static = "1.5"
 
 # Async traits
