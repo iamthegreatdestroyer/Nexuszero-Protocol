@@ -33,7 +33,6 @@ rand = "0.8"
 hex = "0.4"
 
 # Blockchain clients
-ethers = { version = "2.0", features = ["ws", "rustls"] }
 bitcoin = "0.31"
 # Note: Solana support requires separate compilation due to zeroize version conflicts
 # solana-client = "1.17"

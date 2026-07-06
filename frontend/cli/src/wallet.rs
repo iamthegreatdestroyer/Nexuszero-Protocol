@@ -1,7 +1,7 @@
 //! Wallet Management for NexusZero CLI
 
+use alloy::signers::{local::PrivateKeySigner, Signer};
 use bip39::{Language, Mnemonic};
-use ethers::signers::{LocalWallet, Signer};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -21,7 +21,7 @@ pub struct WalletData {
 pub struct Wallet {
     pub name: String,
     pub address: String,
-    inner: LocalWallet,
+    inner: PrivateKeySigner,
 }
 
 impl Wallet {
@@ -48,7 +48,7 @@ impl Wallet {
 
         // Derive wallet from mnemonic (first account)
         let seed = mnemonic.to_seed("");
-        let wallet = LocalWallet::from_bytes(&seed[..32])
+        let wallet = PrivateKeySigner::from_slice(&seed[..32])
             .map_err(|e| CliError::Wallet(format!("Failed to create wallet: {}", e)))?;
 
         let address = format!("{:?}", wallet.address());
@@ -65,7 +65,7 @@ impl Wallet {
         let key_bytes = hex::decode(key.trim_start_matches("0x"))
             .map_err(|e| CliError::Wallet(format!("Invalid private key hex: {}", e)))?;
 
-        let wallet = LocalWallet::from_bytes(&key_bytes)
+        let wallet = PrivateKeySigner::from_slice(&key_bytes)
             .map_err(|e| CliError::Wallet(format!("Failed to create wallet: {}", e)))?;
 
         let address = format!("{:?}", wallet.address());
@@ -78,7 +78,7 @@ impl Wallet {
     }
 
     /// Get the underlying signer
-    pub fn signer(&self) -> &LocalWallet {
+    pub fn signer(&self) -> &PrivateKeySigner {
         &self.inner
     }
 
@@ -86,7 +86,7 @@ impl Wallet {
     pub async fn sign_message(&self, message: &[u8]) -> CliResult<String> {
         let signature = self.inner.sign_message(message).await
             .map_err(|e| CliError::Wallet(format!("Failed to sign: {}", e)))?;
-        Ok(format!("0x{}", hex::encode(signature.to_vec())))
+        Ok(format!("0x{}", hex::encode(signature.as_bytes())))
     }
 
     /// Save wallet to encrypted file
@@ -95,7 +95,7 @@ impl Wallet {
         
         // In production, use proper encryption (AES-GCM with Argon2 key derivation)
         // For now, simple base64 encoding (NOT SECURE - placeholder)
-        let key_bytes = self.inner.signer().to_bytes();
+        let key_bytes = self.inner.to_bytes();
         let encrypted = STANDARD.encode(&key_bytes);
 
         let data = WalletData {
@@ -137,7 +137,7 @@ impl Wallet {
         let key_bytes = STANDARD.decode(parts[1])
             .map_err(|e| CliError::Wallet(format!("Failed to decode key: {}", e)))?;
 
-        let wallet = LocalWallet::from_bytes(&key_bytes)
+        let wallet = PrivateKeySigner::from_slice(&key_bytes)
             .map_err(|e| CliError::Wallet(format!("Failed to load wallet: {}", e)))?;
 
         Ok(Self {
