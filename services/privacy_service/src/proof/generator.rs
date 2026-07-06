@@ -205,7 +205,20 @@ impl ProofGenerator {
         
         hasher.update(b"GROTH16_PROOF_B");
         hasher.update(witness);
-        let b_point = hasher.finalize_reset()[..96].to_vec(); // G2 point
+        // G2 point is 96 bytes (BLS12-381 compressed G2), but Blake2b512
+        // only yields 64 bytes per digest. Expand deterministically by
+        // chaining two domain-separated digests and taking 96 bytes
+        // from their concatenation, rather than slicing past the end
+        // of a single 64-byte hash (which panics).
+        let b_lo = hasher.finalize_reset(); // 64 bytes
+        hasher.update(b"GROTH16_PROOF_B_EXT");
+        hasher.update(witness);
+        hasher.update(&b_lo);
+        let b_hi = hasher.finalize_reset(); // 64 bytes
+        let mut b_point = Vec::with_capacity(96);
+        b_point.extend_from_slice(&b_lo);       // bytes 0..64
+        b_point.extend_from_slice(&b_hi[..32]); // bytes 64..96
+        // b_point is now 96 bytes total (G2 point)
         
         hasher.update(b"GROTH16_PROOF_C");
         hasher.update(witness);
