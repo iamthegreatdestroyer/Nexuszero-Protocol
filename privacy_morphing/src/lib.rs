@@ -14,7 +14,7 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use nexuszero_privacy_morphing::{PrivacyMorphingEngine, MorphingConfig};
+//! use nexuszero_privacy_morphing::{PrivacyMorphingEngine, MorphingConfig, TransactionContext, RecipientType, TransactionUrgency};
 //!
 //! #[tokio::main]
 //! async fn main() {
@@ -26,6 +26,10 @@
 //!         amount: 1000,
 //!         recipient_type: RecipientType::Normal,
 //!         compliance_required: false,
+//!         urgency: TransactionUrgency::Normal,
+//!         source_chain: None,
+//!         dest_chain: None,
+//!         requested_level: None,
 //!     };
 //!
 //!     let privacy_level = engine.calculate_privacy_level(&context).await;
