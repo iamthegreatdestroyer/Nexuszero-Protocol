@@ -7,6 +7,28 @@
 
 ---
 
+## Implementation Status (as-built)
+
+> This document describes the **vision and target design**. Several capabilities
+> referenced below are not yet functional. Current ground truth:
+>
+> - **On-chain submission is OFF-CHAIN SCAFFOLDING.** The Ethereum
+>   (`chain_connectors/ethereum`) and Solana (`chain_connectors/solana`)
+>   `submit_proof` connectors **do not sign or broadcast any transaction and put
+>   nothing on-chain.** They return a *fabricated/placeholder* `TransactionReceipt`
+>   (Ethereum returns a zero tx hash with `status: false` and logs a warning that
+>   signing setup is required; Solana returns a synthesized tx hash with
+>   `status: true` derived from the current slot). Read-only paths (block/receipt
+>   queries, `verify_proof`) call real RPC, but proof *submission* is not wired.
+>   Cross-chain claims ("Works with Ethereum, Bitcoin, Solana, Cosmos") are targets,
+>   not shipped functionality.
+> - **Several CLI verbs are TODO stubs.** `wallet default <name>` validates the
+>   wallet exists but does **not** persist the default (`// TODO: Save default
+>   wallet in config`); `proof list` and `privacy notes` (list proofs / list notes)
+>   return `"Feature pending API implementation"` and list nothing.
+
+---
+
 ## Vision
 
 Build the world's first **Adaptive Quantum-Resistant Zero-Knowledge Privacy Layer** that becomes the universal standard for private transactions across all blockchains, serving 10M+ users and processing $1T+ annually by Year 5.

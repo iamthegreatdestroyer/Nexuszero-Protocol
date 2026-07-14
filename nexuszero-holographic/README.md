@@ -545,6 +545,30 @@ env_logger::init();
 
 ---
 
+## Implementation Status & Limitations
+
+> **Supported holographic path:** The **MPS lossless path is the only supported
+> holographic compression/decompression path.** `CompressedTensorTrain` (v2 tensor
+> train) and the MPS encoder/decoder round-trip byte-perfect data and are what the
+> API examples above exercise.
+>
+> The following modules are **FUTURE-WORK PLACEHOLDERS** and are not part of the
+> supported path. They are exposed in the crate for research/scaffolding only and
+> must not be relied on for correctness:
+>
+> - **Holographic PEPS** (`src/compression/peps.rs`) — a Projected Entangled Pair
+>   State *placeholder*. `PEPS::new` fills random tensors; there is no working
+>   PEPS encode/decode. Future work.
+> - **Decoder / parity-EC** (`src/compression/decoder.rs`) — `decode_proof` is a
+>   *lossy placeholder*. It only recovers data from a one-hot, `physical_dim == 256`
+>   lossless MPS and returns an empty vector for anything else. There is no working
+>   parity / erasure-coding recovery. Future work.
+> - **Direct verification** (`src/verification/direct_verify.rs`) —
+>   `verify_compressed` is a *placeholder that unconditionally returns `true`*. It
+>   performs no verification-without-decompression. Future work.
+
+---
+
 ## License
 
 MIT License - see [LICENSE](../LICENSE)
