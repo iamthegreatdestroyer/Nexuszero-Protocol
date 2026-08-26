@@ -558,9 +558,9 @@ pytest nexuszero-optimizer/tests/test_advanced_tool_use.py -v
 
 Copyright (c) 2025 NexusZero Protocol. All Rights Reserved.
 
-This implementation is part of the NexusZero Protocol and is subject to the project's dual licensing:
+This implementation is part of the NexusZero Protocol, which is proprietary
+software (see repository LICENSE).
 
-- AGPLv3 for personal use
-- Commercial license available
-
-Patent Pending: AI-Driven Zero-Knowledge Proof Optimization System
+Covered by U.S. Provisional Patent Application No. 64/137,791, filed
+2026-08-20 ("GNN-Guided Parameter Selection and Tensor-Network Compression
+in Lattice-Based Zero-Knowledge Proof Systems").

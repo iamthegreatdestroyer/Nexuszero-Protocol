@@ -2,9 +2,9 @@
 name = "nexuszero-crypto"
 version = "0.1.0"
 edition = "2021"
-authors = ["Steve <iamthegreatdestroyer@github.com>"]
+authors = ["Stephen Bilodeau <sgbilod@gmail.com>"]
 description = "Quantum-resistant zero-knowledge proof system based on lattice cryptography"
-license = "MIT"
+license = "UNLICENSED"
 repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
 keywords = ["cryptography", "zero-knowledge", "lattice", "post-quantum", "zkp"]
 categories = ["cryptography", "mathematics"]

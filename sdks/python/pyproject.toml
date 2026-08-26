@@ -7,9 +7,9 @@ name = "nexuszero"
 version = "0.1.0"
 description = "NexusZero Protocol Python SDK - Privacy-preserving transactions with quantum-resistant ZK proofs"
 readme = "README.md"
-license = "AGPL-3.0-or-later"
+license = "UNLICENSED"
 authors = [
-    { name = "NexusZero Team", email = "team@nexuszero.io" }
+    { name = "Stephen Bilodeau", email = "sgbilod@gmail.com" }
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

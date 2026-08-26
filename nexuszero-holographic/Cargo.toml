@@ -2,6 +2,8 @@
 name = "nexuszero-holographic"
 version = "0.1.0"
 edition = "2021"
+authors = ["Stephen Bilodeau <sgbilod@gmail.com>"]
+license = "UNLICENSED"
 
 [features]
 default = []

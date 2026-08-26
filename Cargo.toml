@@ -47,8 +47,8 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["NexusZero Protocol Team"]
-license = "MIT"
+authors = ["Stephen Bilodeau <sgbilod@gmail.com>"]
+license = "UNLICENSED"
 repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
 
 [workspace.dependencies]

@@ -1,7 +1,12 @@
-MIT License
+Copyright (c) 2025-2026 Stephen Bilodeau. All rights reserved.
 
-Copyright (c) 2025 Steve (iamthegreatdestroyer)
+This software is proprietary. No license, express or implied, to any patent
+rights is granted by publication or distribution of this repository.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction...
+Portions of this codebase practice claims of U.S. Provisional Patent
+Application No. 64/137,791 ("GNN-Guided Parameter Selection and Tensor-Network
+Compression in Lattice-Based Zero-Knowledge Proof Systems"), filed 2026-08-20.
+Use, reproduction, or distribution of this software does not convey any
+right or license under that application or any patent issuing from it.
+
+No warranty of any kind is given. Use at your own risk.

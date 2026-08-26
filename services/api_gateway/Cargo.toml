@@ -2,9 +2,9 @@
 name = "nexuszero-api-gateway"
 version = "0.1.0"
 edition = "2021"
-authors = ["NexusZero Team"]
+authors = ["Stephen Bilodeau <sgbilod@gmail.com>"]
 description = "High-performance API Gateway for NexusZero Protocol"
-license = "AGPL-3.0"
+license = "UNLICENSED"
 repository = "https://github.com/iamthegreatdestroyer/Nexuszero-Protocol"
 
 [dependencies]
